@@ -168,10 +168,10 @@ public:
   int CreateList(int hd_threshold, bool debug);  // create TBDlist
   int FindNum(int energy, short *str);           // find number of structure
   bool InsertUB(int i, int j, int energy, short *saddle, bool debug); // insert into UBlist
-  void PrintUBoutput();
-  void PrintDot(char *filename, bool dot_prog, bool print, char *file_print, bool landmap);
-  void PrintMatrix(char *filename);
-  int FloodUp(RNAstruc &i, RNAstruc &j, RNAstruc &saddle, bool shifts, bool noLP, bool debug); // flood up to find direct saddle
+  void PrintUBoutput(); // print UBlist to stdout
+  void PrintDot(char *filename, bool dot_prog, bool print, char *file_print, bool visual); // print dot file to filename, dot_prog - use dot or neato?; print - print dot output to file_print, visual - use tree for visualisation
+  void PrintMatrix(char *filename); // print energy barrier matrix
+  int FloodUp(RNAstruc &i, RNAstruc &j, RNAstruc &saddle, bool shifts, bool noLP, bool debug); // flood up from i and j to find direct saddle
 };
 
 #endif

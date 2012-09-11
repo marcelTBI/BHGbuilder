@@ -30,8 +30,8 @@ int main(int argc, char **argv)
   dsu.PrintUBoutput();
 
     // LinkCP
-  dsu.LinkCP(false, false, args_info.debug_flag);
-  dsu.PrintDot("graph.dot", true, true, "graph.eps", true);
+  dsu.LinkCP(args_info.shift_flag, args_info.noLP_flag, args_info.debug_flag);
+  dsu.PrintDot("graph.dot", true, true, "graph.eps", args_info.tree_visualise_flag);
   dsu.PrintMatrix("graph.en");
 
   cmdline_parser_free(&args_info);
