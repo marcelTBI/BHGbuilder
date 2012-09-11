@@ -120,6 +120,41 @@ inline bool isSeq(char *p)
   }
 }
 
+// union-find set array
+vector<int> parent;
+unsigned int num_unions = 0;
+
+// and union-find set functions
+int find(int x) {
+  if (x != parent[x] && parent[x] != parent[parent[x]])
+    parent[x] = find(parent[x]);
+  return parent[x];
+}
+
+void union_set(int x, int y) {
+  int u, v;
+  u = find(x);
+  v = find(y);
+  if (u != v) {
+    parent[u] = v;
+    num_unions++;
+  }
+}
+
+bool connected_all() {
+  return (num_unions == parent.size()-1);
+}
+
+bool joint(int x, int y) {
+  return find(x) == find(y);
+}
+
+void enlarge_parent() {
+  parent.push_back(parent.size());
+}
+
+//============================ MAIN functions
+
 pq_entry::pq_entry(int i, int j, int hd)
 {
   this->i = min(i, j);
@@ -270,7 +305,7 @@ bool DSU::InsertUB(int i, int j, int energy_par, short *saddle_par, bool debug)
   return false;
 }
 
-int DSU::ComputeUB(int maxkeep, int num_threshold, bool debug)
+int DSU::ComputeUB(int maxkeep, int num_threshold, bool outer, bool debug)
 {
   int dbg_count = 0;
   int cnt = 0;
@@ -331,10 +366,6 @@ int DSU::ComputeUB(int maxkeep, int num_threshold, bool debug)
 
         // update UBlist
         if (num1==-1 || num2==-1) {
-          /*if (num1==-1) {   // double outputs :/
-            if (gl_maxen < last_en) fprintf(stderr, "exceeds en. (last): %s %6.2f\n", pt_to_str(last_str).c_str(), last_en/100.0);
-            else                    fprintf(stderr, "cannot find (last): %s %6.2f\n", pt_to_str(last_str).c_str(), last_en/100.0);
-          }*/
           if (num2==-1) {
             if (gl_maxen < tmp_en) fprintf(stderr, "exceeds en.: %s %6.2f\n", pt_to_str(tmp_str).c_str(), tmp_en/100.0);
             else {
@@ -359,7 +390,7 @@ int DSU::ComputeUB(int maxkeep, int num_threshold, bool debug)
     } // crawling path
 
     // insert saddle between outer structures
-    InsertUB(pq.i, pq.j, en_fltoi(max_energy), make_pair_table(max_path->s), debug);
+    if (outer) InsertUB(pq.i, pq.j, en_fltoi(max_energy), make_pair_table(max_path->s), debug);
 
     // free stuff
     if (last_str) free(last_str);
@@ -386,7 +417,7 @@ void DSU::PrintUBoutput()
 {
   printf("     %s\n", seq);
   for (unsigned int i=0; i<UBoutput.size(); i++) {
-    printf("%4d (%4d,%4d) saddle: %s %6.2f\n", i+1, UBoutput[i].second.i, UBoutput[i].second.j, pt_to_str(UBoutput[i].first.structure).c_str(), UBoutput[i].first.energy/100.0);
+    printf("%4d (%4d,%4d) saddle: %s %6.2f\n", i+1, UBoutput[i].second.i+1, UBoutput[i].second.j+1, pt_to_str(UBoutput[i].first.structure).c_str(), UBoutput[i].first.energy/100.0);
   }
 }
 
@@ -539,7 +570,7 @@ int DSU::FloodUp(RNAstruc &i, RNAstruc &j, RNAstruc &saddle, bool shifts, bool n
   return res;
 }
 
-void DSU::PrintDot(char *filename, bool dot_prog, bool print, char *file_print, bool landmap)
+void DSU::PrintDot(char *filename, bool dot_prog, bool print, char *file_print, bool visual)
 {
   // landmap not supported yet
 
@@ -554,26 +585,43 @@ void DSU::PrintDot(char *filename, bool dot_prog, bool print, char *file_print, 
       fprintf(dot, "\"%d\" [label=\"%d\"]\n", i+1, i+1);
     }
     fprintf(dot, "\n");
-    //nodes saddle:
-    for (unsigned int i=0; i<saddles.size(); i++) {
-      fprintf(dot, "\"S%d\" [label=\"S%d\", color=\"0.0 0.0 %.1f\", fontcolor=\"0.0 0.0 %.1f\"]\n", i+1, i+1, color, color);
-    }
-    fprintf(dot, "\n");
-    // edges l-l
-    for (set<edgeLM>::iterator it=edges_l.begin(); it!=edges_l.end(); it++) {
-      fprintf(dot, "\"%d\" -- \"%d\" [label=\"%.2f\"]\n", (it->i)+1, (it->j)+1, it->en/100.0);
-    }
-    fprintf(dot, "\n");
-    // edges l-s
-    for (set<std::pair<int, int> >::iterator it=edges_ls.begin(); it!=edges_ls.end(); it++) {
-      fprintf(dot, "\"%d\" -- \"S%d\" [color=\"0.0 0.0 %.1f\", fontcolor=\"0.0 0.0 %.1f\"]\n", (it->first)+1, (it->second)+1, color, color);
-    }
 
-    fprintf(dot, "\n");
-    // edges s-s //TODO!
-    /*for (set<edgeLM>::iterator it=edges_l.begin(); it!=edges_l.end(); it++) {
-      fprintf(dot, "\"%d\" -- \"%d\" [label=\"%.2f\"]\n",it->i,it->j, it->en/100.0);
-    }*/
+    if (visual) {
+      for (unsigned int i=0; i<LM.size(); i++) {
+        enlarge_parent();
+      }
+      set<edgeLM, edgeLM_compen> tmp;
+      tmp.insert(edges_l.begin(), edges_l.end());
+      for (set<edgeLM>::iterator it=tmp.begin(); it!=tmp.end(); it++) {
+        if (!joint(it->i, it->j)) {
+          fprintf(dot, "\"%d\" -- \"%d\" [label=\"%.2f\"]\n", (it->i)+1, (it->j)+1, it->en/100.0);
+          union_set(it->i, it->j);
+        }
+      }
+      fprintf(dot, "\n");
+
+    } else {
+      //nodes saddle:
+      for (unsigned int i=0; i<saddles.size(); i++) {
+        fprintf(dot, "\"S%d\" [label=\"S%d\", color=\"0.0 0.0 %.1f\", fontcolor=\"0.0 0.0 %.1f\"]\n", i+1, i+1, color, color);
+      }
+      fprintf(dot, "\n");
+      // edges l-l
+      for (set<edgeLM>::iterator it=edges_l.begin(); it!=edges_l.end(); it++) {
+        fprintf(dot, "\"%d\" -- \"%d\" [label=\"%.2f\"]\n", (it->i)+1, (it->j)+1, it->en/100.0);
+      }
+      fprintf(dot, "\n");
+      // edges l-s
+      for (set<std::pair<int, int> >::iterator it=edges_ls.begin(); it!=edges_ls.end(); it++) {
+        fprintf(dot, "\"%d\" -- \"S%d\" [color=\"0.0 0.0 %.1f\", fontcolor=\"0.0 0.0 %.1f\"]\n", (it->first)+1, (it->second)+1, color, color);
+      }
+
+      fprintf(dot, "\n");
+      // edges s-s //TODO!
+      /*for (set<edgeLM>::iterator it=edges_l.begin(); it!=edges_l.end(); it++) {
+        fprintf(dot, "\"%d\" -- \"%d\" [label=\"%.2f\"]\n",it->i,it->j, it->en/100.0);
+      }*/
+    }
     fprintf(dot, "}\n");
   }
 

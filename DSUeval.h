@@ -107,6 +107,18 @@ struct edgeLM {
     } else return i<second.i;
   }
 };
+// energy comparator
+struct edgeLM_compen {
+
+  bool operator()(const edgeLM &first, const edgeLM &second) const {
+    if (first.en==second.en) {
+      if (first.i==second.i) {
+        return first.j<second.j;
+      } else return first.i<second.i;
+    } else return first.en<second.en;
+  }
+
+};
 
 class DSU {
 
@@ -149,7 +161,7 @@ public:
 
 public:
   // big ones
-  int ComputeUB(int maxkeep, int num_threshold, bool debug);          // compute all UB
+  int ComputeUB(int maxkeep, int num_threshold, bool outer, bool debug);          // compute all UB (outer - add to UB also outer structures? - we will not have only direct saddles then)
   int LinkCP(bool shifts, bool noLP, bool debug);       // construct vertex and edge set from UBoutput
 
   // helpers

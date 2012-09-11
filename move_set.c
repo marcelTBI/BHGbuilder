@@ -124,7 +124,7 @@ typedef struct _Encoded {
   int num_moves;
 
   /* function for flooding */
-  bool (*funct) (struct_en*, struct_en*);
+  int (*funct) (struct_en*, struct_en*);
 
 
 } Encoded;

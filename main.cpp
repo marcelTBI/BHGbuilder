@@ -4,7 +4,6 @@
 #include "DSUeval.h"
 
 extern "C" {
-  #include "fold.h"
   #include "DSUeval_cmdline.h"
 }
 
@@ -24,13 +23,15 @@ int main(int argc, char **argv)
   if (args_info.num_threshold_arg <= 0) args_info.hd_threshold_arg = INT_MAX;
 
   // code
+    // DSUeval
   DSU dsu(stdin);
   dsu.CreateList(args_info.hd_threshold_arg, args_info.debug_flag);
-  dsu.ComputeUB(args_info.depth_arg, args_info.num_threshold_arg, args_info.debug_flag);
+  dsu.ComputeUB(args_info.depth_arg, args_info.num_threshold_arg, args_info.outer_flag, args_info.debug_flag);
   dsu.PrintUBoutput();
-  dsu.LinkCP(0, 0, 1);
 
-  dsu.PrintDot("graph.dot", true, true, "graph.eps", false);
+    // LinkCP
+  dsu.LinkCP(false, false, args_info.debug_flag);
+  dsu.PrintDot("graph.dot", true, true, "graph.eps", true);
   dsu.PrintMatrix("graph.en");
 
   cmdline_parser_free(&args_info);

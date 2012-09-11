@@ -19,3 +19,4 @@ option "name-graph"					- "Filename for landmap/landmark graph image" string def
 
 option "hd-threshold"       - "Do not try to process pairs with Hamming distance more than this. (0 means no threshold)" int default="0" no
 option "num-threshold"      - "Compute only first num-threshold pairs - finish HD range (0 means no threshold)" int default="0" no
+option "outer"              o "Add to UBlist also outer structures - we will not have only direct saddles then" flag on
