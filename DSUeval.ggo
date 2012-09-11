@@ -1,0 +1,21 @@
+# Name of your program
+package "DSUeval"
+purpose "DSUeval"
+
+# Version of your program
+version "0.1"   # don't use version if you're using automake
+
+# command line options passed to gengetopt
+args "--file-name=DSUeval_cmdline --include-getopt --default-optional --unamed-opts"
+
+# Options
+option "debug"        			d "Print debug" flag off
+option "depth"              - "Depth of findpath search (higher value increases running time)" int default="10" no
+
+option "dot"                - "Use dot instead of neato for graph plotting" flag on
+option "print-graph"				- "Generate graph with neato/dot" flag off
+option "name-dot"						- "Filename for dot file(text)" string default="DSUeval.dot" no
+option "name-graph"					- "Filename for landmap/landmark graph image" string default="DSUeval.eps" no
+
+option "hd-threshold"       - "Do not try to process pairs with Hamming distance more than this. (0 means no threshold)" int default="0" no
+option "num-threshold"      - "Compute only first num-threshold pairs - finish HD range (0 means no threshold)" int default="0" no
