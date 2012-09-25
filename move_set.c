@@ -5,7 +5,7 @@
 #include <limits.h>
 #include <time.h>
 
-#include "fold.h"
+#include "fold_dsu.h"
 
 #include "move_set.h"
 

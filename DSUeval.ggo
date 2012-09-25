@@ -12,11 +12,6 @@ args "--file-name=DSUeval_cmdline --include-getopt --default-optional --unamed-o
 option "debug"        			d "Print debug" flag off
 option "depth"              - "Depth of findpath search (higher value increases running time)" int default="10" no
 
-option "dot"                - "Use dot instead of neato for graph plotting" flag on
-option "print-graph"				- "Generate graph with neato/dot" flag off
-option "name-dot"						- "Filename for dot file(text)" string default="DSUeval.dot" no
-option "name-graph"					- "Filename for landmap/landmark graph image" string default="DSUeval.eps" no
-
 option "hd-threshold"       - "Do not try to process pairs with Hamming distance more than this. (0 means no threshold)" int default="0" no
 option "num-threshold"      - "Compute only first num-threshold pairs - finish HD range (0 means no threshold)" int default="0" no
 option "outer"              o "Add to UBlist also outer structures - we will not have only direct saddles then" flag on
@@ -24,3 +19,13 @@ option "tree-visualise"     t "Use tree visualisation (landmark)" flag off
 
 option "noLP"								- "Process structures without lonely pairs (helices of length 1)." flag off
 option "shift"							- "Assume also shift moves (in addition to insertion and deletions)." flag off
+
+section "Output"
+option "dot"                - "Use dot instead of neato for graph plotting" flag on
+option "print-graph"				- "Generate graph with neato/dot" flag off
+option "name-dot"						- "Filename for dot file(text)" string default="DSUeval.dot" no
+option "name-graph"					- "Filename for landmap/landmark graph image" string default="DSUeval.eps" no
+option "energy-file"        - "Fileneme for energy barrier matrix" string default="DSUeval.en" no
+option "print-energy"       - "Generate energy barrier matrix output" flag off
+
+

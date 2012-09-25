@@ -3,122 +3,22 @@
 #include <stdlib.h>
 
 extern "C" {
+  #include "utils.h"
+  #include "fold_vars.h"
   #include "pair_mat.h"
+
+  #include "fold_dsu.h"
   #include "findpath.h"
   #include "move_set.h"
-  #include "fold.h"
 }
 
 #include "DSUeval.h"
+#include "RNAutils.h"
 #include "hash_util.h"
 
 #include <algorithm>
 
 using namespace std;
-
-
-/* reads a line no matter how long*/
-char* my_getline(FILE *fp)
-{
-  char s[512], *line, *cp;
-  line = NULL;
-  do {
-    if(fgets(s, 512, fp) == NULL) break;
-    cp = strchr(s, '\n');
-    if(cp != NULL) *cp = '\0';
-    if(line == NULL) line = (char *) calloc(strlen(s) + 1, sizeof(char));
-    else line = (char *) realloc(line, strlen(s) + strlen(line) + 1);
-    strcat (line, s);
-  } while (cp == NULL);
-  return (line);
-}
-
-// pt to str
-string pt_to_str(const short *pt)
-{
-  string str;
-  str.resize(pt[0]);
-  for (int i=1; i<=pt[0]; i++) {
-    if (pt[i]==0) str[i-1]='.';
-    else if (pt[i]<i) str[i-1]=')';
-    else str[i-1]='(';
-  }
-  return str;
-}
-
-// structure equality
-bool str_eq(const short *lhs, const short *rhs) {
-  int i=1;
-  while (i<=lhs[0] && lhs[i]==rhs[i]) {
-    i++;
-  }
-  if (i>lhs[0]) return true;
-  else return false;
-}
-
-int en_fltoi(float en)
-{
-  if (en < 0.0) return (int)(en*100 - 0.5);
-  else return (int)(en*100 + 0.5);
-}
-
-inline bool isStruct(char *p)
-{
-  // check first two chars - should be enough
-  if (strlen(p)<2) return false;
-  if ((p[0]=='.' || p[0]=='(' || p[0]==')') && (p[1]=='.' || p[1]=='(' || p[1]==')')) return true;
-  else return false;
-}
-
-int HammingDist(const short* struct1, const short* struct2)
-{
-  int match = 0;
-  int str1_par = 0;
-  int str2_par = 0;
-  for (int i=1; i<=struct1[0]; i++) {
-    if (struct1[i]!=0 && struct1[i]>i) {  //'('
-      str1_par++;
-      // count '(' that does match
-      if (struct1[i]==struct2[i]) {
-        match++;
-      }
-    }
-    if (struct2[i]!=0 && struct2[i]>i) str2_par++;
-  }
-
-  // return all pairs minus those that matches
-  return str1_par+str2_par-(2*match);
-}
-
-inline bool isSeq(char *p)
-{
-  if (strlen(p)<2) return false;
-  // check first two chars - should be enough
-  switch (p[0]){
-    case 'A':
-    case 'C':
-    case 'G':
-    case 'T':
-    case 'U':
-    case 'a':
-    case 'c':
-    case 'g':
-    case 't':
-    case 'u': switch (p[1]){
-      case 'A':
-      case 'C':
-      case 'G':
-      case 'T':
-      case 'U':
-      case 'a':
-      case 'c':
-      case 'g':
-      case 't':
-      case 'u': return true;
-    }
-    default : return false;
-  }
-}
 
 // union-find set array
 vector<int> parent;
@@ -177,6 +77,7 @@ DSU::DSU(FILE *input) {
 
   // read seq
   char *line;
+  int num = 0;
 
   line = my_getline(input);
   char *seq2 = strtok(line, " ");
@@ -216,18 +117,25 @@ DSU::DSU(FILE *input) {
       }
       p = strtok(NULL, " ");
     }
+
     // add info:
-    RNAstruc struc;
-    struc.structure = tmp;
-    char *ch = (char*) malloc((tmp[0]+1)*sizeof(char));
-    strcpy(ch, pt_to_str(tmp).c_str());
-    struc.str_ch = ch;
-    int en = (has_energy?en_fltoi(energy_tmp):energy_of_structure_pt(seq, tmp, s0, s1, 0));
-    struc.energy = en;
-    LM.push_back(struc);
-    gl_maxen = max(gl_maxen, en);
+    if (tmp) {
+      RNAstruc struc;
+      struc.structure = tmp;
+      char *ch = (char*) malloc((tmp[0]+1)*sizeof(char));
+      strcpy(ch, pt_to_str(tmp).c_str());
+      struc.str_ch = ch;
+      int en = (has_energy?en_fltoi(energy_tmp):energy_of_structure_pt(seq, tmp, s0, s1, 0));
+      struc.energy = en;
+      LM.push_back(struc);
+      gl_maxen = max(gl_maxen, en);
+    } else {
+      // line without struct???
+      fprintf(stderr, "WARNING: line %d without struct: %s\n", num, line);
+    }
     free(line);
     line = my_getline(input);
+    num++;
   }
 }
 

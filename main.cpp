@@ -31,8 +31,8 @@ int main(int argc, char **argv)
 
     // LinkCP
   dsu.LinkCP(args_info.shift_flag, args_info.noLP_flag, args_info.debug_flag);
-  dsu.PrintDot("graph.dot", true, true, "graph.eps", args_info.tree_visualise_flag);
-  dsu.PrintMatrix("graph.en");
+  dsu.PrintDot(args_info.name_dot_arg, args_info.dot_flag, args_info.print_graph_flag, args_info.name_graph_arg, args_info.tree_visualise_flag);
+  if (args_info.print_energy_flag) dsu.PrintMatrix(args_info.energy_file_arg);
 
   cmdline_parser_free(&args_info);
 }

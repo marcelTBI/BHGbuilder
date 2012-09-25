@@ -1,8 +1,8 @@
 #ViennaRNA package location
-ViennaRNA=~/software/include/ViennaRNA
-ViennaLIB=~/software/lib/libRNA.a
-#ViennaRNA=~/software/ViennaRNA-2.0.7/H
-#ViennaLIB=~/software/ViennaRNA-2.0.7/lib/libRNA.a
+#ViennaRNA=~/software/include/ViennaRNA
+#ViennaLIB=~/software/lib/libRNA.a
+ViennaRNA=~/software/ViennaRNA-2.0.7/H
+ViennaLIB=~/software/ViennaRNA-2.0.7/lib/libRNA.a
 
 
 NAME=DSUeval
@@ -10,7 +10,9 @@ NAME=DSUeval
 OBJ = $(NAME)_cmdline.o\
 			main.o\
 			move_set.o\
-			$(NAME).o
+			$(NAME).o\
+			fold_dsu.o\
+			RNAutils.o
 
 # should stay unchanged: 
 CPP = g++

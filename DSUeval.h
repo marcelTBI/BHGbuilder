@@ -13,13 +13,6 @@
 
 using namespace std;
 
-char* my_getline(FILE *fp);             // reads line no matter how long
-string pt_to_str(const short *pt);      // convert structure short* to string
-bool str_eq(const short *lhs, const short *rhs); // are structures equal?
-int en_fltoi(float en); // convert energy from float to int
-int HammingDist(const short* struct1, const short* struct2); // ahmming distance beetween 2 structs
-
-
 struct RNAstruc {
   int energy;
   short *structure;
@@ -62,7 +55,6 @@ struct RNAstruc_rev {
   }
 
 };
-
 
 // entry for priority queue
 class pq_entry {
