@@ -34,5 +34,22 @@ int main(int argc, char **argv)
   dsu.PrintDot(args_info.name_dot_arg, args_info.dot_flag, args_info.print_graph_flag, args_info.name_graph_arg, args_info.tree_visualise_flag);
   if (args_info.print_energy_flag) dsu.PrintMatrix(args_info.energy_file_arg);
 
+  for (unsigned int i=0; i<args_info.visualise_given; i++) {
+    int a, b;
+    if (sscanf(args_info.visualise_arg[i], "%d=%d", &a, &b)!=2) {
+      fprintf(stderr, "WARNING: wrong use of visualisation option (%s)\n", args_info.visualise_arg[i]);
+    } else {
+      if (a<=0 || b<=0) {
+        fprintf(stderr, "WARNING: non-positive number in visualisation (%s)\n", args_info.visualise_arg[i]);
+      } else {
+        a--;
+        b--;
+        if (a>=dsu.Size() || b>=dsu.Size()) {
+          fprintf(stderr, "WARNING: visualisation number(s) exceeds number of minima (%d) (%s)\n", dsu.Size(), args_info.visualise_arg[i]);
+        } else dsu.VisPath(a, b, !args_info.vis_dist_flag, args_info.vis_length_arg, args_info.dot_flag, args_info.debug_flag);
+      }
+    }
+  }
+
   cmdline_parser_free(&args_info);
 }

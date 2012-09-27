@@ -262,7 +262,8 @@ int DSU::ComputeUB(int maxkeep, int num_threshold, bool outer, bool debug)
       }
       // find adaptive walk
       short *tmp_str = make_pair_table(tmp->s);
-      int tmp_en = move_rand(seq, tmp_str, s0, s1, 0);
+      //int tmp_en = move_rand(seq, tmp_str, s0, s1, 0);
+      int tmp_en = move_deepest(seq, tmp_str, s0, s1, 0, 0, 0);
 
       // do the stuff if we have 2 structs and they are not equal
       if (last && !str_eq(last_str, tmp_str)) {
@@ -331,6 +332,9 @@ void DSU::PrintUBoutput()
 
 int DSU::LinkCP(bool shifts, bool noLP, bool debug)
 {
+  edgesV_ls.resize(LM.size());
+  edgesV_l.resize(LM.size());
+
   for (unsigned int i=0; i<UBoutput.size(); i++) {
     RNAstruc stru = UBoutput[i].first;
     pq_entry pq = UBoutput[i].second;
@@ -352,15 +356,25 @@ int DSU::LinkCP(bool shifts, bool noLP, bool debug)
       vertex_s.insert(make_pair(stru, saddle_num));
       saddles.push_back(stru);
     }
+    // resize
+    edgesV_sl.resize(saddle_num+1);
+
     // edges ls
     edges_ls.insert(make_pair(pq.i, saddle_num));
     edges_ls.insert(make_pair(pq.j, saddle_num));
+
+    edgesV_ls[pq.i].insert(saddle_num);
+    edgesV_sl[saddle_num].insert(pq.i);
+
+    edgesV_ls[pq.j].insert(saddle_num);
+    edgesV_sl[saddle_num].insert(pq.j);
+
     // edges ll
-    edgeLM e;
-    e.i = pq.i;
-    e.j = pq.j;
-    e.en = stru.energy;
+    edgeLM e(pq.i, pq.j, stru.energy, saddle_num);
     edges_l.insert(e);
+
+    edgesV_l[pq.i].insert(e);
+    edgesV_l[pq.j].insert(e);
   }
 
   return 0;
@@ -470,11 +484,11 @@ int DSU::FloodUp(RNAstruc &i, RNAstruc &j, RNAstruc &saddle, bool shifts, bool n
   }
 
   // free
+  while (!flood_queue.empty()) flood_queue.pop();
   for (it=flood_hash.begin(); it!=flood_hash.end(); it++) {
     if (it->first.structure) free(it->first.structure);
   }
   flood_hash.clear();
-  while (!flood_queue.empty()) flood_queue.pop();
   return res;
 }
 
@@ -540,8 +554,172 @@ void DSU::PrintDot(char *filename, bool dot_prog, bool print, char *file_print, 
     char syst[200];
     sprintf(syst, "%s -Tps < %s > %s", (dot_prog ? "dot" : "neato"), filename, file_print);
     int res = system(syst);
-    printf("%s returned %d", syst, res);
+    printf("%s returned %d\n", syst, res);
   }
+}
+
+bool EN_BARRIERS = true;
+
+struct pq_path {
+  int lm;
+  int dist;
+  int en_barr;
+
+  int value() {
+    return (EN_BARRIERS ? en_barr : dist);
+  }
+
+  bool operator<(const pq_path &second) const {
+    if (EN_BARRIERS) {
+      if (en_barr != second.en_barr) {
+        return en_barr<second.en_barr;
+      }
+    }
+    if (dist == second.dist) {
+      return lm<second.lm;
+    }
+    return dist<second.dist;
+  }
+
+  pq_path(int lm, int dist, int en_barr) {
+    this->lm = lm;
+    this->dist = dist;
+    this->en_barr = en_barr;
+  }
+};
+
+void DSU::VisPath(int src, int dest, bool en_barriers, int max_length, bool dot_prog, bool debug)
+{
+  EN_BARRIERS = en_barriers;
+
+  char filename[50];
+  char file_print[50];
+  sprintf(filename, "path%d_%d.dot", src+1, dest+1);
+  sprintf(file_print, "path%d_%d.eps", src+1, dest+1);
+
+  float color = 0.5;
+  //open file
+  FILE *dot;
+  dot = fopen(filename, "w");
+  if (dot) {
+    fprintf(dot, "Graph G {\n\tnode [width=0.1, height=0.1, shape=circle];\n");
+
+    // actual nodes:
+      // forward pass:
+    vector <int> LM_tmp(LM.size(), INT_MAX);
+    priority_queue <pq_path> pq_tmp;
+    pq_path to_insert(src, 0, LM[src].energy);
+    LM_tmp[src] = to_insert.value();
+    pq_tmp.push(to_insert);
+
+    bool found_dst = false;
+    int maximum = INT_MAX;
+    while (!pq_tmp.empty()) {
+      pq_path point = pq_tmp.top();
+      pq_tmp.pop();
+
+      if (point.lm == dest) {
+        maximum = min(point.value(), maximum);
+        found_dst = true;
+        if (!EN_BARRIERS) {
+          break;
+        }
+      }
+
+      if (LM_tmp[point.lm] < point.value()) continue; // we have found better and this is obsolete
+
+      for (set<edgeLM>::iterator it=edgesV_l[point.lm].begin(); it!=edgesV_l[point.lm].end(); it++) {
+        int en_barr = it->en;
+        int goesTo = it->goesTo(point.lm);
+        if (found_dst && (maximum < en_barr)) continue; // we dont want higher energy (really dirty programming :/)
+
+        // insert new elements into pq (if they are better)
+        pq_path to_insert(goesTo, point.dist+1, max(point.en_barr, en_barr));
+        if (LM_tmp[goesTo] <= to_insert.value()) continue;
+        pq_tmp.push(to_insert);
+        LM_tmp[goesTo] = to_insert.value();
+      }
+    }
+
+    // output
+    set<int> LM_out;
+    LM_out.insert(dest);
+    LM_out.insert(src);
+    set<edgeLM> edge_out;
+
+      // backward pass -- find all paths with same dist/same en_barrier
+    if (EN_BARRIERS) {
+      // collect all paths (NP-complete)
+      vector<SimplePath> paths = ConstructAllPaths(src, dest, max_length, LM_tmp[dest]);
+
+      int en_barr;
+      if (paths.size()>0) en_barr = paths[0].max_energy;
+      else fprintf(stderr, "WARNING: Cannot reach %d from %d!\n", src+1, dest+1);
+
+      for (unsigned int i=0; i<paths.size(); i++) {
+        // stopping condition:
+        if (paths[i].max_energy != en_barr) break;
+
+        // print them?
+        if (debug) paths[i].Print(true);
+
+        // output them
+        for (unsigned int j=0; j<paths[i].points.size(); j++) {
+          LM_out.insert(paths[i].points[j]);
+          if (j>0) edge_out.insert(edgeLM(paths[i].points[j-1], paths[i].points[j], paths[i].energies[j-1]));
+        }
+      }
+
+    } else {
+      int max = LM_tmp[dest];
+      if (max == INT_MAX) {
+        fprintf(stderr, "WARNING: Cannot reach %d from %d!\n", src+1, dest+1);
+      } else {
+        queue<pq_path> que;
+        que.push(pq_path(dest, max, INT_MAX));
+
+        while (!que.empty()) {
+          pq_path point = que.front();
+          que.pop();
+
+          for (set<edgeLM>::iterator it=edgesV_l[point.lm].begin(); it!=edgesV_l[point.lm].end(); it++) {
+            int goesTo = it->goesTo(point.lm);
+
+            // if this point is on shortest path:
+            if (LM_tmp[goesTo] == point.dist-1) {
+              LM_out.insert(goesTo);
+              edge_out.insert(*it);
+
+              if (point.dist>1) que.push(pq_path(goesTo, point.dist-1, INT_MAX));
+            } // else nothing
+          }
+        }
+      }
+    }
+
+    // nodes
+    for (set<int>::iterator it=LM_out.begin(); it!=LM_out.end(); it++) {
+      if ((*it) == dest || (*it) == src) {
+        fprintf(dot, "\"%d\" [label=\"%d\"]\n", (*it)+1, (*it)+1);
+      } else fprintf(dot, "\"%d\" [label=\"%d\", color=\"0.0 0.0 %.1f\", fontcolor=\"0.0 0.0 %.1f\"]\n", (*it)+1, (*it)+1, color, color);
+    }
+    fprintf(dot, "\n");
+
+    // edges:
+    for (set<edgeLM>::iterator it=edge_out.begin(); it!=edge_out.end(); it++) {
+      fprintf(dot, "\"%d\" -- \"%d\" [label=\"%.2f\", color=\"0.0 0.0 %.1f\", fontcolor=\"0.0 0.0 %.1f\"]\n", (it->i)+1, (it->j)+1, it->en/100.0, color, color);
+    }
+
+    fprintf(dot, "}\n");
+  }
+
+  fclose(dot);
+
+  // start neato/dot:
+  char syst[200];
+  sprintf(syst, "%s -Tps < %s > %s", (dot_prog ? "dot" : "neato"), filename, file_print);
+  system(syst);
+  //printf("%s returned %d", syst, res);
 }
 
 void DSU::PrintMatrix(char *filename)
@@ -576,4 +754,129 @@ void DSU::PrintMatrix(char *filename)
     }
   }
   fclose(energies);
+}
+
+vector<SimplePath> DSU::ConstructAllPaths(int source, int dest, int max_length, int threshold)
+{
+  vector<SimplePath> paths;
+
+  SimplePath path;
+  path.AddLast(source, INT_MIN);
+
+  // construct all path recursively
+  ConstructPath(paths, path, dest, max_length-1, threshold);
+
+  // score them
+  for (unsigned int i=0; i<paths.size(); i++) {
+    paths[i].Score();
+  }
+
+  // sort
+  sort(paths.begin(), paths.end());
+
+  return paths;
+}
+
+void DSU::ConstructPath(vector<SimplePath> &paths, SimplePath &path, int dest, int max_length, int threshold)
+{
+  int num = path.points[path.points.size()-1];
+
+  if (num == dest) {
+    paths.push_back(path);
+    //if (paths.size()%100==1) printf("found paths: %d\n", (int)paths.size());
+    return ;
+  }
+
+  if (max_length == 0) return;
+
+  // all edges
+  for (set<edgeLM>::iterator it=edgesV_l[num].begin(); it!=edgesV_l[num].end(); it++) {
+    int goesTo = it->goesTo(num);
+    if (!path.ContainsNode(goesTo) && it->en <= threshold) {
+      path.AddLast(goesTo, it->en);
+      ConstructPath(paths, path, dest, max_length-1, threshold);
+      path.RemoveLast();
+    }
+  }
+}
+
+SimplePath::SimplePath()
+{
+  closed = false;
+  max_energy = INT_MIN;
+}
+
+void SimplePath::Close()
+{
+  closed = true;
+}
+
+void SimplePath::Score()
+{
+  for (unsigned int i=0; i<energies.size(); i++) {
+    max_energy = max(max_energy, energies[i]);
+  }
+}
+
+void SimplePath::AddLast(int num, int energy)
+{
+  points.push_back(num);
+  if (energy > INT_MIN) energies.push_back(energy);
+  points_map.insert(make_pair(num, points.size()));
+}
+
+void SimplePath::RemoveLast()
+{
+  points_map.erase(points[points.size()-1]);
+  points.pop_back();
+  energies.pop_back();
+}
+
+SimplePath::SimplePath(const SimplePath &path)
+{
+  points.assign(path.points.begin(), path.points.end());
+  energies.assign(path.energies.begin(), path.energies.end());
+  points_map.insert(path.points_map.begin(), path.points_map.end());
+  closed = path.closed;
+  max_energy = path.max_energy;
+}
+
+void SimplePath::AddPoint(int num, int energy)
+{
+  int h;
+  if ((h = FindNode(num)) != -1) {
+    points.erase(points.begin()+h+1, points.end());
+  } else {
+    points.push_back(num);
+    points_map.insert(make_pair(num, points.size()));
+    max_energy = max(max_energy, energy);
+  }
+}
+
+int SimplePath::FindNode(int num)
+{
+  map<int, int>::iterator it;
+  if ((it=points_map.find(num))==points_map.end()) return -1;
+  else return it->second;
+}
+
+bool SimplePath::ContainsNode(int num)
+{
+  return (bool) points_map.count(num);
+}
+
+void SimplePath::Print(bool whole_path, bool force_print, FILE *out)
+{
+  if (!force_print && !closed) return;
+  //fprintf(out, "(%8.4f) ", simple_prob);
+  fprintf(out, "(%8.2f) ", max_energy/100.0);
+  fprintf(out, "%4d:", (int)points.size());
+
+  if (whole_path) {
+    for (unsigned int i=0; i<points.size(); i++) {
+      fprintf(out, "%4d ", points[i]+1);
+    }
+  }
+
+  fprintf(out, "\n");
 }

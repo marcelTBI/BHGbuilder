@@ -13,6 +13,8 @@
 
 using namespace std;
 
+class SimplePath;
+
 struct RNAstruc {
   int energy;
   short *structure;
@@ -93,6 +95,17 @@ struct edgeLM {
   int j;
   int en;
 
+  int sadd; // number of saddle
+
+  edgeLM(int ii, int jj, int enn, int saddl = -1) {
+    i = min(ii, jj);
+    j = max(ii, jj);
+    en = enn;
+    sadd = saddl;
+  }
+
+  int goesTo(int src) const { if (i==src) return j; else return i;}
+
   bool operator<(const edgeLM &second) const {
     if (i==second.i) {
       return j<second.j;
@@ -143,6 +156,10 @@ private:
     set<std::pair<int, int> > edges_s;
     set<std::pair<int, int> > edges_ls; // first int is l, second is s
 
+    // edges for graph search
+    vector< set<edgeLM> > edgesV_l;
+    vector< set<int> > edgesV_ls;
+    vector< set<int> > edgesV_sl;
 
 private:
   DSU() {};
@@ -161,9 +178,50 @@ public:
   int FindNum(int energy, short *str);           // find number of structure
   bool InsertUB(int i, int j, int energy, short *saddle, bool debug); // insert into UBlist
   void PrintUBoutput(); // print UBlist to stdout
+    // link cp
   void PrintDot(char *filename, bool dot_prog, bool print, char *file_print, bool visual); // print dot file to filename, dot_prog - use dot or neato?; print - print dot output to file_print, visual - use tree for visualisation
   void PrintMatrix(char *filename); // print energy barrier matrix
   int FloodUp(RNAstruc &i, RNAstruc &j, RNAstruc &saddle, bool shifts, bool noLP, bool debug); // flood up from i and j to find direct saddle
+  void VisPath(int src, int dest, bool en_barriers, int max_length, bool dot_prog, bool debug);
+
+  vector<SimplePath> ConstructAllPaths(int source, int dest, int max_length, int threshold);
+  void ConstructPath(vector<SimplePath> &paths, SimplePath &path, int dest, int max_length, int threshold);
+
+  int Size() {return LM.size();}
+};
+
+class SimplePath {
+public:
+  vector<int> points;
+  vector<int> energies;
+
+  map<int, int> points_map;
+
+  int max_energy;
+
+  // closed?
+  bool closed;
+
+  bool operator<(const SimplePath &left) const {
+    if (max_energy == left.max_energy) return points.size() < left.points.size();
+    else return max_energy < left.max_energy;
+  }
+
+public:
+  SimplePath();
+  SimplePath(const SimplePath &path);
+
+  void AddPoint(int num, int energy);
+  void Close();
+
+  void AddLast(int num, int energy);
+  void RemoveLast();
+
+  void Score();
+
+  bool ContainsNode(int num);
+  int FindNode(int num);
+  void Print(bool whole_path, bool force_print = true, FILE *out = stdout);
 };
 
 #endif
