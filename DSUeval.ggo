@@ -2,7 +2,8 @@
 package "DSUeval"
 purpose "Landscape analysis: using near minima connections, tries to recompute local minima landmap of the landscape\n\
   input: (stdin) local minima (output from barriers/RNAlocmin program)\n\
-  output: (stdout) saddles and which minima they connect,\n\
+  output: (stdout) saddles and which minima they connect\n\
+          (stdout) component information about graph after LinkCP function\n\
           .dot file with landmap graph in DOT language\n\
           additional: see options under \"Output\" section"
 

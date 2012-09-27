@@ -125,6 +125,33 @@ struct edgeLM_compen {
 
 };
 
+
+struct Component {
+  int min_lm;
+  int max_energy;
+  int min_energy;
+  vector<int> LMs;
+
+  Component() {
+    min_lm = -1;
+    max_energy = INT_MIN;
+    min_energy = INT_MAX;
+  }
+
+  void UpdateEn(int energy) {
+    max_energy = max(max_energy, energy);
+  }
+
+  void AddLM(int num, int energy) {
+    if (energy < min_energy) {
+      min_lm = num;
+      min_energy = energy;
+    }
+    max_energy = max(max_energy, energy);
+    LMs.push_back(num);
+  }
+};
+
 class DSU {
 
 private:
@@ -158,8 +185,6 @@ private:
 
     // edges for graph search
     vector< set<edgeLM> > edgesV_l;
-    vector< set<int> > edgesV_ls;
-    vector< set<int> > edgesV_sl;
 
 private:
   DSU() {};
@@ -186,7 +211,10 @@ public:
 
   vector<SimplePath> ConstructAllPaths(int source, int dest, int max_length, int threshold);
   void ConstructPath(vector<SimplePath> &paths, SimplePath &path, int dest, int max_length, int threshold);
+  void PrintLinkCP();
+  void Color(int lm, int color, Component &cmp, vector<int> &LM_tmp);
 
+  // small
   int Size() {return LM.size();}
 };
 

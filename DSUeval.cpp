@@ -332,7 +332,7 @@ void DSU::PrintUBoutput()
 
 int DSU::LinkCP(bool shifts, bool noLP, bool debug)
 {
-  edgesV_ls.resize(LM.size());
+  //edgesV_ls.resize(LM.size());
   edgesV_l.resize(LM.size());
 
   for (unsigned int i=0; i<UBoutput.size(); i++) {
@@ -357,17 +357,17 @@ int DSU::LinkCP(bool shifts, bool noLP, bool debug)
       saddles.push_back(stru);
     }
     // resize
-    edgesV_sl.resize(saddle_num+1);
+    //edgesV_sl.resize(saddle_num+1);
 
     // edges ls
     edges_ls.insert(make_pair(pq.i, saddle_num));
     edges_ls.insert(make_pair(pq.j, saddle_num));
 
-    edgesV_ls[pq.i].insert(saddle_num);
-    edgesV_sl[saddle_num].insert(pq.i);
+    //edgesV_ls[pq.i].insert(saddle_num);
+    //edgesV_sl[saddle_num].insert(pq.i);
 
-    edgesV_ls[pq.j].insert(saddle_num);
-    edgesV_sl[saddle_num].insert(pq.j);
+    //edgesV_ls[pq.j].insert(saddle_num);
+    //edgesV_sl[saddle_num].insert(pq.j);
 
     // edges ll
     edgeLM e(pq.i, pq.j, stru.energy, saddle_num);
@@ -796,6 +796,47 @@ void DSU::ConstructPath(vector<SimplePath> &paths, SimplePath &path, int dest, i
       path.AddLast(goesTo, it->en);
       ConstructPath(paths, path, dest, max_length-1, threshold);
       path.RemoveLast();
+    }
+  }
+}
+
+void DSU::PrintLinkCP()
+{
+  vector<Component> comps;
+  vector<int> LM_tmp(LM.size(), -1);
+
+  // find components:
+  for (unsigned int i=0; i<LM.size(); i++) {
+    if (LM_tmp[i]==-1) {
+      Component cmp;
+      Color(i, comps.size(), cmp, LM_tmp);
+      sort(cmp.LMs.begin(), cmp.LMs.end());
+      comps.push_back(cmp);
+    }
+  }
+
+  // print info about them:
+  printf("number of components: %d:\n", (int)comps.size());
+  for (unsigned int i=0; i<comps.size(); i++) {
+    printf("minimal: %4d (%7.2f), max_en: %7.2f :", comps[i].min_lm+1, comps[i].min_energy/100.0, comps[i].max_energy/100.0);
+    for (unsigned int j=0; j<comps[i].LMs.size(); j++) {
+      printf(" %4d", comps[i].LMs[j]+1);
+    }
+    printf("\n");
+  }
+}
+
+void DSU::Color(int lm, int color, Component &cmp, vector<int> &LM_tmp)
+{
+  // add to component and colour the node
+  cmp.AddLM(lm, LM[lm].energy);
+  LM_tmp[lm] = color;
+
+  // proceed to non-coloured
+  for (set<edgeLM>::iterator it=edgesV_l[lm].begin(); it!=edgesV_l[lm].end(); it++) {
+    int goesTo = it->goesTo(lm);
+    if (LM_tmp[goesTo] == -1) {
+      Color(goesTo, color, cmp, LM_tmp);
     }
   }
 }
