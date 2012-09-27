@@ -136,6 +136,8 @@ DSU::DSU(FILE *input) {
     free(line);
     line = my_getline(input);
     num++;
+
+    sort(LM.begin(), LM.end());
   }
 }
 

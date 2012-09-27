@@ -35,6 +35,7 @@ int main(int argc, char **argv)
   if (args_info.print_energy_flag) dsu.PrintMatrix(args_info.energy_file_arg);
   dsu.PrintLinkCP();
 
+    // visualisation
   for (unsigned int i=0; i<args_info.visualise_given; i++) {
     int a, b;
     if (sscanf(args_info.visualise_arg[i], "%d=%d", &a, &b)!=2) {
