@@ -20,7 +20,7 @@ int main(int argc, char **argv)
 
   //adjust args_info
   if (args_info.hd_threshold_arg <= 0) args_info.hd_threshold_arg = INT_MAX;
-  if (args_info.num_threshold_arg <= 0) args_info.hd_threshold_arg = INT_MAX;
+  if (args_info.num_threshold_arg <= 0) args_info.num_threshold_arg = INT_MAX;
 
   // code
     // DSUeval
@@ -33,7 +33,12 @@ int main(int argc, char **argv)
   dsu.LinkCP(args_info.shift_flag, args_info.noLP_flag, args_info.debug_flag);
   dsu.PrintDot(args_info.name_dot_arg, args_info.dot_flag, args_info.print_graph_flag, args_info.name_graph_arg, args_info.tree_visualise_flag);
   if (args_info.print_energy_flag) dsu.PrintMatrix(args_info.energy_file_arg);
-  dsu.PrintLinkCP();
+  dsu.PrintLinkCP(false);
+
+    // conect comps
+  if (args_info.components_flag) dsu.ConnectComps(args_info.depth_arg, args_info.debug_flag);
+  dsu.PrintLinkCP(true);
+  dsu.PrintDot(args_info.name_dot_arg, args_info.dot_flag, args_info.print_graph_flag, "graphC.eps", args_info.tree_visualise_flag);
 
     // visualisation
   for (unsigned int i=0; i<args_info.visualise_given; i++) {

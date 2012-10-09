@@ -32,6 +32,18 @@ string pt_to_str(const short *pt)
   return str;
 }
 
+char *pt_to_char(const short *pt)
+{
+  char *str = (char*) malloc(pt[0]*(sizeof(char)+1));
+  for (int i=1; i<=pt[0]; i++) {
+    if (pt[i]==0) str[i-1]='.';
+    else if (pt[i]<i) str[i-1]=')';
+    else str[i-1]='(';
+  }
+  str[pt[0]]='\0';
+  return str;
+}
+
 // structure equality
 bool str_eq(const short *lhs, const short *rhs) {
   int i=1;
@@ -104,4 +116,42 @@ bool isSeq(const char *p)
     }
     default : return false;
   }
+}
+
+// UNION FIND set functions
+UF_set::UF_set() {
+  parent.clear();
+  num_unions = 0;
+}
+
+int UF_set::find(int x) {
+  if (x != parent[x] && parent[x] != parent[parent[x]])
+    parent[x] = find(parent[x]);
+  return parent[x];
+}
+
+void UF_set::union_set(int x, int y) {
+  int u, v;
+  u = find(x);
+  v = find(y);
+  if (u != v) {
+    parent[u] = v;
+    num_unions++;
+  }
+}
+
+bool UF_set::connected_all() {
+  return (num_unions == parent.size()-1);
+}
+
+bool UF_set::joint(int x, int y) {
+  return find(x) == find(y);
+}
+
+void UF_set::enlarge_parent() {
+  parent.push_back(parent.size());
+}
+
+void UF_set::enlarge_parent(int count) {
+  for (int i=0; i<count; i++) enlarge_parent();
 }

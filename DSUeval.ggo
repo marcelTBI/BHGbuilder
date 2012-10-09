@@ -24,6 +24,8 @@ option "outer"              o "Add to UBlist also outer structures - we will not
 option "noLP"								- "Process structures without lonely pairs (helices of length 1)." flag off
 option "shift"							- "Assume also shift moves (in addition to insertion and deletions)." flag off
 
+option "components"         c "Also link components with DSU-algorithm" flag on
+
 section "Output"
 option "dot"                - "Use dot instead of neato for graph plotting" flag on
 option "print-graph"				- "Generate graph with neato/dot" flag off
