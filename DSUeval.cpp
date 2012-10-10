@@ -19,16 +19,6 @@ extern "C" {
 
 using namespace std;
 
-pq_entry::pq_entry(int i, int j, int hd)
-{
-  this->i = min(i, j);
-  this->j = max(i, j);
-  this->hd = hd;
-}
-
-pq_entry::~pq_entry() {
-}
-
 DSU::DSU(FILE *input) {
 
   // NULL::
@@ -440,19 +430,21 @@ void DSU::PrintDot(char *filename, bool dot_prog, bool print, char *file_print, 
       fprintf(dot, "\n");
 
     } else {
+
       //nodes saddle:
       for (unsigned int i=0; i<saddles.size(); i++) {
-        fprintf(dot, "\"S%d\" [label=\"S%d\", color=\"0.0 0.0 %.1f\", fontcolor=\"0.0 0.0 %.1f\"]\n", i+1, i+1, color, color);
+        bool component = (saddle_to_comp.count(i)==0);
+        fprintf(dot, "\"S%d\" [label=\"S%d\", color=\"0.0 %.1f %.1f\", fontcolor=\"0.0 %.1f %.1f\"]\n", i+1, i+1, (component?1-color:0.0), (component?1.0:color), (component?1-color:0.0),(component?1.0:color));
       }
       fprintf(dot, "\n");
       // edges l-l
       for (set<edgeLM>::iterator it=edges_l.begin(); it!=edges_l.end(); it++) {
-        fprintf(dot, "\"%d\" -- \"%d\" [label=\"%.2f\", color=\"0.0 %.1f %.1f\", fontcolor=\"0.0 %.1f %.1f\"]\n", (it->i)+1, (it->j)+1, it->en/100.0, (it->component?1.0:0.0), color, (it->component?1.0:0.0), color);
+        fprintf(dot, "\"%d\" -- \"%d\" [label=\"%.2f\", color=\"0.0 %.1f %.1f\", fontcolor=\"0.0 %.1f %.1f\"]\n", (it->i)+1, (it->j)+1, it->en/100.0, (it->component?1.0:0.0), (it->component?1.0:0.0), (it->component?1.0:0.0),(it->component?1.0:0.0));
       }
       fprintf(dot, "\n");
       // edges l-s
       for (set<edgeLM>::iterator it=edges_ls.begin(); it!=edges_ls.end(); it++) {
-        fprintf(dot, "\"%d\" -- \"S%d\" [color=\"0.0 0.0 %.1f\", fontcolor=\"0.0 0.0 %.1f\"]\n", (it->i)+1, (it->j)+1, color, color);
+        fprintf(dot, "\"%d\" -- \"S%d\" [color=\"0.0 %.1f %.1f\", fontcolor=\"0.0 %.1f %.1f\"]\n", (it->i)+1, (it->j)+1, (it->component?1-color:0.0), (it->component?1.0:color), (it->component?1-color:0.0),(it->component?1.0:color));
       }
 
       fprintf(dot, "\n");
@@ -725,6 +717,8 @@ void DSU::ConstructPath(vector<SimplePath> &paths, SimplePath &path, int dest, i
 void DSU::FillComps()
 {
   comps.clear();
+  LM_to_comp.clear();
+  saddle_to_comp.clear();
   vector<int> LM_tmp(LM.size(), -1);
   vector<int> sadd_tmp(saddles.size(), -1);
 
@@ -735,9 +729,12 @@ void DSU::FillComps()
       Color(i, comps.size(), cmp, LM_tmp, sadd_tmp);
       sort(cmp.LMs.begin(), cmp.LMs.end());
       sort(cmp.saddles.begin(), cmp.saddles.end());
-      // assign map
+      // assign maps
       for (unsigned int j=0; j<cmp.LMs.size(); j++) {
         LM_to_comp[cmp.LMs[j]] = comps.size();
+      }
+      for (unsigned int j=0; j<cmp.saddles.size(); j++) {
+        saddle_to_comp[cmp.saddles[j]] = comps.size();
       }
       comps.push_back(cmp);
     }
@@ -947,12 +944,12 @@ void DSU::ConnectComps(int maxkeep, bool debug)
     }
   }
 
-  FillComps();
+  //FillComps();
 }
 
 void DSU::PrintLinkCP(bool full)
 {
-  if (comps.size() == 0) FillComps();
+  if (comps.size() == 0 || full) FillComps();
 
   // print info about comps:
   printf("number of components: %d:\n", (int)comps.size());
@@ -1005,85 +1002,4 @@ void DSU::Color(int lm, int color, Component &cmp, vector<int> &LM_tmp, vector<i
       Color(goesTo, color, cmp, LM_tmp, sadd_tmp);
     }
   }
-}
-
-SimplePath::SimplePath()
-{
-  closed = false;
-  max_energy = INT_MIN;
-}
-
-void SimplePath::Close()
-{
-  closed = true;
-}
-
-void SimplePath::Score()
-{
-  for (unsigned int i=0; i<energies.size(); i++) {
-    max_energy = max(max_energy, energies[i]);
-  }
-}
-
-void SimplePath::AddLast(int num, int energy)
-{
-  points.push_back(num);
-  if (energy > INT_MIN) energies.push_back(energy);
-  points_map.insert(make_pair(num, points.size()));
-}
-
-void SimplePath::RemoveLast()
-{
-  points_map.erase(points[points.size()-1]);
-  points.pop_back();
-  energies.pop_back();
-}
-
-SimplePath::SimplePath(const SimplePath &path)
-{
-  points.assign(path.points.begin(), path.points.end());
-  energies.assign(path.energies.begin(), path.energies.end());
-  points_map.insert(path.points_map.begin(), path.points_map.end());
-  closed = path.closed;
-  max_energy = path.max_energy;
-}
-
-void SimplePath::AddPoint(int num, int energy)
-{
-  int h;
-  if ((h = FindNode(num)) != -1) {
-    points.erase(points.begin()+h+1, points.end());
-  } else {
-    points.push_back(num);
-    points_map.insert(make_pair(num, points.size()));
-    max_energy = max(max_energy, energy);
-  }
-}
-
-int SimplePath::FindNode(int num)
-{
-  map<int, int>::iterator it;
-  if ((it=points_map.find(num))==points_map.end()) return -1;
-  else return it->second;
-}
-
-bool SimplePath::ContainsNode(int num)
-{
-  return (bool) points_map.count(num);
-}
-
-void SimplePath::Print(bool whole_path, bool force_print, FILE *out)
-{
-  if (!force_print && !closed) return;
-  //fprintf(out, "(%8.4f) ", simple_prob);
-  fprintf(out, "(%8.2f) ", max_energy/100.0);
-  fprintf(out, "%4d:", (int)points.size());
-
-  if (whole_path) {
-    for (unsigned int i=0; i<points.size(); i++) {
-      fprintf(out, "%4d ", points[i]+1);
-    }
-  }
-
-  fprintf(out, "\n");
 }
