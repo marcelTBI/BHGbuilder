@@ -29,6 +29,20 @@ pq_entry::pq_entry(int i, int j, int hd)
 pq_entry::~pq_entry() {
 }
 
+Opt::Opt(bool noLP, bool shifts, bool saddle, int num, int height)
+{
+  this->noLP = noLP;
+  this->shifts = shifts;
+  this->saddle_conn = saddle;
+  this->flood_num = num;
+  this->flood_height = height;
+}
+
+void RNAstruc::freeMEM() {
+  if (structure) free(structure);
+  if (str_ch) free(str_ch);
+}
+
 SimplePath::SimplePath()
 {
   closed = false;

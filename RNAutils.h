@@ -24,6 +24,11 @@ bool isStruct(const char *p);
 // is string an RNA sequence?
 bool isSeq(const char *p);
 
+//convert rgb to #rgb
+char *rgb(unsigned short red, unsigned short green, unsigned short blue);
+char *rgb_d(double red, double green, double blue);
+
+// class for encapsulating Union-Find set operations
 class UF_set {
 private:
   vector<int> parent;
@@ -38,6 +43,8 @@ public:
   bool joint(int x, int y);
   void enlarge_parent();
   void enlarge_parent(int count);
+  int size();
+  void clear();
 };
 
 #endif

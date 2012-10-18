@@ -118,6 +118,36 @@ bool isSeq(const char *p)
   }
 }
 
+inline char to16(unsigned short num) {
+  if (num<10) return '0'+num;
+  else return 'a'+num-10;
+}
+
+//convert rgb to #rgb
+char *rgb(unsigned short red, unsigned short green, unsigned short blue)
+{
+  static char rgbchar[8];
+  rgbchar[0]='#';
+
+  red %= 256;
+  blue %= 256;
+  green %= 256;
+
+  rgbchar[1]=to16(red/16);
+  rgbchar[2]=to16(red%16);
+  rgbchar[3]=to16(green/16);
+  rgbchar[4]=to16(green%16);
+  rgbchar[5]=to16(blue/16);
+  rgbchar[6]=to16(blue%16);
+  rgbchar[7]='\0';
+
+  return rgbchar;
+}
+
+char *rgb_d(double red, double green, double blue) {
+  return rgb((unsigned short) red*255, (unsigned short) green*255, (unsigned short) blue*255);
+}
+
 // UNION FIND set functions
 UF_set::UF_set() {
   parent.clear();
@@ -125,6 +155,7 @@ UF_set::UF_set() {
 }
 
 int UF_set::find(int x) {
+  if (x >= (int) parent.size()) return -1;
   if (x != parent[x] && parent[x] != parent[parent[x]])
     parent[x] = find(parent[x]);
   return parent[x];
@@ -134,7 +165,7 @@ void UF_set::union_set(int x, int y) {
   int u, v;
   u = find(x);
   v = find(y);
-  if (u != v) {
+  if (u != v && u>=0 && v>=0) {
     parent[u] = v;
     num_unions++;
   }
@@ -154,4 +185,13 @@ void UF_set::enlarge_parent() {
 
 void UF_set::enlarge_parent(int count) {
   for (int i=0; i<count; i++) enlarge_parent();
+}
+
+int UF_set::size() {
+  return parent.size();
+}
+
+void UF_set::clear() {
+  parent.clear();
+  num_unions = 0;
 }

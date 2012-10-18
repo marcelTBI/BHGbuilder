@@ -161,7 +161,7 @@ int DSU::FindNum(int en_par, short *str_par)
   return -1;  // old version*/
 }
 
-bool DSU::InsertUB(int i, int j, int energy_par, short *saddle_par, bool debug)
+bool DSU::InsertUB(int i, int j, int energy_par, short *saddle_par, bool outer, bool debug)
 {
   pq_entry pq(i, j, 0);
   map<pq_entry, RNAstruc, pq_setcomp>::iterator it = UBlist.find(pq);
@@ -170,6 +170,7 @@ bool DSU::InsertUB(int i, int j, int energy_par, short *saddle_par, bool debug)
     saddle.energy = energy_par;
     saddle.structure = saddle_par;
     saddle.str_ch = NULL;
+    saddle.type = (outer?NOT_SURE:DIRECT);
     if (debug) fprintf(stderr, "UBins: (%3d, %3d) insert saddle  %6.2f %s\n", i, j, saddle.energy/100.0, pt_to_str(saddle.structure).c_str());
     UBlist.insert(make_pair(pq, saddle));
     return true;
@@ -182,6 +183,7 @@ bool DSU::InsertUB(int i, int j, int energy_par, short *saddle_par, bool debug)
       if (it->second.structure) free(it->second.structure);
       it->second.structure = saddle_par;
       it->second.str_ch = NULL;
+      it->second.type = (outer?NOT_SURE:DIRECT);
       return true;
     }
   }
@@ -194,6 +196,8 @@ int DSU::ComputeUB(int maxkeep, int num_threshold, bool outer, bool debug)
   int dbg_count = 0;
   int cnt = 0;
   int hd_threshold = INT_MAX;
+
+  // go through all pairs in queue
   while (!TBDlist.empty()) {
     // get pair
     pq_entry pq = TBDlist.top();
@@ -247,23 +251,30 @@ int DSU::ComputeUB(int maxkeep, int num_threshold, bool outer, bool debug)
           // find LM num:
         int num1 = (last_num!=-1?last_num:FindNum(last_en, last_str));
         int num2 = FindNum(tmp_en, tmp_str);
-        last_num = num2;
 
         // update UBlist
         if (num1==-1 || num2==-1) {
           if (num2==-1) {
-            if (gl_maxen < tmp_en) fprintf(stderr, "exceeds en.: %s %6.2f\n", pt_to_str(tmp_str).c_str(), tmp_en/100.0);
-            else {
-                                   fprintf(stderr, "cannot find: %s %6.2f\n", pt_to_str(tmp_str).c_str(), tmp_en/100.0);
-              // maybe add to list of minima and count with them later... TODO
+            if (gl_maxen < tmp_en) {
+              fprintf(stderr, "exceeds en.: %s %6.2f\n", pt_to_str(tmp_str).c_str(), tmp_en/100.0);
+              num2 = AddLMtoDSU(tmp_str, tmp_en, hd_threshold, EE_DSU, debug);
+            } else {
+              fprintf(stderr, "cannot find: %s %6.2f\n", pt_to_str(tmp_str).c_str(), tmp_en/100.0);
+              // add to list of minima and count with them later...
+              num2 = AddLMtoDSU(tmp_str, tmp_en, hd_threshold, NORMAL, debug);
             }
           }
-        } else {
+        }
+        // again check if we can add better saddle
+        if (num1!=-1 && num2!=-1) {
           // store (maybe) better saddle to UB
           int en_tmp = en_fltoi(max(last->en, tmp->en));
           short *saddle = (last->en > tmp->en ? make_pair_table(last->s) : make_pair_table(tmp->s));
-          InsertUB(num1, num2, en_tmp, saddle, debug);
+          InsertUB(num1, num2, en_tmp, saddle, false, debug);
         }
+
+        // change last_num
+        last_num = num2;
       }
 
       // move one next
@@ -275,7 +286,7 @@ int DSU::ComputeUB(int maxkeep, int num_threshold, bool outer, bool debug)
     } // crawling path
 
     // insert saddle between outer structures
-    if (outer) InsertUB(pq.i, pq.j, en_fltoi(max_energy), make_pair_table(max_path->s), debug);
+    if (outer) InsertUB(pq.i, pq.j, en_fltoi(max_energy), make_pair_table(max_path->s), true, debug);
 
     // free stuff
     if (last_str) free(last_str);
@@ -285,6 +296,7 @@ int DSU::ComputeUB(int maxkeep, int num_threshold, bool outer, bool debug)
   // now just resort UBlist to something sorted according energy
   UBoutput.reserve(UBlist.size());
   for (map<pq_entry, RNAstruc, pq_setcomp>::iterator it=UBlist.begin(); it!=UBlist.end(); it++) {
+    if (it->second.str_ch) free(it->second.str_ch);
     it->second.str_ch = pt_to_char(it->second.structure);
     UBoutput.push_back(make_pair(it->second, it->first));
   }
@@ -293,10 +305,37 @@ int DSU::ComputeUB(int maxkeep, int num_threshold, bool outer, bool debug)
 
   // check if everything has been found:
   if (UBoutput.size() != (LM.size()*(LM.size()-1))/2) {
-    fprintf(stderr, "WARNING: All connections have not been found: %d/%d found (%d missing)\n", (int)UBoutput.size(), (int)(LM.size()*(LM.size()-1))/2, (int)((LM.size()*(LM.size()-1))/2 - UBoutput.size()));
+    fprintf(stderr, "All connections have not been found: %d/%d found (%d missing)\n", (int)UBoutput.size(), (int)(LM.size()*(LM.size()-1))/2, (int)((LM.size()*(LM.size()-1))/2 - UBoutput.size()));
   }
 
   return 0;
+}
+
+int DSU::AddLMtoDSU(short *tmp_str, int tmp_en, int hd_threshold, int type, bool debug)
+{
+  RNAstruc rna;
+  rna.energy = tmp_en;
+  rna.structure = allocopy(tmp_str);
+  rna.str_ch = pt_to_char(tmp_str);
+  rna.type = type;
+
+  // add pairs to TBDlist
+  if (type == NORMAL) {
+    for (unsigned int i=0; i<LM.size(); i++) {
+      int hd = HammingDist(LM[i].structure, tmp_str);
+      if (hd < hd_threshold) {
+        TBDlist.push(pq_entry(i, LM.size(), hd));
+        if (debug) {
+          fprintf(stderr, "%s insert que\n%s (%4d,%4d) %3d\n", pt_to_str(LM[i].structure).c_str(), pt_to_str(rna.structure).c_str(), i, (int)LM.size(), hd);
+        }
+      }
+    }
+  }
+
+  // insert LM and return its number
+  LM.push_back(rna);
+  vertex_l[rna]=LM.size()-1;
+  return LM.size()-1;
 }
 
 void DSU::PrintUBoutput()
@@ -307,7 +346,7 @@ void DSU::PrintUBoutput()
   }
 }
 
-int DSU::LinkCP(bool shifts, bool noLP, bool debug)
+int DSU::LinkCP(Opt opt, bool debug)
 {
   //edgesV_ls.resize(LM.size());
   edgesV_l.resize(LM.size());
@@ -318,16 +357,18 @@ int DSU::LinkCP(bool shifts, bool noLP, bool debug)
     pq_entry pq = UBoutput[i].second;
 
     // flood them up!
-    int res = FloodUp(LM[pq.i], LM[pq.j], stru, shifts, noLP, debug);
-    if (res == 1) {
-      // maybe other color ?
-    }// we have found better DS -> true ds ???
+    int res = FloodUp(LM[pq.i], LM[pq.j], stru, opt, debug);
+    if (res == 1 || res == 2) {  // we have found better saddle (1) or reached threshold (2) so better saddle is not possible
+      stru.type = LDIRECT; // so our saddle is for sure lowest direct saddle
+    }
 
     // update vertex/edge sets
     map<RNAstruc, int>::iterator it;
     int saddle_num;
     if ((it = vertex_s.find(stru)) != vertex_s.end()) {
       saddle_num = it->second;
+      stru.freeMEM();
+      //fprintf(stderr, "saddle_num = %d\n", saddle_num);
     } else {
       saddle_num = saddles.size();
       // update vertex
@@ -357,40 +398,43 @@ int DSU::LinkCP(bool shifts, bool noLP, bool debug)
   }
 
   // create saddle-saddle edges
-  set<std::pair<int, int> > saddle_pairs;
-  int last_lm = -1;
-  vector<int> tmp;
-  for (set<edgeLM>::iterator it = edges_ls.begin(); it!=edges_ls.end(); it++) {
+    // create saddle set list
+  if (opt.saddle_conn) {
+    set<std::pair<int, int> > saddle_pairs;
+    int last_lm = -1;
+    vector<int> tmp;
+    for (set<edgeLM>::iterator it = edges_ls.begin(); it!=edges_ls.end(); it++) {
 
-    if (it->i == last_lm) {
-      // add every one into saddle_pairs.
-      for (unsigned int i=0; i<tmp.size(); i++) {
-        saddle_pairs.insert(make_pair(min(tmp[i], it->j), max(tmp[i], it->j)));
+      if (it->i == last_lm) {
+        // add every one into saddle_pairs.
+        for (unsigned int i=0; i<tmp.size(); i++) {
+          saddle_pairs.insert(make_pair(min(tmp[i], it->j), max(tmp[i], it->j)));
+        }
+      } else {
+        // clear
+        tmp.clear();
       }
-    } else {
-      // clear
-      tmp.clear();
+      // add next one
+      tmp.push_back(it->j);
+      last_lm = it->i;
     }
-    // add next one
-    tmp.push_back(it->j);
-    last_lm = it->i;
-  }
-
-  for (set<std::pair<int, int> >::iterator it=saddle_pairs.begin(); it!=saddle_pairs.end(); it++) {
-    if (debug) {
-      fprintf(stderr, "saddles to check: %4d %4d", it->first, it->second);
-    }
-    RNAstruc &first = saddles[it->first];
-    RNAstruc &second = saddles[it->second];
-    if (first.energy > second.energy) {
-      RNAstruc &tmp = first;
-      first = second;
-      second = tmp;
-    }
-    // include them
-    if (FloodSaddle(first, second, shifts, noLP, debug)) {
-      edgeLM e(it->first, it->second, false, false);
-      edges_s.insert(e);
+      // process this list
+    for (set<std::pair<int, int> >::iterator it=saddle_pairs.begin(); it!=saddle_pairs.end(); it++) {
+      if (debug) {
+        fprintf(stderr, "saddles to check: %4d %4d", it->first, it->second);
+      }
+      RNAstruc &first = saddles[it->first];
+      RNAstruc &second = saddles[it->second];
+      if (first.energy > second.energy) {
+        RNAstruc &tmp = first;
+        first = second;
+        second = tmp;
+      }
+      // include them
+      if (FloodSaddle(first, second, opt, debug)) {
+        edgeLM e(it->first, it->second, false, false);
+        edges_s.insert(e);
+      }
     }
   }
 
@@ -403,7 +447,7 @@ void DSU::PrintDot(char *filename, bool dot_prog, bool print, char *file_print, 
   // start find_union stuff
   UF_set connected;
 
-  float color = 0.7;
+  int color = 180;
   //open file
   FILE *dot;
   dot = fopen(filename, "w");
@@ -411,14 +455,17 @@ void DSU::PrintDot(char *filename, bool dot_prog, bool print, char *file_print, 
     fprintf(dot, "Graph G {\n\tnode [width=0.1, height=0.1, shape=circle];\n");
     //nodes LM:
     for (unsigned int i=0; i<LM.size(); i++) {
-      fprintf(dot, "\"%d\" [label=\"%d\"]\n", i+1, i+1);
+      switch (LM[i].type) {
+        case NORMAL: fprintf(dot, "\"%d\" [label=\"%d\"]\n", i+1, i+1); break;
+        case EE_DSU: fprintf(dot, "\"%d\" [label=\"%d\", color=\"%s\", fontcolor=\"%s\"]\n", i+1, i+1, rgb(0, 0, 255), rgb(0, 0, 255)); break;
+        case EE_COMP: fprintf(dot, "\"%d\" [label=\"%d\", color=\"%s\", fontcolor=\"%s\"]\n", i+1, i+1, rgb(255, 0, 0), rgb(255, 0, 0)); break;
+      }
     }
     fprintf(dot, "\n");
 
+    // visualisation option (not finished -- currently it prints out only without saddles)
     if (visual) {
-      for (unsigned int i=0; i<LM.size(); i++) {
-        connected.enlarge_parent();
-      }
+      connected.enlarge_parent(LM.size());
       set<edgeLM, edgeLM_compen> tmp;
       tmp.insert(edges_l.begin(), edges_l.end());
       for (set<edgeLM>::iterator it=tmp.begin(); it!=tmp.end(); it++) {
@@ -433,24 +480,28 @@ void DSU::PrintDot(char *filename, bool dot_prog, bool print, char *file_print, 
 
       //nodes saddle:
       for (unsigned int i=0; i<saddles.size(); i++) {
-        bool component = (saddle_to_comp.count(i)==0);
-        fprintf(dot, "\"S%d\" [label=\"S%d\", color=\"0.0 %.1f %.1f\", fontcolor=\"0.0 %.1f %.1f\"]\n", i+1, i+1, (component?1-color:0.0), (component?1.0:color), (component?1-color:0.0),(component?1.0:color));
+        switch (saddles[i].type) {
+          case DIRECT: fprintf(dot, "\"S%d\" [label=\"S%d\", color=\"%s\", fontcolor=\"%s\"]\n", i+1, i+1, rgb(color, color, color), rgb(color, color, color)); break;
+          case LDIRECT: fprintf(dot, "\"S%d\" [label=\"S%d\", color=\"%s\", fontcolor=\"%s\"]\n", i+1, i+1, rgb(color+30, color+30, color+30), rgb(color+30, color+30, color+30)); break;
+          case NOT_SURE: fprintf(dot, "\"S%d\" [label=\"S%d\", color=\"%s\", fontcolor=\"%s\"]\n", i+1, i+1, rgb(color-30, color-30, color-30), rgb(color-30, color-30, color-30)); break;
+          case COMP: fprintf(dot, "\"S%d\" [label=\"S%d\", color=\"%s\", fontcolor=\"%s\"]\n", i+1, i+1, rgb(255, color, color), rgb(255, color, color)); break;
+        }
       }
       fprintf(dot, "\n");
       // edges l-l
       for (set<edgeLM>::iterator it=edges_l.begin(); it!=edges_l.end(); it++) {
-        fprintf(dot, "\"%d\" -- \"%d\" [label=\"%.2f\", color=\"0.0 %.1f %.1f\", fontcolor=\"0.0 %.1f %.1f\"]\n", (it->i)+1, (it->j)+1, it->en/100.0, (it->component?1.0:0.0), (it->component?1.0:0.0), (it->component?1.0:0.0),(it->component?1.0:0.0));
+        fprintf(dot, "\"%d\" -- \"%d\" [label=\"%.2f\", color=\"%s\", fontcolor=\"%s\"]\n", (it->i)+1, (it->j)+1, it->en/100.0, (it->component?rgb(255, 0, 0):rgb(0, 0, 0)), (it->component?rgb(255, 0, 0):rgb(0, 0, 0)));
       }
       fprintf(dot, "\n");
       // edges l-s
       for (set<edgeLM>::iterator it=edges_ls.begin(); it!=edges_ls.end(); it++) {
-        fprintf(dot, "\"%d\" -- \"S%d\" [color=\"0.0 %.1f %.1f\", fontcolor=\"0.0 %.1f %.1f\"]\n", (it->i)+1, (it->j)+1, (it->component?1-color:0.0), (it->component?1.0:color), (it->component?1-color:0.0),(it->component?1.0:color));
+        fprintf(dot, "\"%d\" -- \"S%d\" [color=\"%s\", fontcolor=\"%s\"]\n", (it->i)+1, (it->j)+1, (it->component?rgb(255, color, color):rgb(color, color, color)), (it->component?rgb(255, color, color):rgb(color, color, color)));
       }
 
       fprintf(dot, "\n");
       // edges s-s
       for (set<edgeLM>::iterator it=edges_s.begin(); it!=edges_s.end(); it++) {
-        fprintf(dot, "\"S%d\" -- \"S%d\" [color=\"0.0 0.0 %.1f\", fontcolor=\"0.0 0.0 %.1f\"]\n",(it->i)+1, (it->j)+1, color, color);
+        fprintf(dot, "\"S%d\" -- \"S%d\" [color=\"%s\", fontcolor=\"%s\"]\n",(it->i)+1, (it->j)+1, rgb(color, color, color),rgb(color, color, color));
       }
     }
     fprintf(dot, "\n}\n");
@@ -841,9 +892,9 @@ void DSU::ConnectComps(int maxkeep, bool debug)
     if (debug) fprintf(stderr, "path between (LM: %d, %d) (comp: %d, %d) (hd: %d):\n", top.i, top.j, top.ci, top.cj, top.hd);
     path_t *path = get_path(seq, top.str_ch1, top.str_ch2, maxkeep);
 
-    // variables for outer insertion
+    /*// variables for outer insertion
     double max_energy= -1e8;
-    path_t *max_path = path;
+    path_t *max_path = path;*/
 
     // variables for inner loops and insertions
     path_t *tmp = path;
@@ -858,11 +909,11 @@ void DSU::ConnectComps(int maxkeep, bool debug)
       // debug??
       if (debug) fprintf(stderr, "%s %6.2f ", tmp->s, tmp->en);
 
-      // update max_energy
+      /*// update max_energy
       if (max_energy < tmp->en) {
         max_energy = tmp->en;
         max_path = tmp;
-      }
+      }*/
       // find adaptive walk
       short *tmp_str = make_pair_table(tmp->s);
       //int tmp_en = move_rand(seq, tmp_str, s0, s1, 0);
@@ -877,17 +928,19 @@ void DSU::ConnectComps(int maxkeep, bool debug)
         int num1 = (last_num!=-1?last_num:FindNum(last_en, last_str));
         int num2 = FindNum(tmp_en, tmp_str);
 
-        last_num = num2;
-
         // check if ok
         if (num1==-1 || num2==-1) {
           if (num2==-1) {
-            if (gl_maxen < tmp_en) fprintf(stderr, "exceeds en.: %s %6.2f\n", pt_to_str(tmp_str).c_str(), tmp_en/100.0);
-            else {
-                                   fprintf(stderr, "cannot find: %s %6.2f\n", pt_to_str(tmp_str).c_str(), tmp_en/100.0);
+            if (gl_maxen < tmp_en) {
+              fprintf(stderr, "exceeds en.: %s %6.2f\n", pt_to_str(tmp_str).c_str(), tmp_en/100.0);
+              num2 = AddLMtoComp(tmp_str, tmp_en, debug, connected, connections);
+            } else {
+              fprintf(stderr, "WARNING! cannot find: %s %6.2f\n", pt_to_str(tmp_str).c_str(), tmp_en/100.0);
             }
           }
-        } else {
+        }
+        // again check
+        if (num1!=-1 && num2!=-1) {
           // find component
           if (LM_to_comp.count(num1)==0 || LM_to_comp.count(num2)==0) {
             fprintf(stderr, "Not found component of LM num %d or %d (HUGE ERROR!)\n", num1, num2);
@@ -897,6 +950,9 @@ void DSU::ConnectComps(int maxkeep, bool debug)
             AddConnection(num1, num2, en_fltoi(max(last->en, tmp->en)), saddle, connected, connections);
           }
         }
+
+        // update last_num
+        last_num = num2;
       }
 
       // move one next
@@ -916,24 +972,26 @@ void DSU::ConnectComps(int maxkeep, bool debug)
     free_path(path);
   }
   // write connections to graph:
+  edgesV_l.resize(LM.size());
   for (unsigned int i=0; i<connections.size(); i++) {
     for (unsigned int j=0; j<connections[i].size(); j++) {
 
       if (!connections[i][j]) continue;
       // saddle
       RNAstruc2* saddle = connections[i][j];
+      saddle->type = COMP;
       vertex_s.insert(make_pair(*saddle, saddles.size()));
       saddle->str_ch = pt_to_char(saddle->structure);
       saddles.push_back(*saddle);
 
-      // edge
+      // edge l-l
       edgeLM e(saddle->conn1, saddle->conn2, true, true);
       e.AddSaddle(saddle->energy, saddles.size()-1);
       e.MarkComp();
       edges_l.insert(e);
       edgesV_l[saddle->conn1].insert(e);
       edgesV_l[saddle->conn2].insert(e);
-
+      // edge l-s
       edgeLM e2(saddle->conn1, saddles.size()-1, true, false);
       e2.MarkComp();
       edges_ls.insert(e2);
@@ -945,6 +1003,26 @@ void DSU::ConnectComps(int maxkeep, bool debug)
   }
 
   //FillComps();
+}
+
+int DSU::AddLMtoComp(short *structure, int energy, bool debug, UF_set &connected, vector<vector<RNAstruc2*> > &connections)
+{
+  // resize connected and connections (we have new component...)
+  int numComp = connected.size();
+  connected.enlarge_parent();
+  connections.resize(numComp+1);
+  for (unsigned int i=0; i< connections.size(); i++) {
+    connections[i].resize(numComp+1, NULL);
+  }
+
+  // add new LM to LMs
+  int numLM = AddLMtoDSU(structure, energy, 0, EE_COMP, debug);
+
+
+  // add new component to map
+  LM_to_comp[numLM] = numComp;
+
+  return numLM;
 }
 
 void DSU::PrintLinkCP(bool full)
@@ -971,11 +1049,13 @@ void DSU::PrintLinkCP(bool full)
   if (full) {
     printf("Local minima (%4d):\n", (int)LM.size());
     for (unsigned int i=0; i<LM.size(); i++) {
-      printf("%4d  %s (%7.2f)\n", i+1, LM[i].str_ch, LM[i].energy/100.0);
+      char type[][10] = { "NORMAL", "EE_DSU", "EE_COMP"};
+      printf("%4d  %s (%7.2f) %s\n", i+1, LM[i].str_ch, LM[i].energy/100.0, type[LM[i].type]);
     }
     printf("Saddles (%4d):\n", (int)saddles.size());
     for (unsigned int i=0; i<saddles.size(); i++) {
-      printf("%4dS %s (%7.2f)\n", i+1, saddles[i].str_ch, saddles[i].energy/100.0);
+      char type[][10] = { "DIRECT", "LDIRECT", "NOT_SURE", "COMP" };
+      printf("%4dS %s (%7.2f) %s\n", i+1, saddles[i].str_ch, saddles[i].energy/100.0, type[saddles[i].type]);
     }
   }
 

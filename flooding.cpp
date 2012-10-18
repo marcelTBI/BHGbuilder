@@ -58,10 +58,16 @@ int funct(struct_en *moved, struct_en *current) {
   return 0;
 }
 
-int DSU::FloodUp(RNAstruc &i, RNAstruc &j, RNAstruc &saddle, bool shifts, bool noLP, bool debug)
+int DSU::FloodUp(RNAstruc &i, RNAstruc &j, RNAstruc &saddle, Opt &opt, bool debug)
 {
   // threshold set
-  threshold = saddle.energy;
+  if (opt.flood_height == 0) {
+    if (saddle.type == NOT_SURE) threshold = INT_MAX; // we cannot specify the threshold
+    else threshold = saddle.energy;
+  } else {
+    threshold = min(saddle.energy, min(i.energy, j.energy) + opt.flood_height);
+  }
+
   gl_debug = debug;
 
   // debug output
@@ -90,7 +96,7 @@ int DSU::FloodUp(RNAstruc &i, RNAstruc &j, RNAstruc &saddle, bool shifts, bool n
   curr = flood_queue.top();
   flood_queue.pop();
   currNum = flood_hash[curr];
-  while (curr.energy < threshold) {
+  while (curr.energy < threshold && (int)flood_hash.size() < opt.flood_num) {
 
     // debug output
     if (debug) {
@@ -98,7 +104,7 @@ int DSU::FloodUp(RNAstruc &i, RNAstruc &j, RNAstruc &saddle, bool shifts, bool n
     }
 
     // start browsing
-    curr.energy = browse_neighs(seq, curr.structure, s0, s1, 0, shifts, noLP, funct);
+    curr.energy = browse_neighs(seq, curr.structure, s0, s1, 0, opt.shifts, opt.noLP, funct);
 
     // found DS - quitting
     if (foundDS) {
@@ -110,6 +116,12 @@ int DSU::FloodUp(RNAstruc &i, RNAstruc &j, RNAstruc &saddle, bool shifts, bool n
     curr = flood_queue.top();
     flood_queue.pop();
     currNum = flood_hash[curr];
+  }
+
+  // if we have searched up to known direct saddle threshold
+  if (curr.energy >= threshold && saddle.type != NOT_SURE) {
+    if (curr.energy > threshold) fprintf(stderr, "WTFWWTFWTF???");
+    res = 2;
   }
 
   // we did end sucesfully
@@ -168,10 +180,10 @@ int funct_saddle(struct_en *moved, struct_en *current) {
   return 0;
 }
 
-bool DSU::FloodSaddle(RNAstruc &saddle_lower, RNAstruc &saddle_higher, bool shifts, bool noLP, bool debug)
+bool DSU::FloodSaddle(RNAstruc &saddle_lower, RNAstruc &saddle_higher, Opt &opt, bool debug)
 {
-// threshold set
-  threshold = saddle_higher.energy;
+  // threshold set
+  threshold = saddle_higher.energy; // not very good to use floodHeight restriction here :-)
   gl_debug = debug;
 
   // debug output
@@ -196,7 +208,7 @@ bool DSU::FloodSaddle(RNAstruc &saddle_lower, RNAstruc &saddle_higher, bool shif
   // main loop
   curr = flood_queue.top();
   flood_queue.pop();
-  while (curr.energy < threshold) {
+  while (curr.energy < threshold && (int)flood_hash.size() < opt.flood_num) {
 
     // debug output
     if (debug) {
@@ -204,7 +216,7 @@ bool DSU::FloodSaddle(RNAstruc &saddle_lower, RNAstruc &saddle_higher, bool shif
     }
 
     // start browsing
-    curr.energy = browse_neighs(seq, curr.structure, s0, s1, 0, shifts, noLP, funct_saddle);
+    curr.energy = browse_neighs(seq, curr.structure, s0, s1, 0, opt.shifts, opt.noLP, funct_saddle);
 
     // found DS - quitting
     if (found_saddle) {

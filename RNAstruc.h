@@ -17,10 +17,15 @@ using namespace std;
 
 class SimplePath;
 
+enum { NORMAL, EE_DSU, EE_COMP }; // normal type, exceeds energy in DSUeval, exceeds energy in connect components
+enum { DIRECT, LDIRECT, NOT_SURE, COMP };   // direct saddle - but not sure if lowest, for sure lowest direct saddle, not sure -- only with outer option, saddle from component join (direct, but maybe not lowest)
+
 struct RNAstruc {
   int energy;
   short *structure; // in short * format
   char *str_ch;     // in normal char format
+
+  int type;      // type of node {different for LM and saddles}
 
   bool operator<(const RNAstruc &second) const {
     if (energy==second.energy) {
@@ -55,6 +60,20 @@ struct RNAstruc {
       return false;
     } else return false;
   }
+
+  /*RNAstruc(int energy, short *str, bool usable = true) {
+    this->energy = energy;
+    this->structure = str;
+    this->usable = usable;
+    if (usable) str_ch = pt_to_char(str);
+    else str_ch = NULL;
+  }*/
+
+  RNAstruc() {
+    type = NORMAL;
+  }
+
+  void freeMEM();
 };
 
 struct RNAstruc2 : public RNAstruc {
@@ -62,6 +81,19 @@ struct RNAstruc2 : public RNAstruc {
   int conn2;
 };
 
+// options structure;
+struct Opt {
+  bool noLP;
+  bool shifts;
+  bool saddle_conn;
+
+  int flood_num;
+  int flood_height;
+
+  Opt(bool noLP, bool shifts, bool saddle, int num, int height);
+};
+
+// just for reverse ordering
 struct RNAstruc_rev {
   bool operator()(const RNAstruc &first, const RNAstruc &second) const {
     if (first.energy==second.energy) {
