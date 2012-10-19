@@ -340,9 +340,9 @@ int DSU::AddLMtoDSU(short *tmp_str, int tmp_en, int hd_threshold, int type, bool
 
 void DSU::PrintUBoutput()
 {
-  printf("     %s\n", seq);
+  printf("                 %s\n", seq);
   for (unsigned int i=0; i<UBoutput.size(); i++) {
-    printf("%4d (%4d,%4d) saddle: %s %6.2f\n", i+1, UBoutput[i].second.i+1, UBoutput[i].second.j+1, pt_to_str(UBoutput[i].first.structure).c_str(), UBoutput[i].first.energy/100.0);
+    printf("%4d (%4d,%4d) %s %6.2f\n", i+1, UBoutput[i].second.i+1, UBoutput[i].second.j+1, pt_to_str(UBoutput[i].first.structure).c_str(), UBoutput[i].first.energy/100.0);
   }
 }
 
@@ -514,7 +514,7 @@ void DSU::PrintDot(char *filename, bool dot_prog, bool print, char *file_print, 
     char syst[200];
     sprintf(syst, "%s -Tps < %s > %s", (dot_prog ? "dot" : "neato"), filename, file_print);
     int res = system(syst);
-    printf("%s returned %d\n", syst, res);
+    //printf("%s returned %d\n", syst, res);
   }
 }
 
@@ -1030,11 +1030,10 @@ void DSU::PrintLinkCP(bool full)
   if (comps.size() == 0 || full) FillComps();
 
   // print info about comps:
-  printf("number of components: %d:\n", (int)comps.size());
   for (unsigned int i=0; i<comps.size(); i++) {
-    printf("minimal: %4d (%7.2f), ", comps[i].min_lm+1, comps[i].min_energy/100.0);
-    if (comps[i].max_saddle!=-1)  printf("max_saddle: %4dS (%7.2f) :", comps[i].max_saddle+1, comps[i].max_energy/100.0);
-    else                          printf("                            :");
+    printf("%4d %4d (%7.2f)", i, comps[i].min_lm+1, comps[i].min_energy/100.0);
+    if (comps[i].max_saddle!=-1)  printf(" %4dS (%7.2f) :", comps[i].max_saddle+1, comps[i].max_energy/100.0);
+    else                          printf("                 :");
     for (unsigned int j=0; j<comps[i].LMs.size(); j++) {
       printf(" %4d", comps[i].LMs[j]+1);
     }
@@ -1044,18 +1043,33 @@ void DSU::PrintLinkCP(bool full)
     }
     printf("\n");
   }
+  printf("\n");
 
   // full listing of structures...
   if (full) {
-    printf("Local minima (%4d):\n", (int)LM.size());
+    //printf("Local minima (%4d):\n", (int)LM.size());
     for (unsigned int i=0; i<LM.size(); i++) {
       char type[][10] = { "NORMAL", "EE_DSU", "EE_COMP"};
-      printf("%4d  %s (%7.2f) %s\n", i+1, LM[i].str_ch, LM[i].energy/100.0, type[LM[i].type]);
+      printf("%4d  %s (%7.2f) %8s\n", i+1, LM[i].str_ch, LM[i].energy/100.0, type[LM[i].type]);
     }
-    printf("Saddles (%4d):\n", (int)saddles.size());
+    //printf("Saddles (%4d):\n", (int)saddles.size());
+    printf("\n");
+    // collect saddle info
+    vector<set<int> > saddle_connLM (saddles.size());
+    vector<set<int> > saddle_connSadd (saddles.size());
+    for (set<edgeLM>::iterator it=edges_ls.begin(); it!=edges_ls.end(); it++) {
+      saddle_connLM[it->j].insert(it->i);
+    }
+    for (set<edgeLM>::iterator it=edges_s.begin(); it!=edges_s.end(); it++) {
+      saddle_connSadd[it->j].insert(it->i);
+      saddle_connSadd[it->i].insert(it->j);
+    }
     for (unsigned int i=0; i<saddles.size(); i++) {
       char type[][10] = { "DIRECT", "LDIRECT", "NOT_SURE", "COMP" };
-      printf("%4dS %s (%7.2f) %s\n", i+1, saddles[i].str_ch, saddles[i].energy/100.0, type[saddles[i].type]);
+      printf("%4dS %s (%7.2f) %8s", i+1, saddles[i].str_ch, saddles[i].energy/100.0, type[saddles[i].type]);
+      for (set<int>::iterator it=saddle_connLM[i].begin(); it!=saddle_connLM[i].end(); it++) printf(" %4d", *it);
+      for (set<int>::iterator it=saddle_connSadd[i].begin(); it!=saddle_connSadd[i].end(); it++) printf(" %3dS", *it);
+      printf("\n");
     }
   }
 
