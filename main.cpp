@@ -26,7 +26,7 @@ int main(int argc, char **argv)
     // DSUeval
   DSU dsu(stdin);
   dsu.CreateList(args_info.hd_threshold_arg, args_info.debug_flag);
-  dsu.ComputeUB(args_info.depth_arg, args_info.num_threshold_arg, args_info.outer_flag, args_info.debug_flag);
+  dsu.ComputeUB(args_info.depth_arg, args_info.num_threshold_arg, args_info.outer_flag, args_info.noLP_flag, args_info.shift_flag, args_info.debug_flag);
   dsu.PrintUBoutput();
 
     // LinkCP

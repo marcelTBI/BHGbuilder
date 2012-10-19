@@ -64,7 +64,7 @@ public:
 
 public:
   // big ones
-  int ComputeUB(int maxkeep, int num_threshold, bool outer, bool debug);          // compute all UB (outer - add to UB also outer structures? - we will not have only direct saddles then)
+  int ComputeUB(int maxkeep, int num_threshold, bool outer, bool noLP, bool shifts, bool debug);          // compute all UB (outer - add to UB also outer structures? - we will not have only direct saddles then)
   int LinkCP(Opt opt, bool debug);       // construct vertex and edge set from UBoutput
 
   // helpers

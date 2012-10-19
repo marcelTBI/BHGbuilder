@@ -191,7 +191,7 @@ bool DSU::InsertUB(int i, int j, int energy_par, short *saddle_par, bool outer, 
   return false;
 }
 
-int DSU::ComputeUB(int maxkeep, int num_threshold, bool outer, bool debug)
+int DSU::ComputeUB(int maxkeep, int num_threshold, bool outer, bool noLP, bool shifts, bool debug)
 {
   int dbg_count = 0;
   int cnt = 0;
@@ -243,7 +243,7 @@ int DSU::ComputeUB(int maxkeep, int num_threshold, bool outer, bool debug)
       // find adaptive walk
       short *tmp_str = make_pair_table(tmp->s);
       //int tmp_en = move_rand(seq, tmp_str, s0, s1, 0);
-      int tmp_en = move_deepest(seq, tmp_str, s0, s1, 0, 0, 0);
+      int tmp_en = move_deepest(seq, tmp_str, s0, s1, 0, shifts, noLP);
 
       // do the stuff if we have 2 structs and they are not equal
       if (last && !str_eq(last_str, tmp_str)) {

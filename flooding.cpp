@@ -119,8 +119,7 @@ int DSU::FloodUp(RNAstruc &i, RNAstruc &j, RNAstruc &saddle, Opt &opt, bool debu
   }
 
   // if we have searched up to known direct saddle threshold
-  if (curr.energy >= threshold && saddle.type != NOT_SURE) {
-    if (curr.energy > threshold) fprintf(stderr, "WTFWWTFWTF???");
+  if (flood_queue.empty() && saddle.type != NOT_SURE) {
     res = 2;
   }
 
