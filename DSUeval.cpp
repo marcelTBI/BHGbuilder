@@ -368,33 +368,49 @@ int DSU::LinkCP(Opt opt, bool debug)
     if ((it = vertex_s.find(stru)) != vertex_s.end()) {
       saddle_num = it->second;
       stru.freeMEM();
+
+      // also add missing edges:
+      set<int> miss;
+      for (set<edgeLM>::iterator it2 = edges_ls.begin(); it2!=edges_ls.end(); it2++) {
+        if (it2->j == saddle_num) {
+          miss.insert(it2->i);
+        }
+      }
+      miss.insert(pq.i);
+      miss.insert(pq.j);
+
+      // edges ll
+      for (set<int>::iterator it2 = miss.begin(); it2!=miss.end(); it2++) {
+        set<int>::iterator it3 = it2;
+        for (it3++; it3!=miss.end(); it3++) {
+          edgeLM e(*it2, *it3, true, true);
+          e.AddSaddle(stru.energy, saddle_num);
+          edges_l.insert(e);
+
+          edgesV_l[*it2].insert(e);
+          edgesV_l[*it3].insert(e);
+        }
+      }
+
       //fprintf(stderr, "saddle_num = %d\n", saddle_num);
     } else {
       saddle_num = saddles.size();
       // update vertex
       vertex_s.insert(make_pair(stru, saddle_num));
       saddles.push_back(stru);
+
+      // edges ll
+      edgeLM e(pq.i, pq.j, true, true);
+      e.AddSaddle(stru.energy, saddle_num);
+      edges_l.insert(e);
+
+      edgesV_l[pq.i].insert(e);
+      edgesV_l[pq.j].insert(e);
     }
-    // resize
-    //edgesV_sl.resize(saddle_num+1);
 
     // edges ls
     edges_ls.insert(edgeLM(pq.i, saddle_num, true, false));
     edges_ls.insert(edgeLM(pq.j, saddle_num, true, false));
-
-    //edgesV_ls[pq.i].insert(saddle_num);
-    //edgesV_sl[saddle_num].insert(pq.i);
-
-    //edgesV_ls[pq.j].insert(saddle_num);
-    //edgesV_sl[saddle_num].insert(pq.j);
-
-    // edges ll
-    edgeLM e(pq.i, pq.j, true, true);
-    e.AddSaddle(stru.energy, saddle_num);
-    edges_l.insert(e);
-
-    edgesV_l[pq.i].insert(e);
-    edgesV_l[pq.j].insert(e);
   }
 
   // create saddle-saddle edges
@@ -1067,8 +1083,8 @@ void DSU::PrintLinkCP(bool full)
     for (unsigned int i=0; i<saddles.size(); i++) {
       char type[][10] = { "DIRECT", "LDIRECT", "NOT_SURE", "COMP" };
       printf("%4dS %s (%7.2f) %8s", i+1, saddles[i].str_ch, saddles[i].energy/100.0, type[saddles[i].type]);
-      for (set<int>::iterator it=saddle_connLM[i].begin(); it!=saddle_connLM[i].end(); it++) printf(" %4d", *it);
-      for (set<int>::iterator it=saddle_connSadd[i].begin(); it!=saddle_connSadd[i].end(); it++) printf(" %3dS", *it);
+      for (set<int>::iterator it=saddle_connLM[i].begin(); it!=saddle_connLM[i].end(); it++) printf(" %4d", (*it)+1);
+      for (set<int>::iterator it=saddle_connSadd[i].begin(); it!=saddle_connSadd[i].end(); it++) printf(" %3dS", (*it)+1);
       printf("\n");
     }
   }
