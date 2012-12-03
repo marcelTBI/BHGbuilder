@@ -15,10 +15,8 @@
 
 using namespace std;
 
-class SimplePath;
-
 enum { NORMAL, EE_DSU, EE_COMP }; // normal type, exceeds energy in DSUeval, exceeds energy in connect components
-enum { DIRECT, LDIRECT, NOT_SURE, COMP };   // direct saddle - but not sure if lowest, for sure lowest direct saddle, not sure -- only with outer option, saddle from component join (direct, but maybe not lowest)
+enum { DIRECT, LDIRECT, NOT_SURE, COMP };   // direct saddle - but not sure if lowest, for sure lowest direct saddle, not sure -- only with outer option, saddle from component join (direct, but maybe not lowest, principially same as DIRECT)
 
 struct RNAstruc {
   int energy;
@@ -74,6 +72,7 @@ struct RNAstruc {
   }
 
   void freeMEM();
+  void recompute_str();
 };
 
 struct RNAstruc2 : public RNAstruc {

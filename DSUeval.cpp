@@ -95,8 +95,9 @@ DSU::DSU(FILE *input) {
     line = my_getline(input);
     num++;
 
-    sort(LM.begin(), LM.end());
   }
+
+	sort(LM.begin(), LM.end());
 }
 
 DSU::~DSU() {
@@ -120,7 +121,7 @@ DSU::~DSU() {
     if (it->second.str_ch) free(it->second.str_ch);
   }
 
-  /*for (unsigned int i=0; i<UBoutput.size(); i++) {
+  /*for (unsigned int i=0; i<UBoutput.size(); i++) {  // converted to saddles
     if (UBoutput[i].first.structure) free(UBoutput[i].first.structure);
     if (UBoutput[i].first.str_ch) free(UBoutput[i].first.str_ch);
   }*/
@@ -351,6 +352,7 @@ int DSU::LinkCP(Opt opt, bool debug)
   //edgesV_ls.resize(LM.size());
   edgesV_l.resize(LM.size());
 
+  fprintf(stderr, "Computing lm-* edges.\n");
   // create lm-saddle and lm-lm edges
   for (unsigned int i=0; i<UBoutput.size(); i++) {
     RNAstruc stru = UBoutput[i].first;
@@ -413,6 +415,7 @@ int DSU::LinkCP(Opt opt, bool debug)
     edges_ls.insert(edgeLM(pq.j, saddle_num, true, false));
   }
 
+  fprintf(stderr, "Computing saddle-saddle edges.\n");
   // create saddle-saddle edges
     // create saddle set list
   if (opt.saddle_conn) {
@@ -439,13 +442,8 @@ int DSU::LinkCP(Opt opt, bool debug)
       if (debug) {
         fprintf(stderr, "saddles to check: %4d %4d", it->first, it->second);
       }
-      RNAstruc &first = saddles[it->first];
-      RNAstruc &second = saddles[it->second];
-      if (first.energy > second.energy) {
-        RNAstruc &tmp = first;
-        first = second;
-        second = tmp;
-      }
+      RNAstruc &first = ((saddles[it->first].energy <= saddles[it->second].energy) ? saddles[it->first] : saddles[it->second]);
+      RNAstruc &second = ((saddles[it->first].energy > saddles[it->second].energy) ? saddles[it->first] : saddles[it->second]);
       // include them
       if (FloodSaddle(first, second, opt, debug)) {
         edgeLM e(it->first, it->second, false, false);
@@ -871,6 +869,8 @@ void DSU::ConnectComps(int maxkeep, bool debug)
   // just debug
   LM_to_comp[-1]=-1;
 
+  fprintf(stderr, "Connecting components.\n");
+
   // create queue of saddle pairs
   priority_queue<que_tmp> queue;
   for (unsigned int i=0; i<comps.size(); i++) {
@@ -1066,7 +1066,7 @@ void DSU::PrintLinkCP(bool full)
     //printf("Local minima (%4d):\n", (int)LM.size());
     for (unsigned int i=0; i<LM.size(); i++) {
       char type[][10] = { "NORMAL", "EE_DSU", "EE_COMP"};
-      printf("%4d  %s (%7.2f) %8s\n", i+1, LM[i].str_ch, LM[i].energy/100.0, type[LM[i].type]);
+      printf("%4d  %s %7.2f %8s\n", i+1, LM[i].str_ch, LM[i].energy/100.0, type[LM[i].type]);
     }
     //printf("Saddles (%4d):\n", (int)saddles.size());
     printf("\n");
@@ -1082,7 +1082,7 @@ void DSU::PrintLinkCP(bool full)
     }
     for (unsigned int i=0; i<saddles.size(); i++) {
       char type[][10] = { "DIRECT", "LDIRECT", "NOT_SURE", "COMP" };
-      printf("%4dS %s (%7.2f) %8s", i+1, saddles[i].str_ch, saddles[i].energy/100.0, type[saddles[i].type]);
+      printf("%4dS %s %7.2f %8s", i+1, saddles[i].str_ch, saddles[i].energy/100.0, type[saddles[i].type]);
       for (set<int>::iterator it=saddle_connLM[i].begin(); it!=saddle_connLM[i].end(); it++) printf(" %4d", (*it)+1);
       for (set<int>::iterator it=saddle_connSadd[i].begin(); it!=saddle_connSadd[i].end(); it++) printf(" %3dS", (*it)+1);
       printf("\n");
@@ -1112,4 +1112,9 @@ void DSU::Color(int lm, int color, Component &cmp, vector<int> &LM_tmp, vector<i
       Color(goesTo, color, cmp, LM_tmp, sadd_tmp);
     }
   }
+}
+
+void DSU::EHeights(FILE *heights)
+{
+
 }

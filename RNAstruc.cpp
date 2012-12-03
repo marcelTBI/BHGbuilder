@@ -43,6 +43,13 @@ void RNAstruc::freeMEM() {
   if (str_ch) free(str_ch);
 }
 
+void RNAstruc::recompute_str()
+{
+  if (str_ch) free(str_ch);
+  if (!structure) str_ch = NULL;
+  else str_ch = pt_to_char(structure);
+}
+
 SimplePath::SimplePath()
 {
   closed = false;

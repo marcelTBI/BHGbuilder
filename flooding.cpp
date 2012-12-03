@@ -112,21 +112,26 @@ int DSU::FloodUp(RNAstruc &i, RNAstruc &j, RNAstruc &saddle, Opt &opt, bool debu
     }
 
     // get another struct
-    if (flood_queue.empty()) break;
+    if (flood_queue.empty()) {
+      break;
+    }
     curr = flood_queue.top();
     flood_queue.pop();
     currNum = flood_hash[curr];
   }
 
   // if we have searched up to known direct saddle threshold
-  if (flood_queue.empty() && saddle.type != NOT_SURE) {
-    res = 2;
+  if (flood_queue.empty()) {
+    if (saddle.type != NOT_SURE) {
+      res = 2;
+    }
   }
 
   // we did end sucesfully
   if (foundDS) {
     copy_arr(saddle.structure, curr.structure);
     saddle.energy = curr.energy;
+    saddle.recompute_str();
     res = 1;
   }
 
@@ -207,7 +212,7 @@ bool DSU::FloodSaddle(RNAstruc &saddle_lower, RNAstruc &saddle_higher, Opt &opt,
   // main loop
   curr = flood_queue.top();
   flood_queue.pop();
-  while (curr.energy < threshold && (int)flood_hash.size() < opt.flood_num) {
+  while (curr.energy < threshold && (int)flood_set.size() < opt.flood_num) {
 
     // debug output
     if (debug) {

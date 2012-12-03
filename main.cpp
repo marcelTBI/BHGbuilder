@@ -63,5 +63,13 @@ int main(int argc, char **argv)
     }
   }
 
+  // temporary
+  if (args_info.energy_heights_flag) {
+    FILE *file_h;
+    file_h = fopen("energy_heights.txt", "w");
+    dsu.EHeights(file_h);
+    fclose(file_h);
+  }
+
   cmdline_parser_free(&args_info);
 }

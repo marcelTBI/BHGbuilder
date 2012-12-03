@@ -98,5 +98,8 @@ public:
 
   // small
   int Size() {return LM.size();}
+
+  //Temporary
+  void EHeights(FILE *heights);
 };
 #endif
