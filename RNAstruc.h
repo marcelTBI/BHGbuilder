@@ -15,15 +15,13 @@
 
 using namespace std;
 
-enum { NORMAL, EE_DSU, EE_COMP }; // normal type, exceeds energy in DSUeval, exceeds energy in connect components
-enum { DIRECT, LDIRECT, NOT_SURE, COMP };   // direct saddle - but not sure if lowest, for sure lowest direct saddle, not sure -- only with outer option, saddle from component join (direct, but maybe not lowest, principially same as DIRECT)
+enum LMtype { NORMAL, NORM_CF, EE_DSU, EE_COMP }; // normal type, normal which was not in first list, exceeds energy in DSUeval, exceeds energy in connect components
+enum SDtype { DIRECT, LDIRECT, NOT_SURE, COMP };   // direct saddle - but not sure if lowest, for sure lowest direct saddle, not sure -- only with outer option, saddle from component join (direct, but maybe not lowest, principially same as DIRECT)
 
 struct RNAstruc {
   int energy;
   short *structure; // in short * format
   char *str_ch;     // in normal char format
-
-  int type;      // type of node {different for LM and saddles}
 
   bool operator<(const RNAstruc &second) const {
     if (energy==second.energy) {
@@ -68,16 +66,33 @@ struct RNAstruc {
   }*/
 
   RNAstruc() {
-    type = NORMAL;
+    structure  = NULL;
+    str_ch = NULL;
   }
 
   void freeMEM();
   void recompute_str();
 };
 
-struct RNAstruc2 : public RNAstruc {
-  int conn1; // LM it connects
-  int conn2;
+struct RNAlocmin: public RNAstruc {
+  LMtype type;
+
+  RNAlocmin():RNAstruc() {
+    type = NORMAL;
+  }
+};
+
+// saddle has 2lm that connects
+struct RNAsaddle: public RNAstruc {
+  int lm1;
+  int lm2;
+  SDtype type;
+
+  RNAsaddle(int lm1, int lm2, SDtype type = DIRECT):RNAstruc() {
+    this->lm1 = min(lm1, lm2);
+    this->lm2 = max(lm1, lm2);
+    this->type = type;
+  }
 };
 
 // options structure;
@@ -137,6 +152,11 @@ public:
   ~pq_entry();
 };
 
+class saddle {
+
+};
+
+
 // maybe we dont need this for map...
 struct pq_setcomp {
   long operator() (const pq_entry &l, const pq_entry &r) const {
@@ -145,41 +165,23 @@ struct pq_setcomp {
   }
 };
 
-struct edgeLM {
+//edges in graph
+struct edge {
   int i;
-  bool LMi;
   int j;
-  bool LMj;
-
-  int en;   // energy and ->
-  int sadd; // number of saddle (just if LMi and LMj are true)
 
   bool component; // if info comes from join components
 
-  edgeLM(int ii, int jj, bool LMii, bool LMjj) {
+  edge(int ii, int jj, bool comp = false) {
     i = ii;
     j = jj;
-    en = INT_MAX;
-    sadd = -1;
-    component = false;
-    LMi = LMii;
-    LMj = LMjj;
-
-    // bad i-j positions
-    if (((LMi && LMj) || (!LMi && !LMj)) && (i > j)) {
-      swap(i, j);
-    }
-
-    // bad position saddle/LM
-    if (!LMi && LMj) {
-      swap(i,j);
-      swap(LMi, LMj);
-    }
+    component = comp;
   }
 
-  void AddSaddle(int energy, int saddle) {
-    en = energy;
-    sadd = saddle;
+  bool operator<(const edge &second) const {
+    if (i==second.i) {
+      return j<second.j;
+    } else return i<second.i;
   }
 
   void MarkComp() {
@@ -188,23 +190,40 @@ struct edgeLM {
 
   int goesTo(int src) const { if (i==src) return j; else return i;}
 
-  bool operator<(const edgeLM &second) const {
-    if (i==second.i) {
-      return j<second.j;
-    } else return i<second.i;
+};
+
+struct edgeLL : public edge {
+  int en;
+  int saddle;
+
+  edgeLL(int ii, int jj, int energy, int saddle, bool comp = false):edge(ii,jj,comp) {
+    if (i > j) swap(i,j);
+    en = energy;
+    this->saddle = saddle;
   }
 };
-// energy comparator
-struct edgeLM_compen {
 
-  bool operator()(const edgeLM &first, const edgeLM &second) const {
+struct edgeSS : public edge {
+  edgeSS(int i, int j):edge(i,j){};
+};
+
+struct edgeLS : public edge {
+  SDtype type;
+
+  edgeLS(int lm, int saddle, SDtype type, bool comp = false):edge(lm,saddle,comp) {
+    this->type = type;
+  }
+};
+
+// energy comparator
+struct edgeLL_compen {
+  bool operator()(const edgeLL &first, const edgeLL &second) const {
     if (first.en==second.en) {
       if (first.i==second.i) {
         return first.j<second.j;
       } else return first.i<second.i;
     } else return first.en<second.en;
   }
-
 };
 
 // component structure

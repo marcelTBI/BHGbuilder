@@ -74,7 +74,7 @@ DSU::DSU(FILE *input) {
 
     // add info:
     if (tmp) {
-      RNAstruc struc;
+      RNAlocmin struc;
       struc.structure = tmp;
       char *ch = (char*) malloc((tmp[0]+1)*sizeof(char));
       strcpy(ch, pt_to_str(tmp).c_str());
@@ -116,7 +116,7 @@ DSU::~DSU() {
   }
 
   // always should be empty
-  for (map<pq_entry, RNAstruc, pq_setcomp>::iterator it=UBlist.begin(); it!=UBlist.end(); it++) {
+  for (map<pq_entry, RNAsaddle, pq_setcomp>::iterator it=UBlist.begin(); it!=UBlist.end(); it++) {
     if (it->second.structure) free(it->second.structure);
     if (it->second.str_ch) free(it->second.str_ch);
   }
@@ -165,9 +165,9 @@ int DSU::FindNum(int en_par, short *str_par)
 bool DSU::InsertUB(int i, int j, int energy_par, short *saddle_par, bool outer, bool debug)
 {
   pq_entry pq(i, j, 0);
-  map<pq_entry, RNAstruc, pq_setcomp>::iterator it = UBlist.find(pq);
+  map<pq_entry, RNAsaddle, pq_setcomp>::iterator it = UBlist.find(pq);
   if (it==UBlist.end()) {
-    RNAstruc saddle;
+    RNAsaddle saddle(i, j);
     saddle.energy = energy_par;
     saddle.structure = saddle_par;
     saddle.str_ch = NULL;
@@ -262,7 +262,7 @@ int DSU::ComputeUB(int maxkeep, int num_threshold, bool outer, bool noLP, bool s
             } else {
               fprintf(stderr, "cannot find: %s %6.2f\n", pt_to_str(tmp_str).c_str(), tmp_en/100.0);
               // add to list of minima and count with them later...
-              num2 = AddLMtoDSU(tmp_str, tmp_en, hd_threshold, NORMAL, debug);
+              num2 = AddLMtoDSU(tmp_str, tmp_en, hd_threshold, NORM_CF, debug);
             }
           }
         }
@@ -296,7 +296,7 @@ int DSU::ComputeUB(int maxkeep, int num_threshold, bool outer, bool noLP, bool s
 
   // now just resort UBlist to something sorted according energy
   UBoutput.reserve(UBlist.size());
-  for (map<pq_entry, RNAstruc, pq_setcomp>::iterator it=UBlist.begin(); it!=UBlist.end(); it++) {
+  for (map<pq_entry, RNAsaddle, pq_setcomp>::iterator it=UBlist.begin(); it!=UBlist.end(); it++) {
     if (it->second.str_ch) free(it->second.str_ch);
     it->second.str_ch = pt_to_char(it->second.structure);
     UBoutput.push_back(make_pair(it->second, it->first));
@@ -306,22 +306,22 @@ int DSU::ComputeUB(int maxkeep, int num_threshold, bool outer, bool noLP, bool s
 
   // check if everything has been found:
   if (UBoutput.size() != (LM.size()*(LM.size()-1))/2) {
-    fprintf(stderr, "All connections have not been found: %d/%d found (%d missing)\n", (int)UBoutput.size(), (int)(LM.size()*(LM.size()-1))/2, (int)((LM.size()*(LM.size()-1))/2 - UBoutput.size()));
+    fprintf(stderr, "Found: %d/%d connections (%d missing)\n", (int)UBoutput.size(), (int)(LM.size()*(LM.size()-1))/2, (int)((LM.size()*(LM.size()-1))/2 - UBoutput.size()));
   }
 
   return 0;
 }
 
-int DSU::AddLMtoDSU(short *tmp_str, int tmp_en, int hd_threshold, int type, bool debug)
+int DSU::AddLMtoDSU(short *tmp_str, int tmp_en, int hd_threshold, LMtype type, bool debug)
 {
-  RNAstruc rna;
+  RNAlocmin rna;
   rna.energy = tmp_en;
   rna.structure = allocopy(tmp_str);
   rna.str_ch = pt_to_char(tmp_str);
   rna.type = type;
 
   // add pairs to TBDlist
-  if (type == NORMAL) {
+  if (type == NORMAL || type == NORM_CF) {
     for (unsigned int i=0; i<LM.size(); i++) {
       int hd = HammingDist(LM[i].structure, tmp_str);
       if (hd < hd_threshold) {
@@ -355,7 +355,7 @@ int DSU::LinkCP(Opt opt, bool debug)
   fprintf(stderr, "Computing lm-* edges.\n");
   // create lm-saddle and lm-lm edges
   for (unsigned int i=0; i<UBoutput.size(); i++) {
-    RNAstruc stru = UBoutput[i].first;
+    RNAsaddle stru = UBoutput[i].first;
     pq_entry pq = UBoutput[i].second;
 
     // flood them up!
@@ -365,7 +365,7 @@ int DSU::LinkCP(Opt opt, bool debug)
     }
 
     // update vertex/edge sets
-    map<RNAstruc, int>::iterator it;
+    /*map<RNAstruc, int>::iterator it;
     int saddle_num;
     if ((it = vertex_s.find(stru)) != vertex_s.end()) {
       saddle_num = it->second;
@@ -395,34 +395,34 @@ int DSU::LinkCP(Opt opt, bool debug)
       }
 
       //fprintf(stderr, "saddle_num = %d\n", saddle_num);
-    } else {
-      saddle_num = saddles.size();
-      // update vertex
-      vertex_s.insert(make_pair(stru, saddle_num));
-      saddles.push_back(stru);
+    } else {*/
 
-      // edges ll
-      edgeLM e(pq.i, pq.j, true, true);
-      e.AddSaddle(stru.energy, saddle_num);
-      edges_l.insert(e);
+    // add to sets:
+    int saddle_num = saddles.size();
+    // update vertex
+    //vertex_s.insert(make_pair(stru, saddle_num));
+    saddles.push_back(stru);
 
-      edgesV_l[pq.i].insert(e);
-      edgesV_l[pq.j].insert(e);
-    }
+    // edges ll
+    edgeLL e(pq.i, pq.j, stru.energy, saddle_num);
+    edges_l.insert(e);
+
+    edgesV_l[pq.i].insert(e);
+    edgesV_l[pq.j].insert(e);
 
     // edges ls
-    edges_ls.insert(edgeLM(pq.i, saddle_num, true, false));
-    edges_ls.insert(edgeLM(pq.j, saddle_num, true, false));
+    edges_ls.insert(edgeLS(pq.i, saddle_num, stru.type));
+    edges_ls.insert(edgeLS(pq.j, saddle_num, stru.type));
   }
 
-  fprintf(stderr, "Computing saddle-saddle edges.\n");
   // create saddle-saddle edges
     // create saddle set list
   if (opt.saddle_conn) {
+    fprintf(stderr, "Computing saddle-saddle edges.\n");
     set<std::pair<int, int> > saddle_pairs;
     int last_lm = -1;
     vector<int> tmp;
-    for (set<edgeLM>::iterator it = edges_ls.begin(); it!=edges_ls.end(); it++) {
+    for (set<edgeLS>::iterator it = edges_ls.begin(); it!=edges_ls.end(); it++) {
 
       if (it->i == last_lm) {
         // add every one into saddle_pairs.
@@ -442,11 +442,11 @@ int DSU::LinkCP(Opt opt, bool debug)
       if (debug) {
         fprintf(stderr, "saddles to check: %4d %4d", it->first, it->second);
       }
-      RNAstruc &first = ((saddles[it->first].energy <= saddles[it->second].energy) ? saddles[it->first] : saddles[it->second]);
-      RNAstruc &second = ((saddles[it->first].energy > saddles[it->second].energy) ? saddles[it->first] : saddles[it->second]);
+      RNAsaddle &first = ((saddles[it->first].energy <= saddles[it->second].energy) ? saddles[it->first] : saddles[it->second]);
+      RNAsaddle &second = ((saddles[it->first].energy > saddles[it->second].energy) ? saddles[it->first] : saddles[it->second]);
       // include them
       if (FloodSaddle(first, second, opt, debug)) {
-        edgeLM e(it->first, it->second, false, false);
+        edgeSS e(it->first, it->second);
         edges_s.insert(e);
       }
     }
@@ -470,7 +470,8 @@ void DSU::PrintDot(char *filename, bool dot_prog, bool print, char *file_print, 
     //nodes LM:
     for (unsigned int i=0; i<LM.size(); i++) {
       switch (LM[i].type) {
-        case NORMAL: fprintf(dot, "\"%d\" [label=\"%d\"]\n", i+1, i+1); break;
+        case NORMAL:
+        case NORM_CF: fprintf(dot, "\"%d\" [label=\"%d\"]\n", i+1, i+1); break;
         case EE_DSU: fprintf(dot, "\"%d\" [label=\"%d\", color=\"%s\", fontcolor=\"%s\"]\n", i+1, i+1, rgb(0, 0, 255), rgb(0, 0, 255)); break;
         case EE_COMP: fprintf(dot, "\"%d\" [label=\"%d\", color=\"%s\", fontcolor=\"%s\"]\n", i+1, i+1, rgb(255, 0, 0), rgb(255, 0, 0)); break;
       }
@@ -480,9 +481,9 @@ void DSU::PrintDot(char *filename, bool dot_prog, bool print, char *file_print, 
     // visualisation option (not finished -- currently it prints out only without saddles)
     if (visual) {
       connected.enlarge_parent(LM.size());
-      set<edgeLM, edgeLM_compen> tmp;
+      set<edgeLL, edgeLL_compen> tmp;
       tmp.insert(edges_l.begin(), edges_l.end());
-      for (set<edgeLM>::iterator it=tmp.begin(); it!=tmp.end(); it++) {
+      for (set<edgeLL>::iterator it=tmp.begin(); it!=tmp.end(); it++) {
         if (!connected.joint(it->i, it->j)) {
           fprintf(dot, "\"%d\" -- \"%d\" [label=\"%.2f\"]\n", (it->i)+1, (it->j)+1, it->en/100.0);
           connected.union_set(it->i, it->j);
@@ -503,18 +504,18 @@ void DSU::PrintDot(char *filename, bool dot_prog, bool print, char *file_print, 
       }
       fprintf(dot, "\n");
       // edges l-l
-      for (set<edgeLM>::iterator it=edges_l.begin(); it!=edges_l.end(); it++) {
+      for (set<edgeLL>::iterator it=edges_l.begin(); it!=edges_l.end(); it++) {
         fprintf(dot, "\"%d\" -- \"%d\" [label=\"%.2f\", color=\"%s\", fontcolor=\"%s\"]\n", (it->i)+1, (it->j)+1, it->en/100.0, (it->component?rgb(255, 0, 0):rgb(0, 0, 0)), (it->component?rgb(255, 0, 0):rgb(0, 0, 0)));
       }
       fprintf(dot, "\n");
       // edges l-s
-      for (set<edgeLM>::iterator it=edges_ls.begin(); it!=edges_ls.end(); it++) {
+      for (set<edgeLS>::iterator it=edges_ls.begin(); it!=edges_ls.end(); it++) {
         fprintf(dot, "\"%d\" -- \"S%d\" [color=\"%s\", fontcolor=\"%s\"]\n", (it->i)+1, (it->j)+1, (it->component?rgb(255, color, color):rgb(color, color, color)), (it->component?rgb(255, color, color):rgb(color, color, color)));
       }
 
       fprintf(dot, "\n");
       // edges s-s
-      for (set<edgeLM>::iterator it=edges_s.begin(); it!=edges_s.end(); it++) {
+      for (set<edgeSS>::iterator it=edges_s.begin(); it!=edges_s.end(); it++) {
         fprintf(dot, "\"S%d\" -- \"S%d\" [color=\"%s\", fontcolor=\"%s\"]\n",(it->i)+1, (it->j)+1, rgb(color, color, color),rgb(color, color, color));
       }
     }
@@ -532,7 +533,7 @@ void DSU::PrintDot(char *filename, bool dot_prog, bool print, char *file_print, 
   }
 }
 
-bool EN_BARRIERS = true;
+static int EN_BARRIERS = true;
 
 struct pq_path {
   int lm;
@@ -602,7 +603,7 @@ void DSU::VisPath(int src, int dest, bool en_barriers, int max_length, bool dot_
 
       if (LM_tmp[point.lm] < point.value()) continue; // we have found better and this is obsolete
 
-      for (set<edgeLM>::iterator it=edgesV_l[point.lm].begin(); it!=edgesV_l[point.lm].end(); it++) {
+      for (set<edgeLL>::iterator it=edgesV_l[point.lm].begin(); it!=edgesV_l[point.lm].end(); it++) {
         int en_barr = it->en;
         int goesTo = it->goesTo(point.lm);
         if (found_dst && (maximum < en_barr)) continue; // we dont want higher energy (really dirty programming :/)
@@ -619,7 +620,7 @@ void DSU::VisPath(int src, int dest, bool en_barriers, int max_length, bool dot_
     set<int> LM_out;
     LM_out.insert(dest);
     LM_out.insert(src);
-    set<edgeLM> edge_out;
+    set<edgeLL> edge_out;
 
       // backward pass -- find all paths with same dist/same en_barrier
     if (EN_BARRIERS) {
@@ -641,8 +642,7 @@ void DSU::VisPath(int src, int dest, bool en_barriers, int max_length, bool dot_
         for (unsigned int j=0; j<paths[i].points.size(); j++) {
           LM_out.insert(paths[i].points[j]);
           if (j>0) {
-            edgeLM e(paths[i].points[j-1], paths[i].points[j], true, true);
-            e.AddSaddle(paths[i].energies[j-1], -1);
+            edgeLL e(paths[i].points[j-1], paths[i].points[j], paths[i].energies[j-1], -1);
             edge_out.insert(e);
           }
         }
@@ -661,7 +661,7 @@ void DSU::VisPath(int src, int dest, bool en_barriers, int max_length, bool dot_
           pq_path point = que.front();
           que.pop();
 
-          for (set<edgeLM>::iterator it=edgesV_l[point.lm].begin(); it!=edgesV_l[point.lm].end(); it++) {
+          for (set<edgeLL>::iterator it=edgesV_l[point.lm].begin(); it!=edgesV_l[point.lm].end(); it++) {
             int goesTo = it->goesTo(point.lm);
 
             // if this point is on shortest path:
@@ -685,7 +685,7 @@ void DSU::VisPath(int src, int dest, bool en_barriers, int max_length, bool dot_
     fprintf(dot, "\n");
 
     // edges:
-    for (set<edgeLM>::iterator it=edge_out.begin(); it!=edge_out.end(); it++) {
+    for (set<edgeLL>::iterator it=edge_out.begin(); it!=edge_out.end(); it++) {
       fprintf(dot, "\"%d\" -- \"%d\" [label=\"%.2f\", color=\"0.0 0.0 %.1f\", fontcolor=\"0.0 0.0 %.1f\"]\n", (it->i)+1, (it->j)+1, it->en/100.0, color, color);
     }
 
@@ -714,7 +714,7 @@ void DSU::PrintMatrix(char *filename)
     }
 
     // fill it with edges:
-    for (set<edgeLM>::iterator it=edges_l.begin(); it!=edges_l.end(); it++) {
+    for (set<edgeLL>::iterator it=edges_l.begin(); it!=edges_l.end(); it++) {
       matrix[it->i][it->j] = it->en/100.0;
       matrix[it->j][it->i] = it->en/100.0;
     }
@@ -769,7 +769,7 @@ void DSU::ConstructPath(vector<SimplePath> &paths, SimplePath &path, int dest, i
   if (max_length == 0) return;
 
   // all edges
-  for (set<edgeLM>::iterator it=edgesV_l[num].begin(); it!=edgesV_l[num].end(); it++) {
+  for (set<edgeLL>::iterator it=edgesV_l[num].begin(); it!=edgesV_l[num].end(); it++) {
     int goesTo = it->goesTo(num);
     if (!path.ContainsNode(goesTo) && it->en <= threshold) {
       path.AddLast(goesTo, it->en);
@@ -806,7 +806,7 @@ void DSU::FillComps()
   }
 }
 
-int DSU::AddConnection(int num1, int num2, int energy, short *saddle, UF_set &connected, vector<vector<RNAstruc2*> > &connections) {
+int DSU::AddConnection(int num1, int num2, int energy, short *saddle, UF_set &connected, vector<vector<RNAsaddle*> > &connections) {
 
   int comp1 = LM_to_comp[num1];
   int comp2 = LM_to_comp[num2];
@@ -815,16 +815,14 @@ int DSU::AddConnection(int num1, int num2, int energy, short *saddle, UF_set &co
   if (comp1 != comp2) {
 
     if (connections[comp1][comp2] == NULL || connections[comp1][comp2]->energy > energy) {
-      RNAstruc2 *tmpRNA = (RNAstruc2 *) space(sizeof(RNAstruc2));
-      tmpRNA->conn1 = num1;
-      tmpRNA->conn2 = num2;
+      RNAsaddle *tmpRNA = new RNAsaddle(num1, num2, COMP);
       tmpRNA->energy = energy;
       tmpRNA->structure = saddle;
       tmpRNA->str_ch = NULL;
 
       if (connections[comp1][comp2]) {
         free(connections[comp1][comp2]->structure);
-        free(connections[comp1][comp2]);
+        delete connections[comp1][comp2];
       }
       // assign new one
       connections[comp1][comp2] = tmpRNA;
@@ -834,6 +832,7 @@ int DSU::AddConnection(int num1, int num2, int energy, short *saddle, UF_set &co
       return 1;
     }
   }
+  // if it didn't work then release memory
   free(saddle);
   return 0;
 }
@@ -875,8 +874,10 @@ void DSU::ConnectComps(int maxkeep, bool debug)
   priority_queue<que_tmp> queue;
   for (unsigned int i=0; i<comps.size(); i++) {
     for (unsigned int j=i+1; j<comps.size(); j++) {
-      const RNAstruc &first = (comps[i].max_saddle==-1?LM[comps[i].LMs[0]]:saddles[comps[i].max_saddle]);
-      const RNAstruc &second = (comps[j].max_saddle==-1?LM[comps[j].LMs[0]]:saddles[comps[j].max_saddle]);
+      RNAstruc first = LM[comps[i].LMs[0]];
+      RNAstruc second = LM[comps[j].LMs[0]];
+      if (comps[i].max_saddle!=-1) first = saddles[comps[i].max_saddle];
+      if (comps[j].max_saddle!=-1) second = saddles[comps[j].max_saddle];
 
       que_tmp tmp(first.str_ch, second.str_ch, HammingDist(first.structure, second.structure));
       tmp.i = comps[i].LMs[0];
@@ -893,7 +894,7 @@ void DSU::ConnectComps(int maxkeep, bool debug)
   // here we will store output:
   UF_set connected;
   connected.enlarge_parent(comps.size());
-  vector<vector<RNAstruc2*> > connections(comps.size(), vector<RNAstruc2*>(comps.size(), NULL));
+  vector<vector<RNAsaddle*> > connections(comps.size(), vector<RNAsaddle*>(comps.size(), NULL));
 
   // go throught the queue - take pair *
   while (!queue.empty() && !connected.connected_all()) {
@@ -994,26 +995,24 @@ void DSU::ConnectComps(int maxkeep, bool debug)
 
       if (!connections[i][j]) continue;
       // saddle
-      RNAstruc2* saddle = connections[i][j];
+      RNAsaddle* saddle = connections[i][j];
       saddle->type = COMP;
-      vertex_s.insert(make_pair(*saddle, saddles.size()));
+      //vertex_s.insert(make_pair(*saddle, saddles.size()));
       saddle->str_ch = pt_to_char(saddle->structure);
       saddles.push_back(*saddle);
 
       // edge l-l
-      edgeLM e(saddle->conn1, saddle->conn2, true, true);
-      e.AddSaddle(saddle->energy, saddles.size()-1);
-      e.MarkComp();
+      edgeLL e(saddle->lm1, saddle->lm2, saddle->energy, saddles.size()-1, true);
       edges_l.insert(e);
-      edgesV_l[saddle->conn1].insert(e);
-      edgesV_l[saddle->conn2].insert(e);
+      edgesV_l[saddle->lm1].insert(e);
+      edgesV_l[saddle->lm2].insert(e);
       // edge l-s
-      edgeLM e2(saddle->conn1, saddles.size()-1, true, false);
-      e2.MarkComp();
+      edgeLS e2(saddle->lm1, saddles.size()-1, COMP, true);
       edges_ls.insert(e2);
-      e2.i = saddle->conn2;
+      e2.i = saddle->lm2;
       edges_ls.insert(e2);
 
+      // free the pointer
       free(saddle);
     }
   }
@@ -1021,7 +1020,7 @@ void DSU::ConnectComps(int maxkeep, bool debug)
   //FillComps();
 }
 
-int DSU::AddLMtoComp(short *structure, int energy, bool debug, UF_set &connected, vector<vector<RNAstruc2*> > &connections)
+int DSU::AddLMtoComp(short *structure, int energy, bool debug, UF_set &connected, vector<vector<RNAsaddle*> > &connections)
 {
   // resize connected and connections (we have new component...)
   int numComp = connected.size();
@@ -1065,7 +1064,7 @@ void DSU::PrintLinkCP(bool full)
   if (full) {
     //printf("Local minima (%4d):\n", (int)LM.size());
     for (unsigned int i=0; i<LM.size(); i++) {
-      char type[][10] = { "NORMAL", "EE_DSU", "EE_COMP"};
+      char type[][10] = { "NORMAL", "NORM_CF", "EE_DSU", "EE_COMP"};
       printf("%4d  %s %7.2f %8s\n", i+1, LM[i].str_ch, LM[i].energy/100.0, type[LM[i].type]);
     }
     //printf("Saddles (%4d):\n", (int)saddles.size());
@@ -1073,10 +1072,10 @@ void DSU::PrintLinkCP(bool full)
     // collect saddle info
     vector<set<int> > saddle_connLM (saddles.size());
     vector<set<int> > saddle_connSadd (saddles.size());
-    for (set<edgeLM>::iterator it=edges_ls.begin(); it!=edges_ls.end(); it++) {
+    for (set<edgeLS>::iterator it=edges_ls.begin(); it!=edges_ls.end(); it++) {
       saddle_connLM[it->j].insert(it->i);
     }
-    for (set<edgeLM>::iterator it=edges_s.begin(); it!=edges_s.end(); it++) {
+    for (set<edgeSS>::iterator it=edges_s.begin(); it!=edges_s.end(); it++) {
       saddle_connSadd[it->j].insert(it->i);
       saddle_connSadd[it->i].insert(it->j);
     }
@@ -1088,7 +1087,6 @@ void DSU::PrintLinkCP(bool full)
       printf("\n");
     }
   }
-
 }
 
 void DSU::Color(int lm, int color, Component &cmp, vector<int> &LM_tmp, vector<int> &sadd_tmp)
@@ -1098,13 +1096,13 @@ void DSU::Color(int lm, int color, Component &cmp, vector<int> &LM_tmp, vector<i
   LM_tmp[lm] = color;
 
   // proceed to non-coloured
-  for (set<edgeLM>::iterator it=edgesV_l[lm].begin(); it!=edgesV_l[lm].end(); it++) {
+  for (set<edgeLL>::iterator it=edgesV_l[lm].begin(); it!=edgesV_l[lm].end(); it++) {
     int goesTo = it->goesTo(lm);
 
     // info about saddle:
-    if (it->sadd != -1 && sadd_tmp[it->sadd] == -1) {
-      sadd_tmp[it->sadd] = color;
-      cmp.AddSadd(it->sadd, it->en);
+    if (it->saddle != -1 && sadd_tmp[it->saddle] == -1) {
+      sadd_tmp[it->saddle] = color;
+      cmp.AddSadd(it->saddle, it->en);
     }
     // info about LM
     if (LM_tmp[goesTo] == -1) {

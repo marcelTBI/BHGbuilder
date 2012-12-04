@@ -32,7 +32,7 @@ int main(int argc, char **argv)
     // LinkCP
   Opt opt(args_info.noLP_flag, args_info.shift_flag, !args_info.noSaddle_flag, args_info.floodMax_arg, args_info.floodHeight_arg);
   dsu.LinkCP(opt, args_info.debug_flag);
-  //dsu.PrintDot(args_info.name_dot_arg, args_info.dot_flag, args_info.print_graph_flag, args_info.name_graph_arg, args_info.tree_visualise_flag);
+  dsu.PrintDot(args_info.name_dot_arg, args_info.dot_flag, args_info.print_graph_flag, "previous.eps", args_info.tree_visualise_flag);
 
     // connect comps
   if (args_info.components_flag) {

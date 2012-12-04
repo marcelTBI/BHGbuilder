@@ -25,30 +25,32 @@ private:
   short *s1;
 
   // structures
-  vector<RNAstruc> LM;  // contains memory
+  vector<RNAlocmin> LM;  // contains memory
   int gl_maxen;
 
   // lists
   priority_queue<pq_entry> TBDlist;
-  map<pq_entry, RNAstruc, pq_setcomp> UBlist; // its free in the end unsually
+  map<pq_entry, RNAsaddle, pq_setcomp> UBlist; // its free in the end
 
   // output
-  vector<std::pair<RNAstruc, pq_entry> > UBoutput; // contains memory
+  vector<std::pair<RNAsaddle, pq_entry> > UBoutput; // contains memory
 
   // -- linkCP
     // vertex sets
     map<RNAstruc, int> vertex_l;  // points to number in LM
-    map<RNAstruc, int> vertex_s;  // points to number in saddles
+    //map<RNAstruc, int> vertex_s;  // points to number in saddles
 
-    vector<RNAstruc> saddles; // contains memory (same as UBoutput)
+    vector<RNAsaddle> saddles; // contains memory (replaces saddles)
+
+    //vector<RNAstruc> saddles; // contains memory (same as UBoutput)
 
     // edge sets
-    set<edgeLM> edges_l; // LM to LM
-    set<edgeLM> edges_s; // saddle to saddle
-    set<edgeLM> edges_ls; // i is LM, j is saddle
+    set<edgeLL> edges_l; // LM to LM
+    set<edgeSS> edges_s; // saddle to saddle
+    set<edgeLS> edges_ls; // i is LM, j is saddle
 
     // edges for graph search
-    vector< set<edgeLM> > edgesV_l;
+    vector< set<edgeLL> > edgesV_l;
 
     // components
     vector<Component> comps;
@@ -71,11 +73,11 @@ public:
   int CreateList(int hd_threshold, bool debug);  // create TBDlist
   int FindNum(int energy, short *str);           // find number of structure
   bool InsertUB(int i, int j, int energy, short *saddle, bool outer, bool debug); // insert into UBlist
-  int AddLMtoDSU(short *tmp_str, int tmp_en, int hd_threshold, int type, bool debug);
+  int AddLMtoDSU(short *tmp_str, int tmp_en, int hd_threshold, LMtype type, bool debug);
     // link cp
   void PrintMatrix(char *filename); // print energy barrier matrix
-  int FloodUp(RNAstruc &i, RNAstruc &j, RNAstruc &saddle, Opt &opt, bool debug); // flood up from i and j to find direct saddle
-  bool FloodSaddle(RNAstruc &saddle_lower, RNAstruc &saddle_higher, Opt &opt, bool debug); // flood saddle
+  int FloodUp(RNAlocmin &i, RNAlocmin &j, RNAsaddle &saddle, Opt &opt, bool debug); // flood up from i and j to find direct saddle
+  bool FloodSaddle(RNAsaddle &saddle_lower, RNAsaddle &saddle_higher, Opt &opt, bool debug); // flood saddle
 
   // visualisation
   void VisPath(int src, int dest, bool en_barriers, int max_length, bool dot_prog, bool debug);
@@ -93,8 +95,8 @@ public:
 
   // connect components
   void ConnectComps(int maxkeep, bool debug);
-  int AddLMtoComp(short *structure, int energy, bool debug, UF_set &connected, vector<vector<RNAstruc2*> > &connections);
-  int AddConnection(int num1, int num2, int energy, short *saddle, UF_set &connected, vector<vector<RNAstruc2*> > &connections);
+  int AddLMtoComp(short *structure, int energy, bool debug, UF_set &connected, vector<vector<RNAsaddle*> > &connections);
+  int AddConnection(int num1, int num2, int energy, short *saddle, UF_set &connected, vector<vector<RNAsaddle*> > &connections);
 
   // small
   int Size() {return LM.size();}

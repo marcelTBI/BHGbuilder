@@ -58,7 +58,7 @@ int funct(struct_en *moved, struct_en *current) {
   return 0;
 }
 
-int DSU::FloodUp(RNAstruc &i, RNAstruc &j, RNAstruc &saddle, Opt &opt, bool debug)
+int DSU::FloodUp(RNAlocmin &i, RNAlocmin &j, RNAsaddle &saddle, Opt &opt, bool debug)
 {
   // threshold set
   if (opt.flood_height == 0) {
@@ -184,7 +184,7 @@ int funct_saddle(struct_en *moved, struct_en *current) {
   return 0;
 }
 
-bool DSU::FloodSaddle(RNAstruc &saddle_lower, RNAstruc &saddle_higher, Opt &opt, bool debug)
+bool DSU::FloodSaddle(RNAsaddle &saddle_lower, RNAsaddle &saddle_higher, Opt &opt, bool debug)
 {
   // threshold set
   threshold = saddle_higher.energy; // not very good to use floodHeight restriction here :-)
