@@ -411,8 +411,8 @@ int DSU::LinkCP(Opt opt, bool debug)
     edgesV_l[pq.j].insert(e);
 
     // edges ls
-    edges_ls.insert(edgeLS(pq.i, saddle_num, stru.type));
-    edges_ls.insert(edgeLS(pq.j, saddle_num, stru.type));
+    edges_ls.insert(edgeLS(pq.i, saddle_num));
+    edges_ls.insert(edgeLS(pq.j, saddle_num));
   }
 
   // create saddle-saddle edges
@@ -505,12 +505,14 @@ void DSU::PrintDot(char *filename, bool dot_prog, bool print, char *file_print, 
       fprintf(dot, "\n");
       // edges l-l
       for (set<edgeLL>::iterator it=edges_l.begin(); it!=edges_l.end(); it++) {
-        fprintf(dot, "\"%d\" -- \"%d\" [label=\"%.2f\", color=\"%s\", fontcolor=\"%s\"]\n", (it->i)+1, (it->j)+1, it->en/100.0, (it->component?rgb(255, 0, 0):rgb(0, 0, 0)), (it->component?rgb(255, 0, 0):rgb(0, 0, 0)));
+        bool component = (saddles[it->saddle].type == COMP);
+        fprintf(dot, "\"%d\" -- \"%d\" [label=\"%.2f\", color=\"%s\", fontcolor=\"%s\"]\n", (it->i)+1, (it->j)+1, it->en/100.0, (component?rgb(255, 0, 0):rgb(0, 0, 0)), (component?rgb(255, 0, 0):rgb(0, 0, 0)));
       }
       fprintf(dot, "\n");
       // edges l-s
       for (set<edgeLS>::iterator it=edges_ls.begin(); it!=edges_ls.end(); it++) {
-        fprintf(dot, "\"%d\" -- \"S%d\" [color=\"%s\", fontcolor=\"%s\"]\n", (it->i)+1, (it->j)+1, (it->component?rgb(255, color, color):rgb(color, color, color)), (it->component?rgb(255, color, color):rgb(color, color, color)));
+        bool component = (saddles[it->j].type == COMP);
+        fprintf(dot, "\"%d\" -- \"S%d\" [color=\"%s\", fontcolor=\"%s\"]\n", (it->i)+1, (it->j)+1, (component?rgb(255, color, color):rgb(color, color, color)), (component?rgb(255, color, color):rgb(color, color, color)));
       }
 
       fprintf(dot, "\n");
@@ -528,7 +530,7 @@ void DSU::PrintDot(char *filename, bool dot_prog, bool print, char *file_print, 
   if (dot && print && file_print) {
     char syst[200];
     sprintf(syst, "%s -Tps < %s > %s", (dot_prog ? "dot" : "neato"), filename, file_print);
-    int res = system(syst);
+    system(syst);
     //printf("%s returned %d\n", syst, res);
   }
 }
@@ -806,6 +808,27 @@ void DSU::FillComps()
   }
 }
 
+void DSU::Color(int lm, int color, Component &cmp, vector<int> &LM_tmp, vector<int> &sadd_tmp) {
+  // add to component and colour the node
+  cmp.AddLM(lm, LM[lm].energy);
+  LM_tmp[lm] = color;
+
+  // proceed to non-coloured
+  for (set<edgeLL>::iterator it=edgesV_l[lm].begin(); it!=edgesV_l[lm].end(); it++) {
+    int goesTo = it->goesTo(lm);
+    // info about saddle:
+    if (it->saddle != -1 && sadd_tmp[it->saddle] == -1) {
+      sadd_tmp[it->saddle] = color;
+      cmp.AddSadd(it->saddle, it->en);
+    }
+    // info about LM
+    if (LM_tmp[goesTo] == -1) {
+      // colour it!
+      Color(goesTo, color, cmp, LM_tmp, sadd_tmp);
+    }
+  }
+}
+
 int DSU::AddConnection(int num1, int num2, int energy, short *saddle, UF_set &connected, vector<vector<RNAsaddle*> > &connections) {
 
   int comp1 = LM_to_comp[num1];
@@ -1002,12 +1025,12 @@ void DSU::ConnectComps(int maxkeep, bool debug)
       saddles.push_back(*saddle);
 
       // edge l-l
-      edgeLL e(saddle->lm1, saddle->lm2, saddle->energy, saddles.size()-1, true);
+      edgeLL e(saddle->lm1, saddle->lm2, saddle->energy, saddles.size()-1);
       edges_l.insert(e);
       edgesV_l[saddle->lm1].insert(e);
       edgesV_l[saddle->lm2].insert(e);
       // edge l-s
-      edgeLS e2(saddle->lm1, saddles.size()-1, COMP, true);
+      edgeLS e2(saddle->lm1, saddles.size()-1);
       edges_ls.insert(e2);
       e2.i = saddle->lm2;
       edges_ls.insert(e2);
@@ -1040,9 +1063,10 @@ int DSU::AddLMtoComp(short *structure, int energy, bool debug, UF_set &connected
   return numLM;
 }
 
-void DSU::PrintLinkCP(bool full)
+void DSU::PrintComps(bool fill)
 {
-  if (comps.size() == 0 || full) FillComps();
+  // fix the sorting disorder
+  if (comps.size()==0 || fill) FillComps();
 
   // print info about comps:
   for (unsigned int i=0; i<comps.size(); i++) {
@@ -1059,60 +1083,125 @@ void DSU::PrintLinkCP(bool full)
     printf("\n");
   }
   printf("\n");
+}
 
-  // full listing of structures...
-  if (full) {
-    //printf("Local minima (%4d):\n", (int)LM.size());
-    for (unsigned int i=0; i<LM.size(); i++) {
-      char type[][10] = { "NORMAL", "NORM_CF", "EE_DSU", "EE_COMP"};
-      printf("%4d  %s %7.2f %8s\n", i+1, LM[i].str_ch, LM[i].energy/100.0, type[LM[i].type]);
-    }
-    //printf("Saddles (%4d):\n", (int)saddles.size());
+void DSU::PrintLinkCP(bool fix)
+{
+  if (fix) SortFix();
+
+  //printf("Local minima (%4d):\n", (int)LM.size());
+  for (unsigned int i=0; i<LM.size(); i++) {
+    char type[][10] = { "NORMAL", "NORM_CF", "EE_DSU", "EE_COMP"};
+    printf("%4d  %s %7.2f %8s\n", i+1, LM[i].str_ch, LM[i].energy/100.0, type[LM[i].type]);
+  }
+  //printf("Saddles (%4d):\n", (int)saddles.size());
+  printf("\n");
+  // collect saddle info
+  vector<set<int> > saddle_connLM (saddles.size());
+  vector<set<int> > saddle_connSadd (saddles.size());
+  for (set<edgeLS>::iterator it=edges_ls.begin(); it!=edges_ls.end(); it++) {
+    saddle_connLM[it->j].insert(it->i);
+  }
+  for (set<edgeSS>::iterator it=edges_s.begin(); it!=edges_s.end(); it++) {
+    saddle_connSadd[it->j].insert(it->i);
+    saddle_connSadd[it->i].insert(it->j);
+  }
+  for (unsigned int i=0; i<saddles.size(); i++) {
+    char type[][10] = { "DIRECT", "LDIRECT", "NOT_SURE", "COMP" };
+    printf("%4dS %s %7.2f %8s", i+1, saddles[i].str_ch, saddles[i].energy/100.0, type[saddles[i].type]);
+    for (set<int>::iterator it=saddle_connLM[i].begin(); it!=saddle_connLM[i].end(); it++) printf(" %4d", (*it)+1);
+    for (set<int>::iterator it=saddle_connSadd[i].begin(); it!=saddle_connSadd[i].end(); it++) printf(" %3dS", (*it)+1);
     printf("\n");
-    // collect saddle info
-    vector<set<int> > saddle_connLM (saddles.size());
-    vector<set<int> > saddle_connSadd (saddles.size());
-    for (set<edgeLS>::iterator it=edges_ls.begin(); it!=edges_ls.end(); it++) {
-      saddle_connLM[it->j].insert(it->i);
+  }
+}
+
+bool DSU::SortFix()
+{
+  //return ;
+  vector<int> mappingLM(LM.size());
+  vector<int> mappingSD(saddles.size());
+  {
+    // create mapping (and sort LMs)
+    vector<std::pair<RNAlocmin, int> > temp(LM.size());
+    for (unsigned int i=0; i<LM.size(); i++) {
+      temp[i] = make_pair(LM[i], i);
     }
-    for (set<edgeSS>::iterator it=edges_s.begin(); it!=edges_s.end(); it++) {
-      saddle_connSadd[it->j].insert(it->i);
-      saddle_connSadd[it->i].insert(it->j);
+    sort(temp.begin(), temp.end());
+    for (unsigned int i=0; i<temp.size(); i++) {
+      LM[i]=temp[i].first;
+      mappingLM[temp[i].second]=i;
+      vertex_l[temp[i].first]=temp[i].second;
     }
+  }
+  {
+    // create mapping (and sort saddles)
+    vector<std::pair<RNAsaddle, int> > temp;
     for (unsigned int i=0; i<saddles.size(); i++) {
-      char type[][10] = { "DIRECT", "LDIRECT", "NOT_SURE", "COMP" };
-      printf("%4dS %s %7.2f %8s", i+1, saddles[i].str_ch, saddles[i].energy/100.0, type[saddles[i].type]);
-      for (set<int>::iterator it=saddle_connLM[i].begin(); it!=saddle_connLM[i].end(); it++) printf(" %4d", (*it)+1);
-      for (set<int>::iterator it=saddle_connSadd[i].begin(); it!=saddle_connSadd[i].end(); it++) printf(" %3dS", (*it)+1);
-      printf("\n");
+      temp.push_back(make_pair(saddles[i], i));
+    }
+    sort(temp.begin(), temp.end());
+    for (unsigned int i=0; i<temp.size(); i++) {
+      saddles[i]=temp[i].first;
+      saddles[i].lm1 = mappingLM[saddles[i].lm1];
+      saddles[i].lm2 = mappingLM[saddles[i].lm2];
+      if (saddles[i].lm1 > saddles[i].lm2) swap(saddles[i].lm1, saddles[i].lm2);
+      mappingSD[temp[i].second]=i;
     }
   }
-}
 
-void DSU::Color(int lm, int color, Component &cmp, vector<int> &LM_tmp, vector<int> &sadd_tmp)
-{
-  // add to component and colour the node
-  cmp.AddLM(lm, LM[lm].energy);
-  LM_tmp[lm] = color;
+  // now process all edges:
+  set<edgeLL> edges_l_t;
+  for (set<edgeLL>::iterator it=edges_l.begin(); it!=edges_l.end(); it++) {
+    edges_l_t.insert(edgeLL(mappingLM[it->i], mappingLM[it->j], saddles[mappingSD[it->saddle]].energy, mappingSD[it->saddle]));
+  }
+  edges_l = edges_l_t;
 
-  // proceed to non-coloured
-  for (set<edgeLL>::iterator it=edgesV_l[lm].begin(); it!=edgesV_l[lm].end(); it++) {
-    int goesTo = it->goesTo(lm);
+  set<edgeLS> edges_ls_t;
+  for (set<edgeLS>::iterator it=edges_ls.begin(); it!=edges_ls.end(); it++) {
+    edges_ls_t.insert(edgeLS(mappingLM[it->i], mappingSD[it->j]));
+  }
+  edges_ls = edges_ls_t;
 
-    // info about saddle:
-    if (it->saddle != -1 && sadd_tmp[it->saddle] == -1) {
-      sadd_tmp[it->saddle] = color;
-      cmp.AddSadd(it->saddle, it->en);
-    }
-    // info about LM
-    if (LM_tmp[goesTo] == -1) {
-      // colour it!
-      Color(goesTo, color, cmp, LM_tmp, sadd_tmp);
+  set<edgeSS> edges_s_t;
+  for (set<edgeSS>::iterator it=edges_s.begin(); it!=edges_s.end(); it++) {
+    edges_s_t.insert(edgeSS(mappingSD[it->i], mappingSD[it->j]));
+  }
+
+  // process edgesV_l:
+  vector<set<edgeLL> > edges_temp(edgesV_l.size());
+  for (unsigned int i=0; i<edgesV_l.size(); i++) {
+    for (set<edgeLL>::iterator it=edgesV_l[i].begin(); it!=edgesV_l[i].end(); it++) {
+      edges_temp[i].insert(edgeLL(mappingLM[it->i], mappingLM[it->j], saddles[mappingSD[it->saddle]].energy, mappingSD[it->saddle]));
     }
   }
+  for (unsigned int i=0; i<edgesV_l.size(); i++) {
+    edgesV_l[mappingLM[i]]=edges_temp[i];
+  }
+
+  // recompute components:
+  if (comps.size()>0) {
+    FillComps();
+    return true;
+  }
+  return false;
 }
 
-void DSU::EHeights(FILE *heights)
+void DSU::EHeights(FILE *heights, bool full)
 {
-
+  if (!full) {
+    for (unsigned int i=0; i< saddles.size(); i++) {
+      //fprintf(heights, "%s %.2f %s %.2f %s %.2f\n", LM[saddles[i].lm1].str_ch, LM[saddles[i].lm1].energy/100.0, LM[saddles[i].lm2].str_ch, LM[saddles[i].lm2].energy/100.0, saddles[i].str_ch, saddles[i].energy/100.0);
+      fprintf(heights, "%4d %4d %.2f\n", saddles[i].lm1+1, saddles[i].lm2+1, saddles[i].energy/100.0);
+    }
+  } else {
+    vector<vector<std::pair<int, int> > > res(LM.size());
+    for (unsigned int i=0; i<LM.size(); i++) {
+      res[i] = HeightSearch(i, edgesV_l);
+    }
+    for (unsigned int i=0; i<res.size(); i++) {
+      for (unsigned int j=i+1; j<res[i].size(); j++) {
+        fprintf(heights, "%4d %4d %.2f\n", i+1, j+1, res[i][j].first/100.0);
+      }
+    }
+  }
 }

@@ -32,15 +32,21 @@ int main(int argc, char **argv)
     // LinkCP
   Opt opt(args_info.noLP_flag, args_info.shift_flag, !args_info.noSaddle_flag, args_info.floodMax_arg, args_info.floodHeight_arg);
   dsu.LinkCP(opt, args_info.debug_flag);
-  dsu.PrintDot(args_info.name_dot_arg, args_info.dot_flag, args_info.print_graph_flag, "previous.eps", args_info.tree_visualise_flag);
+  dsu.PrintDot(args_info.name_dot_arg, args_info.dot_flag, args_info.print_graph_flag, args_info.name_graph_arg, args_info.tree_visualise_flag);
 
     // connect comps
   if (args_info.components_flag) {
-    dsu.PrintLinkCP(false);
+    dsu.PrintComps();
     dsu.ConnectComps(args_info.depth_arg, args_info.debug_flag);
     dsu.PrintDot(args_info.name_dot_arg, args_info.dot_flag, args_info.print_graph_flag, args_info.name_graph_arg, args_info.tree_visualise_flag);
   }
-  dsu.PrintLinkCP(true);
+  dsu.PrintComps();
+  dsu.PrintLinkCP(false);
+  dsu.PrintLinkCP();
+  dsu.PrintComps(true);
+
+  dsu.PrintDot(args_info.name_dot_arg, args_info.dot_flag, args_info.print_graph_flag, "after", args_info.tree_visualise_flag);
+
 
   // print energy matrix
   if (args_info.print_energy_flag) dsu.PrintMatrix(args_info.energy_file_arg);
@@ -67,7 +73,8 @@ int main(int argc, char **argv)
   if (args_info.energy_heights_flag) {
     FILE *file_h;
     file_h = fopen("energy_heights.txt", "w");
-    dsu.EHeights(file_h);
+    bool full = true;
+    dsu.EHeights(file_h, full);
     fclose(file_h);
   }
 

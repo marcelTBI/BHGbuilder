@@ -12,7 +12,9 @@ OBJ = $(NAME)_cmdline.o\
 			move_set.o\
 			$(NAME).o\
 			fold_dsu.o\
-			RNAutils.o
+			RNAutils.o\
+			flooding.o\
+			graph_tech.o
 
 # should stay unchanged: 
 CPP = g++

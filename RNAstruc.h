@@ -170,12 +170,9 @@ struct edge {
   int i;
   int j;
 
-  bool component; // if info comes from join components
-
-  edge(int ii, int jj, bool comp = false) {
+  edge(int ii, int jj) {
     i = ii;
     j = jj;
-    component = comp;
   }
 
   bool operator<(const edge &second) const {
@@ -184,35 +181,29 @@ struct edge {
     } else return i<second.i;
   }
 
-  void MarkComp() {
-    component = true;
-  }
-
   int goesTo(int src) const { if (i==src) return j; else return i;}
 
 };
 
 struct edgeLL : public edge {
-  int en;
   int saddle;
+  int en;
 
-  edgeLL(int ii, int jj, int energy, int saddle, bool comp = false):edge(ii,jj,comp) {
+  edgeLL(int ii, int jj, int energy, int saddle):edge(ii,jj) {
     if (i > j) swap(i,j);
-    en = energy;
     this->saddle = saddle;
+    this->en = energy;
   }
 };
 
 struct edgeSS : public edge {
-  edgeSS(int i, int j):edge(i,j){};
+  edgeSS(int i, int j):edge(i,j){
+    if (i > j) swap(i,j);
+  }
 };
 
 struct edgeLS : public edge {
-  SDtype type;
-
-  edgeLS(int lm, int saddle, SDtype type, bool comp = false):edge(lm,saddle,comp) {
-    this->type = type;
-  }
+  edgeLS(int lm, int saddle):edge(lm,saddle) {}
 };
 
 // energy comparator

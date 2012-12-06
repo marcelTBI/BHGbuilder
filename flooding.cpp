@@ -28,7 +28,7 @@ priority_queue<RNAstruc, vector<RNAstruc>, RNAstruc_rev> flood_queue;
 
 int funct(struct_en *moved, struct_en *current) {
 
-  if (moved->energy > curr.energy && moved->energy < threshold) {
+  if (moved->energy >= curr.energy && moved->energy < threshold) {
     RNAstruc tmp;
     tmp.energy = moved->energy;
     tmp.structure = moved->structure;
@@ -46,7 +46,7 @@ int funct(struct_en *moved, struct_en *current) {
         return 1;
       } // else nothing
     } else {
-      // insert strucure we havent see yet (and its in range)
+      // insert strucure we havent see yet (and it is in range)
       RNAstruc to_ins;
       to_ins.energy = moved->energy;
       to_ins.structure = allocopy(moved->structure);
@@ -155,7 +155,7 @@ unordered_set<RNAstruc, hash_fncts, hash_eq>::iterator it_set;
 
 int funct_saddle(struct_en *moved, struct_en *current) {
 
-  if (moved->energy > curr.energy) {
+  if (moved->energy >= curr.energy) {
     RNAstruc tmp;
     tmp.energy = moved->energy;
     tmp.structure = moved->structure;
@@ -167,16 +167,16 @@ int funct_saddle(struct_en *moved, struct_en *current) {
     if (moved->energy < threshold) {
 
       if ((it_set = flood_set.find(tmp))!=flood_set.end()) {
-      // nothing...
-      return 0;
+        // nothing...
+        return 0;
       } else {
-      // add it
-      RNAstruc to_ins;
-      to_ins.energy = moved->energy;
-      to_ins.structure = allocopy(moved->structure);
-      flood_set.insert(to_ins);
-      flood_queue.push(to_ins);
-      return 0;
+        // add it
+        RNAstruc to_ins;
+        to_ins.energy = moved->energy;
+        to_ins.structure = allocopy(moved->structure);
+        flood_set.insert(to_ins);
+        flood_queue.push(to_ins);
+        return 0;
       }
     }
   }

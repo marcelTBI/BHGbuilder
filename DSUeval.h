@@ -25,7 +25,7 @@ private:
   short *s1;
 
   // structures
-  vector<RNAlocmin> LM;  // contains memory
+  vector<RNAlocmin> LM;  // contains memory (after split - should be in both programs)
   int gl_maxen;
 
   // lists
@@ -57,6 +57,9 @@ private:
     map<int, int> LM_to_comp;
     map<int, int> saddle_to_comp;
 
+  // -- Height-first Search
+
+
 private:
   DSU() {};
 
@@ -86,7 +89,8 @@ public:
   void PrintDot(char *filename, bool dot_prog, bool print, char *file_print, bool visual); // print dot file to filename, dot_prog - use dot or neato?; print - print dot output to file_print, visual - use tree for visualisation
 
   // print text
-  void PrintLinkCP(bool full);
+  void PrintLinkCP(bool fix = true);
+  void PrintComps(bool fill = true);
   void PrintUBoutput(); // print UBlist to stdout
 
     // find components
@@ -98,10 +102,17 @@ public:
   int AddLMtoComp(short *structure, int energy, bool debug, UF_set &connected, vector<vector<RNAsaddle*> > &connections);
   int AddConnection(int num1, int num2, int energy, short *saddle, UF_set &connected, vector<vector<RNAsaddle*> > &connections);
 
+  // sort results and fix connections, output TRUE if recomputed connections
+  bool SortFix();
+
   // small
   int Size() {return LM.size();}
 
-  //Temporary
-  void EHeights(FILE *heights);
+  // graph techniques
+  // -- Height-first Search  -- returns energy barriers to get i-th minima from start minima + distances in graph
+  vector<std::pair<int, int> > HeightSearch(int start, vector< set<edgeLL> > &edgesV_l);
+
+  // evaluation
+  void EHeights(FILE *heights, bool full);
 };
 #endif

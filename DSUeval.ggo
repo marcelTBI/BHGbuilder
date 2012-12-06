@@ -46,5 +46,5 @@ option "visualise"          v "Visualise paths between 2 structures, can be spec
 option "vis-dist"           - "Set distance as a bounding condition for visualisation (instead of energy)" flag off
 option "vis-length"         - "Set maximal length of paths in visualisation (increases computation time greatly) use only with vis-dist off" int default="15" no
 
-section "Temporary"
+section "Evaluation"
 option "energy-heights"     - "output energy height for comparison with barriers" flag off
