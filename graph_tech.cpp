@@ -77,3 +77,23 @@ vector<std::pair<int, int> > DSU::HeightSearch(int start, vector< set<edgeLL> > 
 
   return res;
 }
+
+void DSU::EHeights(FILE *heights, bool full)
+{
+  if (!full) {
+    for (unsigned int i=0; i< saddles.size(); i++) {
+      //fprintf(heights, "%s %.2f %s %.2f %s %.2f\n", LM[saddles[i].lm1].str_ch, LM[saddles[i].lm1].energy/100.0, LM[saddles[i].lm2].str_ch, LM[saddles[i].lm2].energy/100.0, saddles[i].str_ch, saddles[i].energy/100.0);
+      fprintf(heights, "%4d %4d %.2f\n", saddles[i].lm1+1, saddles[i].lm2+1, saddles[i].energy/100.0);
+    }
+  } else {
+    vector<vector<std::pair<int, int> > > res(LM.size());
+    for (unsigned int i=0; i<LM.size(); i++) {
+      res[i] = HeightSearch(i, edgesV_l);
+    }
+    for (unsigned int i=0; i<res.size(); i++) {
+      for (unsigned int j=i+1; j<res[i].size(); j++) {
+        fprintf(heights, "%4d %4d %.2f %3d\n", i+1, j+1, res[i][j].first/100.0, res[i][j].second);
+      }
+    }
+  }
+}
