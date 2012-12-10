@@ -98,6 +98,7 @@ DSU::DSU(FILE *input) {
   }
 
 	sort(LM.begin(), LM.end());
+	number_lm = (int)LM.size();
 }
 
 DSU::~DSU() {
@@ -197,6 +198,7 @@ int DSU::ComputeUB(int maxkeep, int num_threshold, bool outer, bool noLP, bool s
   int dbg_count = 0;
   int cnt = 0;
   int hd_threshold = INT_MAX;
+  int norm_cf = 0;
 
   // go through all pairs in queue
   while (!TBDlist.empty()) {
@@ -263,6 +265,7 @@ int DSU::ComputeUB(int maxkeep, int num_threshold, bool outer, bool noLP, bool s
               fprintf(stderr, "cannot find: %s %6.2f\n", pt_to_str(tmp_str).c_str(), tmp_en/100.0);
               // add to list of minima and count with them later...
               num2 = AddLMtoDSU(tmp_str, tmp_en, hd_threshold, NORM_CF, debug);
+              norm_cf++;
             }
           }
         }
@@ -305,9 +308,7 @@ int DSU::ComputeUB(int maxkeep, int num_threshold, bool outer, bool noLP, bool s
   UBlist.clear();
 
   // check if everything has been found:
-  if (UBoutput.size() != (LM.size()*(LM.size()-1))/2) {
-    fprintf(stderr, "Found: %d/%d connections (%d missing)\n", (int)UBoutput.size(), (int)(LM.size()*(LM.size()-1))/2, (int)((LM.size()*(LM.size()-1))/2 - UBoutput.size()));
-  }
+  fprintf(stderr, "Found: %d connections\nLM resized from: %d to %d (%d missing, %d above the energy threshold) LMs\n", (int)UBoutput.size(), number_lm, (int)LM.size(), norm_cf, (int)LM.size()-number_lm-norm_cf);
 
   return 0;
 }

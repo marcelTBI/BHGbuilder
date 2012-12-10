@@ -26,6 +26,7 @@ private:
 
   // structures
   vector<RNAlocmin> LM;  // contains memory (after split - should be in both programs)
+  int number_lm;  // number of lm in the beginning
   int gl_maxen;
 
   // lists
