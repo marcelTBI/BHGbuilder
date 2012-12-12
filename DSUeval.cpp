@@ -91,6 +91,8 @@ DSU::DSU(FILE *input, bool noLP, bool shifts) {
         LM.push_back(struc);
 
         gl_maxen = max(gl_maxen, en);
+      } else {
+        free(tmp);
       }
     } else {
       // line without struct???
