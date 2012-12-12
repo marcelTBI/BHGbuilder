@@ -24,10 +24,10 @@ int main(int argc, char **argv)
 
   // code
     // DSUeval
-  DSU dsu(stdin);
+  DSU dsu(stdin, args_info.noLP_flag, args_info.shift_flag);
   dsu.CreateList(args_info.hd_threshold_arg, args_info.debug_flag);
   dsu.ComputeUB(args_info.depth_arg, args_info.num_threshold_arg, args_info.outer_flag, args_info.noLP_flag, args_info.shift_flag, args_info.debug_flag);
-  dsu.PrintUBoutput();
+  dsu.PrintUBoutput(stderr);
 
     // LinkCP
   Opt opt(args_info.noLP_flag, args_info.shift_flag, !args_info.noSaddle_flag, args_info.floodMax_arg, args_info.floodHeight_arg);
@@ -36,16 +36,20 @@ int main(int argc, char **argv)
 
     // connect comps
   if (args_info.components_flag) {
-    dsu.PrintComps();
+    //dsu.PrintComps();
     dsu.ConnectComps(args_info.depth_arg, args_info.debug_flag);
-    dsu.PrintDot(args_info.name_dot_arg, args_info.dot_flag, args_info.print_graph_flag, args_info.name_graph_arg, args_info.tree_visualise_flag);
+    //dsu.PrintDot(args_info.name_dot_arg, args_info.dot_flag, args_info.print_graph_flag, args_info.name_graph_arg, args_info.tree_visualise_flag);
   }
+  /*// just debug
   dsu.PrintComps();
   dsu.PrintLinkCP(false);
-  dsu.PrintLinkCP();
-  dsu.PrintComps(true);
+*/
+  // real output:
+  dsu.PrintLM(stdout);
+  dsu.PrintSaddles(stderr);
+  dsu.PrintComps(stderr, true);
 
-  dsu.PrintDot(args_info.name_dot_arg, args_info.dot_flag, args_info.print_graph_flag, "after", args_info.tree_visualise_flag);
+  dsu.PrintDot(args_info.name_dot_arg, args_info.dot_flag, args_info.print_graph_flag, args_info.name_graph_arg, args_info.tree_visualise_flag);
 
 
   // print energy matrix
@@ -77,6 +81,8 @@ int main(int argc, char **argv)
     dsu.EHeights(file_h, full);
     fclose(file_h);
   }
+
+  fprintf(stderr, "DSUeval exitting succesfully!\n");
 
   cmdline_parser_free(&args_info);
 }

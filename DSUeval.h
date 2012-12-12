@@ -65,7 +65,7 @@ private:
   DSU() {};
 
 public:
-  DSU(FILE *input); // read seq + structs from input (barriers/RNAlocmin output)
+  DSU(FILE *input, bool noLP, bool shifts); // read seq + structs from input (barriers/RNAlocmin output)
   ~DSU();
 
 public:
@@ -90,9 +90,11 @@ public:
   void PrintDot(char *filename, bool dot_prog, bool print, char *file_print, bool visual); // print dot file to filename, dot_prog - use dot or neato?; print - print dot output to file_print, visual - use tree for visualisation
 
   // print text
-  void PrintLinkCP(bool fix = true);
-  void PrintComps(bool fill = true);
-  void PrintUBoutput(); // print UBlist to stdout
+  void PrintLinkCP(FILE *output = stdout, bool fix = true);
+  void PrintLM(FILE *output = stdout, bool fix = true);
+  void PrintSaddles(FILE *output = stdout, bool fix = true);
+  void PrintComps(FILE *output = stdout, bool fill = true);
+  void PrintUBoutput(FILE *output = stdout); // print UBlist to stdout
 
     // find components
   void FillComps();

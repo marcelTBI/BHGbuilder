@@ -20,7 +20,7 @@
 #define true 1
 #define false 0
 
-int compare(short *lhs, short *rhs)
+bool compare(short *lhs, short *rhs)
 {
 
   //printf("%d ", (int)lhs[0]);
@@ -43,7 +43,7 @@ int find_min(short *arr[MAX_DEGEN], int begin, int end) {
   int i;
 
   for (i=begin+1; i<end; i++) {
-    if (compare(arr[i], min)) {
+    if (!compare(arr[i], min)) {
       min = arr[i];
       min_num = i;
     }

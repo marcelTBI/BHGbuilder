@@ -19,7 +19,7 @@ extern "C" {
 
 using namespace std;
 
-DSU::DSU(FILE *input) {
+DSU::DSU(FILE *input, bool noLP, bool shifts) {
 
   // NULL::
   seq = NULL;
@@ -74,19 +74,24 @@ DSU::DSU(FILE *input) {
 
     // add info:
     if (tmp) {
-      RNAlocmin struc;
-      struc.structure = tmp;
-      char *ch = (char*) malloc((tmp[0]+1)*sizeof(char));
-      strcpy(ch, pt_to_str(tmp).c_str());
-      struc.str_ch = ch;
-      int en = (has_energy?en_fltoi(energy_tmp):energy_of_structure_pt(seq, tmp, s0, s1, 0));
-      struc.energy = en;
+      // check if its true local minima
+      int en = move_deepest(seq, tmp, s0, s1, 0, noLP, shifts);
 
-      // insert new LM
-      vertex_l[struc] = LM.size();
-      LM.push_back(struc);
+      // if we don't have it yet, add it:
+      if (FindNum(en, tmp)==-1) {
 
-      gl_maxen = max(gl_maxen, en);
+        RNAlocmin struc;
+        struc.structure = tmp;
+        struc.str_ch = pt_to_char(struc.structure);
+        struc.energy = en;
+        //int en = (has_energy?en_fltoi(energy_tmp):energy_of_structure_pt(seq, tmp, s0, s1, 0));
+
+        // insert new LM
+        vertex_l[struc] = LM.size();
+        LM.push_back(struc);
+
+        gl_maxen = max(gl_maxen, en);
+      }
     } else {
       // line without struct???
       fprintf(stderr, "WARNING: line %d without struct: %s\n", num, line);
@@ -97,7 +102,8 @@ DSU::DSU(FILE *input) {
 
   }
 
-	sort(LM.begin(), LM.end());
+  // sort them!
+  SortFix();
 	number_lm = (int)LM.size();
 }
 
@@ -258,8 +264,8 @@ int DSU::ComputeUB(int maxkeep, int num_threshold, bool outer, bool noLP, bool s
         // update UBlist
         if (num1==-1 || num2==-1) {
           if (num2==-1) {
-            if (gl_maxen < tmp_en) {
-              fprintf(stderr, "exceeds en.: %s %6.2f\n", pt_to_str(tmp_str).c_str(), tmp_en/100.0);
+            if (gl_maxen <= tmp_en) {
+              //fprintf(stderr, "exceeds en.: %s %6.2f\n", pt_to_str(tmp_str).c_str(), tmp_en/100.0);
               num2 = AddLMtoDSU(tmp_str, tmp_en, hd_threshold, EE_DSU, debug);
             } else {
               fprintf(stderr, "cannot find: %s %6.2f\n", pt_to_str(tmp_str).c_str(), tmp_en/100.0);
@@ -308,7 +314,7 @@ int DSU::ComputeUB(int maxkeep, int num_threshold, bool outer, bool noLP, bool s
   UBlist.clear();
 
   // check if everything has been found:
-  fprintf(stderr, "Found: %d connections\nLM resized from: %d to %d (%d missing, %d above the energy threshold) LMs\n", (int)UBoutput.size(), number_lm, (int)LM.size(), norm_cf, (int)LM.size()-number_lm-norm_cf);
+  fprintf(stderr, "Found: %d connections\nLM resized from: %d to %d (%d missing, %d above the energy threshold)\n", (int)UBoutput.size(), number_lm, (int)LM.size(), norm_cf, (int)LM.size()-number_lm-norm_cf);
 
   return 0;
 }
@@ -340,11 +346,11 @@ int DSU::AddLMtoDSU(short *tmp_str, int tmp_en, int hd_threshold, LMtype type, b
   return LM.size()-1;
 }
 
-void DSU::PrintUBoutput()
+void DSU::PrintUBoutput(FILE *output)
 {
-  printf("                 %s\n", seq);
+  fprintf(output, "                 %s\n", seq);
   for (unsigned int i=0; i<UBoutput.size(); i++) {
-    printf("%4d (%4d,%4d) %s %6.2f\n", i+1, UBoutput[i].second.i+1, UBoutput[i].second.j+1, pt_to_str(UBoutput[i].first.structure).c_str(), UBoutput[i].first.energy/100.0);
+    fprintf(output, "%4d (%4d,%4d) %s %6.2f\n", i+1, UBoutput[i].second.i+1, UBoutput[i].second.j+1, pt_to_str(UBoutput[i].first.structure).c_str(), UBoutput[i].first.energy/100.0);
   }
 }
 
@@ -354,6 +360,8 @@ int DSU::LinkCP(Opt opt, bool debug)
   edgesV_l.resize(LM.size());
 
   fprintf(stderr, "Computing lm-* edges.\n");
+
+  int trueds = 0;
   // create lm-saddle and lm-lm edges
   for (unsigned int i=0; i<UBoutput.size(); i++) {
     RNAsaddle stru = UBoutput[i].first;
@@ -363,6 +371,7 @@ int DSU::LinkCP(Opt opt, bool debug)
     int res = FloodUp(LM[pq.i], LM[pq.j], stru, opt, debug);
     if (res == 1 || res == 2) {  // we have found better saddle (1) or reached threshold (2) so better saddle is not possible
       stru.type = LDIRECT; // so our saddle is for sure lowest direct saddle
+      trueds ++;
     }
 
     // update vertex/edge sets
@@ -416,6 +425,8 @@ int DSU::LinkCP(Opt opt, bool debug)
     edges_ls.insert(edgeLS(pq.j, saddle_num));
   }
 
+  fprintf(stderr, "Recomputed %d edges (%d are true direct saddles)\n", (int)edges_l.size(), trueds);
+
   // create saddle-saddle edges
     // create saddle set list
   if (opt.saddle_conn) {
@@ -451,6 +462,7 @@ int DSU::LinkCP(Opt opt, bool debug)
         edges_s.insert(e);
       }
     }
+    fprintf(stderr, "Recomputed %d saddle-saddle edges (%d computations done)\n", (int)edges_s.size(), (int)saddle_pairs.size());
   }
 
   return 0;
@@ -892,7 +904,10 @@ void DSU::ConnectComps(int maxkeep, bool debug)
   // just debug
   LM_to_comp[-1]=-1;
 
-  fprintf(stderr, "Connecting components.\n");
+
+  if (comps.size()==1) return ;
+  fprintf(stderr, "Connecting components (%d components).\n", (int)comps.size());
+  int lastLM = LM.size();
 
   // create queue of saddle pairs
   priority_queue<que_tmp> queue;
@@ -1041,6 +1056,8 @@ void DSU::ConnectComps(int maxkeep, bool debug)
     }
   }
 
+  fprintf(stderr, "LM resized from %d to %d\n", lastLM, (int)LM.size());
+
   //FillComps();
 }
 
@@ -1064,39 +1081,50 @@ int DSU::AddLMtoComp(short *structure, int energy, bool debug, UF_set &connected
   return numLM;
 }
 
-void DSU::PrintComps(bool fill)
+void DSU::PrintComps(FILE *output, bool fill)
 {
   // fix the sorting disorder
   if (comps.size()==0 || fill) FillComps();
 
   // print info about comps:
   for (unsigned int i=0; i<comps.size(); i++) {
-    printf("%4d %4d (%7.2f)", i, comps[i].min_lm+1, comps[i].min_energy/100.0);
-    if (comps[i].max_saddle!=-1)  printf(" %4dS (%7.2f) :", comps[i].max_saddle+1, comps[i].max_energy/100.0);
-    else                          printf("                 :");
+    fprintf(output, "%4d %4d (%7.2f)", i, comps[i].min_lm+1, comps[i].min_energy/100.0);
+    if (comps[i].max_saddle!=-1)  fprintf(output, " %4dS (%7.2f) :", comps[i].max_saddle+1, comps[i].max_energy/100.0);
+    else                          fprintf(output, "                 :");
     for (unsigned int j=0; j<comps[i].LMs.size(); j++) {
-      printf(" %4d", comps[i].LMs[j]+1);
+      fprintf(output, " %4d", comps[i].LMs[j]+1);
     }
-    printf("      ");
+    fprintf(output, "      ");
     for (unsigned int j=0; j<comps[i].saddles.size(); j++) {
-      printf(" %3dS", comps[i].saddles[j]+1);
+      fprintf(output, " %3dS", comps[i].saddles[j]+1);
     }
-    printf("\n");
+    fprintf(output, "\n");
   }
-  printf("\n");
+  fprintf(output, "\n");
 }
 
-void DSU::PrintLinkCP(bool fix)
+void DSU::PrintLinkCP(FILE *output, bool fix)
+{
+  PrintLM(output, true);
+  PrintSaddles(output, false);
+}
+
+void DSU::PrintLM(FILE *output, bool fix)
 {
   if (fix) SortFix();
 
   //printf("Local minima (%4d):\n", (int)LM.size());
   for (unsigned int i=0; i<LM.size(); i++) {
     char type[][10] = { "NORMAL", "NORM_CF", "EE_DSU", "EE_COMP"};
-    printf("%4d  %s %7.2f %8s\n", i+1, LM[i].str_ch, LM[i].energy/100.0, type[LM[i].type]);
+    fprintf(output, "%4d  %s %7.2f %8s\n", i+1, LM[i].str_ch, LM[i].energy/100.0, type[LM[i].type]);
   }
+}
+
+void DSU::PrintSaddles(FILE *output, bool fix)
+{
+  if (fix) SortFix();
   //printf("Saddles (%4d):\n", (int)saddles.size());
-  printf("\n");
+  fprintf(output, "\n");
   // collect saddle info
   vector<set<int> > saddle_connLM (saddles.size());
   vector<set<int> > saddle_connSadd (saddles.size());
@@ -1109,10 +1137,10 @@ void DSU::PrintLinkCP(bool fix)
   }
   for (unsigned int i=0; i<saddles.size(); i++) {
     char type[][10] = { "DIRECT", "LDIRECT", "NOT_SURE", "COMP" };
-    printf("%4dS %s %7.2f %8s", i+1, saddles[i].str_ch, saddles[i].energy/100.0, type[saddles[i].type]);
-    for (set<int>::iterator it=saddle_connLM[i].begin(); it!=saddle_connLM[i].end(); it++) printf(" %4d", (*it)+1);
-    for (set<int>::iterator it=saddle_connSadd[i].begin(); it!=saddle_connSadd[i].end(); it++) printf(" %3dS", (*it)+1);
-    printf("\n");
+    fprintf(output, "%4dS %s %7.2f %8s", i+1, saddles[i].str_ch, saddles[i].energy/100.0, type[saddles[i].type]);
+    for (set<int>::iterator it=saddle_connLM[i].begin(); it!=saddle_connLM[i].end(); it++) fprintf(output, " %4d", (*it)+1);
+    for (set<int>::iterator it=saddle_connSadd[i].begin(); it!=saddle_connSadd[i].end(); it++) fprintf(output, " %3dS", (*it)+1);
+    fprintf(output, "\n");
   }
 }
 
