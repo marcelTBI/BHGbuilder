@@ -356,7 +356,7 @@ void DSU::PrintUBoutput(FILE *output)
   }
 }
 
-int DSU::LinkCP(Opt opt, bool debug)
+int DSU::LinkCPLM(Opt opt, bool debug)
 {
   //edgesV_ls.resize(LM.size());
   edgesV_l.resize(LM.size());
@@ -428,44 +428,44 @@ int DSU::LinkCP(Opt opt, bool debug)
   }
 
   fprintf(stderr, "Recomputed %d edges (%d are true direct saddles)\n", (int)edges_l.size(), trueds);
+  return 0;
+}
 
-  // create saddle-saddle edges
-    // create saddle set list
-  if (opt.saddle_conn) {
-    fprintf(stderr, "Computing saddle-saddle edges.\n");
-    set<std::pair<int, int> > saddle_pairs;
-    int last_lm = -1;
-    vector<int> tmp;
-    for (set<edgeLS>::iterator it = edges_ls.begin(); it!=edges_ls.end(); it++) {
+int DSU::LinkCPsaddle(Opt opt, bool debug) {       // construct vertex and edge set from UBoutput (saddle to saddle)
 
-      if (it->i == last_lm) {
-        // add every one into saddle_pairs.
-        for (unsigned int i=0; i<tmp.size(); i++) {
-          saddle_pairs.insert(make_pair(min(tmp[i], it->j), max(tmp[i], it->j)));
-        }
-      } else {
-        // clear
-        tmp.clear();
+  fprintf(stderr, "Computing saddle-saddle edges.\n");
+  set<std::pair<int, int> > saddle_pairs;
+  int last_lm = -1;
+  vector<int> tmp;
+  for (set<edgeLS>::iterator it = edges_ls.begin(); it!=edges_ls.end(); it++) {
+
+    if (it->i == last_lm) {
+      // add every one into saddle_pairs.
+      for (unsigned int i=0; i<tmp.size(); i++) {
+        saddle_pairs.insert(make_pair(min(tmp[i], it->j), max(tmp[i], it->j)));
       }
-      // add next one
-      tmp.push_back(it->j);
-      last_lm = it->i;
+    } else {
+      // clear
+      tmp.clear();
     }
-      // process this list
-    for (set<std::pair<int, int> >::iterator it=saddle_pairs.begin(); it!=saddle_pairs.end(); it++) {
-      if (debug) {
-        fprintf(stderr, "saddles to check: %4d %4d", it->first, it->second);
-      }
-      RNAsaddle &first = ((saddles[it->first].energy <= saddles[it->second].energy) ? saddles[it->first] : saddles[it->second]);
-      RNAsaddle &second = ((saddles[it->first].energy > saddles[it->second].energy) ? saddles[it->first] : saddles[it->second]);
-      // include them
-      if (FloodSaddle(first, second, opt, debug)) {
-        edgeSS e(it->first, it->second);
-        edges_s.insert(e);
-      }
-    }
-    fprintf(stderr, "Recomputed %d saddle-saddle edges (%d computations done)\n", (int)edges_s.size(), (int)saddle_pairs.size());
+    // add next one
+    tmp.push_back(it->j);
+    last_lm = it->i;
   }
+    // process this list
+  for (set<std::pair<int, int> >::iterator it=saddle_pairs.begin(); it!=saddle_pairs.end(); it++) {
+    if (debug) {
+      fprintf(stderr, "saddles to check: %4d %4d", it->first, it->second);
+    }
+    RNAsaddle &first = ((saddles[it->first].energy <= saddles[it->second].energy) ? saddles[it->first] : saddles[it->second]);
+    RNAsaddle &second = ((saddles[it->first].energy > saddles[it->second].energy) ? saddles[it->first] : saddles[it->second]);
+    // include them
+    if (FloodSaddle(first, second, opt, debug)) {
+      edgeSS e(it->first, it->second);
+      edges_s.insert(e);
+    }
+  }
+  fprintf(stderr, "Recomputed %d saddle-saddle edges (%d computations done)\n", (int)edges_s.size(), (int)saddle_pairs.size());
 
   return 0;
 }
@@ -798,6 +798,7 @@ void DSU::ConstructPath(vector<SimplePath> &paths, SimplePath &path, int dest, i
 
 void DSU::FillComps()
 {
+  fprintf(stderr, "Filling components.");
   comps.clear();
   LM_to_comp.clear();
   saddle_to_comp.clear();
@@ -821,6 +822,7 @@ void DSU::FillComps()
       comps.push_back(cmp);
     }
   }
+  fprintf(stderr, "..done, found %4d components\n", (int)comps.size());
 }
 
 void DSU::Color(int lm, int color, Component &cmp, vector<int> &LM_tmp, vector<int> &sadd_tmp) {

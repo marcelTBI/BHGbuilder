@@ -1,7 +1,9 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include <time.h>
 
 #include "DSUeval.h"
+
 
 extern "C" {
   #include "DSUeval_cmdline.h"
@@ -11,6 +13,7 @@ using namespace std;
 
 int main(int argc, char **argv)
 {
+  clock_t time = clock();
   // parse arguments
   gengetopt_args_info args_info;
   if (cmdline_parser(argc, argv, &args_info) != 0) {
@@ -27,12 +30,21 @@ int main(int argc, char **argv)
   DSU dsu(stdin, args_info.noLP_flag, args_info.shift_flag);
   dsu.CreateList(args_info.hd_threshold_arg, args_info.debug_flag);
   dsu.ComputeUB(args_info.depth_arg, args_info.num_threshold_arg, args_info.outer_flag, args_info.noLP_flag, args_info.shift_flag, args_info.debug_flag);
-  dsu.PrintUBoutput(stderr);
+  //dsu.PrintUBoutput(stderr);
+
+  fprintf(stderr, "computation of UB list took %.2f secs.\n", (clock()-time)/(double)CLOCKS_PER_SEC); time = clock();
 
     // LinkCP
   Opt opt(args_info.noLP_flag, args_info.shift_flag, !args_info.noSaddle_flag, args_info.floodMax_arg, args_info.floodHeight_arg);
-  dsu.LinkCP(opt, args_info.debug_flag);
+  dsu.LinkCPLM(opt, args_info.debug_flag);
+  fprintf(stderr, "computing LM-edges took %.2f secs.\n", (clock()-time)/(double)CLOCKS_PER_SEC); time = clock();
+  if (!args_info.noSaddle_flag) {
+    dsu.LinkCPsaddle(opt, args_info.debug_flag);
+    fprintf(stderr, "computing saddle-edges took %.2f secs.\n", (clock()-time)/(double)CLOCKS_PER_SEC); time = clock();
+  }
   dsu.PrintDot(args_info.name_dot_arg, args_info.dot_flag, args_info.print_graph_flag, args_info.name_graph_arg, args_info.tree_visualise_flag);
+
+  fprintf(stderr, "printing dot took %.2f secs.\n", (clock()-time)/(double)CLOCKS_PER_SEC); time = clock();
 
     // connect comps
   if (args_info.components_flag) {
@@ -44,13 +56,14 @@ int main(int argc, char **argv)
   dsu.PrintComps();
   dsu.PrintLinkCP(false);
 */
+  fprintf(stderr, "connnecting components took %.2f secs.\n", (clock()-time)/(double)CLOCKS_PER_SEC); time = clock();
+
   // real output:
   dsu.PrintLM(stdout);
-  dsu.PrintSaddles(stderr);
-  dsu.PrintComps(stderr, true);
+  //dsu.PrintSaddles(stderr);
+  //dsu.PrintComps(stderr, true);
 
   dsu.PrintDot(args_info.name_dot_arg, args_info.dot_flag, args_info.print_graph_flag, args_info.name_graph_arg, args_info.tree_visualise_flag);
-
 
   // print energy matrix
   if (args_info.print_energy_flag) dsu.PrintMatrix(args_info.energy_file_arg);
@@ -73,16 +86,26 @@ int main(int argc, char **argv)
     }
   }
 
-  // temporary
-  if (args_info.energy_heights_flag) {
+  // evaluation
+  if (args_info.energy_heights_given) {
     FILE *file_h;
-    file_h = fopen("energy_heights.txt", "w");
+    file_h = fopen(args_info.energy_heights_arg, "w");
     bool full = true;
     dsu.EHeights(file_h, full);
+    fclose(file_h);
+  }
+
+  // evaluation
+  if (args_info.energy_rank_given) {
+    FILE *file_h;
+    file_h = fopen(args_info.energy_rank_arg, "w");
+    bool full = true;
+    dsu.ERank(file_h);
     fclose(file_h);
   }
 
   fprintf(stderr, "DSUeval exitting succesfully!\n");
 
   cmdline_parser_free(&args_info);
+  fprintf(stderr, "rest took %.2f secs.\n", (clock()-time)/(double)CLOCKS_PER_SEC); time = clock();
 }

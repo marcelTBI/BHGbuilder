@@ -47,4 +47,5 @@ option "vis-dist"           - "Set distance as a bounding condition for visualis
 option "vis-length"         - "Set maximal length of paths in visualisation (increases computation time greatly) use only with vis-dist off" int default="15" no
 
 section "Evaluation"
-option "energy-heights"     - "output energy height for comparison with barriers" flag off
+option "energy-heights"     - "output energy height for comparison with barriers" string no
+option "energy-rank"        - "output energy on each rank of interior node" string no

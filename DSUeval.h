@@ -10,6 +10,7 @@
 #include <string>
 #include <map>
 #include <set>
+#include <algorithm>
 
 #include "RNAutils.h"
 #include "RNAstruc.h"
@@ -71,7 +72,8 @@ public:
 public:
   // big ones
   int ComputeUB(int maxkeep, int num_threshold, bool outer, bool noLP, bool shifts, bool debug);          // compute all UB (outer - add to UB also outer structures? - we will not have only direct saddles then)
-  int LinkCP(Opt opt, bool debug);       // construct vertex and edge set from UBoutput
+  int LinkCPLM(Opt opt, bool debug);       // construct vertex and edge set from UBoutput (lm to *)
+  int LinkCPsaddle(Opt opt, bool debug);       // construct vertex and edge set from UBoutput (saddle to saddle)
 
   // helpers
   int CreateList(int hd_threshold, bool debug);  // create TBDlist
@@ -117,5 +119,6 @@ public:
 
   // evaluation
   void EHeights(FILE *heights, bool full);
+  void ERank(FILE *rank);
 };
 #endif
