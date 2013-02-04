@@ -92,8 +92,70 @@ void DSU::EHeights(FILE *heights, bool full)
     }
     for (unsigned int i=0; i<res.size(); i++) {
       for (unsigned int j=i+1; j<res[i].size(); j++) {
+        // print lines: energy heights: from_node, to_node, energy height, distance
         fprintf(heights, "%4d %4d %.2f %3d\n", i+1, j+1, res[i][j].first/100.0, res[i][j].second);
       }
     }
   }
 }
+
+
+void DSU::ERank(FILE *rank)
+{
+  // ranks
+  vector<vector<std::pair<int, int> > > res(number_lm);
+  for (unsigned int i=0; i<number_lm; i++) {
+    res[i] = HeightSearch(i, edgesV_l);
+  }
+
+  struct energy_pair {
+    int i,j;
+    float barrier;
+    bool operator<(const energy_pair &scnd) const {
+      return  barrier>scnd.barrier;
+    }
+  };
+
+  int n = number_lm;
+
+  priority_queue<energy_pair> saddles;
+  for (int i=0; i<n; i++) {
+    //if (nodes[i].father!=-1) continue;
+    for (int j=i+1; j<n; j++) {
+      //if (nodes[j].father!=-1) continue;
+      if (res[i][j].first<1e8) {
+        energy_pair ep;
+        ep.barrier = res[i][j].first/100.0;
+        ep.i=i;
+        ep.j=j;
+        saddles.push(ep);
+      }
+    }
+  }
+
+  int count = 1;
+
+  UF_set ufset;
+  ufset.enlarge_parent(n);
+  while (!saddles.empty()) {
+    energy_pair ep = saddles.top();
+    saddles.pop();
+
+    //fprintf(stderr, "%4d %4d %7.2f\n", ep.i, ep.j, ep.barrier);
+
+    if (!ufset.joint(ep.i, ep.j)) {
+
+      int i=ufset.find(ep.i);
+      int j=ufset.find(ep.j);
+
+      int father = min(i, j);
+      int child = max(i, j);
+
+      fprintf(rank, "%4d %8.2f\n", count++, ep.barrier);
+
+      // finally join them
+      ufset.union_set(father, child);
+    }
+  }
+}
+

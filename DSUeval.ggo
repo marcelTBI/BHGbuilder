@@ -16,19 +16,20 @@ args "--file-name=DSUeval_cmdline --include-getopt --default-optional --unamed-o
 # Options
 option "debug"        			d "Print debug" flag off
 option "depth"              - "Depth of findpath search (higher value increases running time)" int default="10" no
+option "noLP"								- "Process structures without lonely pairs (helices of length 1)." flag off
+option "shift"							- "Assume also shift moves (in addition to insertion and deletions)." flag off
+option "time-max"           - "Quit after computing for specified time (in seconds)" int default="0" no
 
+section "UBlist"
 option "hd-threshold"       - "Do not try to process pairs with Hamming distance more than this. (0 means no threshold)" int default="0" no
 option "num-threshold"      - "Compute only first num-threshold pairs - finish HD range (0 means no threshold)" int default="0" no
 option "outer"              o "Add to UBlist also outer structures - we will not have only direct saddles then (use on your own risk!)" flag off
 
-option "noLP"								- "Process structures without lonely pairs (helices of length 1)." flag off
-option "shift"							- "Assume also shift moves (in addition to insertion and deletions)." flag off
-
+section "Graph creation"
 option "components"         c "Also link components with DSU-algorithm" flag on
-
 option "noSaddle"           - "Do not flood-link sadddles (saves some computation time, usually saddles are not connected anyway)" flag off
+option "just-ub"  					- "Do not find connections - just do first part of program" hidden flag off
 
-section "Flooding"
 option "floodMax"           - "Flood cap on number - how many structures to flood" int default="1000" no
 option "floodHeight"        - "Flood cap on height - what is the maximal energy height we will flood in 10cal/mol (0 = unlimited)" int default="0" no
 
@@ -47,4 +48,5 @@ option "vis-dist"           - "Set distance as a bounding condition for visualis
 option "vis-length"         - "Set maximal length of paths in visualisation (increases computation time greatly) use only with vis-dist off" int default="15" no
 
 section "Evaluation"
-option "energy-heights"     - "output energy height for comparison with barriers" flag off
+option "energy-heights"     - "output energy height for comparison with barriers" string no
+option "energy-rank"        - "output energy on each rank of interior node" string no
