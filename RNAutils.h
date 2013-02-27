@@ -3,6 +3,7 @@
 
 #include <string>
 #include <vector>
+#include <set>
 
 using namespace std;
 
@@ -45,6 +46,21 @@ public:
   void enlarge_parent(int count);
   int size();
   void clear();
+};
+
+class UF_set_child : public UF_set {
+private:
+  vector<set<int> > children;
+public:
+  // and union-find set functions
+  UF_set_child();
+  void union_set(int x, int y);
+  void enlarge_parent();
+  void enlarge_parent(int count);
+  void clear();
+  int count(int which);
+  set<int> get_children(int which);
+  void make_single(int which);
 };
 
 #endif

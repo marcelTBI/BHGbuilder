@@ -24,6 +24,7 @@ section "UBlist"
 option "hd-threshold"       - "Do not try to process pairs with Hamming distance more than this. (0 means no threshold)" int default="0" no
 option "num-threshold"      - "Compute only first num-threshold pairs - finish HD range (0 means no threshold)" int default="0" no
 option "outer"              o "Add to UBlist also outer structures - we will not have only direct saddles then (use on your own risk!)" flag off
+option "include-higher"     - "Include higher energy LM found by UB list computation to computation" flag off
 
 section "Graph creation"
 option "components"         c "Also link components with DSU-algorithm" flag on
@@ -50,3 +51,8 @@ option "vis-length"         - "Set maximal length of paths in visualisation (inc
 section "Evaluation"
 option "energy-heights"     - "output energy height for comparison with barriers" string no
 option "energy-rank"        - "output energy on each rank of interior node" string no
+option "energy-barrier"			- "output energy barriers (sorted) of interior nodes" string no
+
+section "Clustering"
+option "cluster-off"        - "Switch off clustering" flag off
+option "cluster-Kmax"       K "Size of maximal cluster" int default="100" no

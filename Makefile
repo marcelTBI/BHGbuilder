@@ -14,7 +14,8 @@ OBJ = $(NAME)_cmdline.o\
 			fold_dsu.o\
 			RNAutils.o\
 			flooding.o\
-			graph_tech.o
+			graph_tech.o\
+			clustering.o
 
 # should stay unchanged: 
 CPP = g++

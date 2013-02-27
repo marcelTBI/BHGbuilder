@@ -183,8 +183,8 @@ void UF_set::enlarge_parent() {
   parent.push_back(parent.size());
 }
 
-void UF_set::enlarge_parent(int count) {
-  for (int i=0; i<count; i++) enlarge_parent();
+void UF_set::enlarge_parent(int cnt) {
+  for (int i=0; i<cnt; i++) enlarge_parent();
 }
 
 int UF_set::size() {
@@ -194,4 +194,62 @@ int UF_set::size() {
 void UF_set::clear() {
   parent.clear();
   num_unions = 0;
+}
+
+// UF_set_child
+
+set<int> UF_set_child::get_children(int which)
+{
+  if (which < children.size() && which>=0) return children[which];
+  else return set<int>();
+}
+
+int UF_set_child::count(int which)
+{
+  if (which < children.size() && which>=0) return children[which].size();
+  else return -1;
+}
+
+void UF_set_child::make_single(int which)
+{
+  // just try to simulate that we have only one vertex, so count = 1 and children = this
+  if (which < children.size() && which>=0) {
+    which = find(which);
+    children[which].clear();
+    children[which].insert(which);
+  }
+}
+
+UF_set_child::UF_set_child():
+  UF_set()
+{
+  children.clear();
+}
+
+void UF_set_child::enlarge_parent() {
+  UF_set::enlarge_parent();
+  set<int> s;
+  s.insert(size()-1);
+  children.push_back(s);
+}
+
+void UF_set_child::enlarge_parent(int cnt) {
+  for (int i=0; i<cnt; i++) enlarge_parent();
+}
+
+void UF_set_child::clear() {
+  UF_set::clear();
+  children.clear();
+}
+
+void UF_set_child::union_set(int x, int y) {
+  int u, v;
+  u = find(x);
+  v = find(y);
+  if (v<u) swap(u,v);
+  if (u != v && u>=0 && v>=0) {
+    UF_set::union_set(u,v);
+    children[v].insert(children[u].begin(), children[u].end());
+    children[u].clear();
+  }
 }

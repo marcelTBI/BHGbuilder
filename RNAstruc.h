@@ -29,8 +29,8 @@ struct RNAstruc {
       int i=1;
       char l=0,r=0;
       while (i<=structure[0]) {
-        l = (structure[i]==0?'.':(structure[i]<structure[structure[i]]?'(':')'));
-        r = (second.structure[i]==0?'.':(second.structure[i]<second.structure[second.structure[i]]?'(':')'));
+        l = (structure[i]==0?'.':(structure[i]<structure[structure[i]]?')':'('));
+        r = (second.structure[i]==0?'.':(second.structure[i]<second.structure[second.structure[i]]?')':'('));
         if (l != r) break;
         i++;
       }
@@ -46,8 +46,8 @@ struct RNAstruc {
       int i=1;
       char l=0,r=0;
       while (i<=structure[0]) {
-        l = (structure[i]==0?'.':(structure[i]<structure[structure[i]]?'(':')'));
-        r = (second.structure[i]==0?'.':(second.structure[i]<second.structure[second.structure[i]]?'(':')'));
+        l = (structure[i]==0?'.':(structure[i]<structure[structure[i]]?')':'('));
+        r = (second.structure[i]==0?'.':(second.structure[i]<second.structure[second.structure[i]]?')':'('));
         if (l != r) break;
         i++;
       }
@@ -115,8 +115,8 @@ struct RNAstruc_rev {
       int i=1;
       char l=0,r=0;
       while (i<=first.structure[0]) {
-        l = (first.structure[i]==0?'.':(first.structure[i]<first.structure[first.structure[i]]?'(':')'));
-        r = (second.structure[i]==0?'.':(second.structure[i]<second.structure[second.structure[i]]?'(':')'));
+        l = (first.structure[i]==0?'.':(first.structure[i]<first.structure[first.structure[i]]?')':'('));
+        r = (second.structure[i]==0?'.':(second.structure[i]<second.structure[second.structure[i]]?')':'('));
         if (l != r) break;
         i++;
       }
@@ -151,11 +151,6 @@ public:
   pq_entry(int i, int j, int hd);
   ~pq_entry();
 };
-
-class saddle {
-
-};
-
 
 // maybe we dont need this for map...
 struct pq_setcomp {

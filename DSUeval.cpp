@@ -207,7 +207,7 @@ bool DSU::InsertUB(int i, int j, int energy_par, short *saddle_par, bool outer, 
   return false;
 }
 
-int DSU::ComputeUB(int maxkeep, int num_threshold, bool outer, bool noLP, bool shifts, bool debug)
+int DSU::ComputeUB(int maxkeep, int num_threshold, bool outer, bool noLP, bool shifts, bool include, bool debug)
 {
   int dbg_count = 0;
   int cnt = 0;
@@ -279,7 +279,9 @@ int DSU::ComputeUB(int maxkeep, int num_threshold, bool outer, bool noLP, bool s
           if (num2==-1) {
             if (gl_maxen <= tmp_en) {
               //fprintf(stderr, "exceeds en.: %s %6.2f\n", pt_to_str(tmp_str).c_str(), tmp_en/100.0);
-              num2 = AddLMtoDSU(tmp_str, tmp_en, hd_threshold, EE_DSU, debug);
+              if (include) {
+                num2 = AddLMtoDSU(tmp_str, tmp_en, hd_threshold, EE_DSU, debug);
+              }
             } else {
               fprintf(stderr, "cannot find: %s %6.2f\n", pt_to_str(tmp_str).c_str(), tmp_en/100.0);
               // add to list of minima and count with them later...

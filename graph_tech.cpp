@@ -100,11 +100,11 @@ void DSU::EHeights(FILE *heights, bool full)
 }
 
 
-void DSU::ERank(FILE *rank)
+void DSU::ERank(FILE *rank, bool barrier)
 {
-  // ranks
+  // saddle point energies + distances
   vector<vector<std::pair<int, int> > > res(number_lm);
-  for (unsigned int i=0; i<number_lm; i++) {
+  for (int i=0; i<number_lm; i++) {
     res[i] = HeightSearch(i, edgesV_l);
   }
 
@@ -126,6 +126,9 @@ void DSU::ERank(FILE *rank)
       if (res[i][j].first<1e8) {
         energy_pair ep;
         ep.barrier = res[i][j].first/100.0;
+        if (barrier) {
+          ep.barrier -= max(LM[i].energy, LM[j].energy);
+        }
         ep.i=i;
         ep.j=j;
         saddles.push(ep);

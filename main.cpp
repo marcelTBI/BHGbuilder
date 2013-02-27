@@ -28,12 +28,18 @@ int main(int argc, char **argv)
   // code
     // DSUeval
   DSU dsu(stdin, args_info.noLP_flag, args_info.shift_flag, args_info.time_max_arg);
+
+  TBD output;
+  dsu.Cluster(args_info.cluster_Kmax_arg, output);
+  fprintf(stderr, "clustering took %.2f secs.\n", (clock()-time)/(double)CLOCKS_PER_SEC); time = clock();
+
+
   dsu.CreateList(args_info.hd_threshold_arg, args_info.debug_flag);
-  dsu.ComputeUB(args_info.depth_arg, args_info.num_threshold_arg, args_info.outer_flag, args_info.noLP_flag, args_info.shift_flag, args_info.debug_flag);
+  dsu.ComputeUB(args_info.depth_arg, args_info.num_threshold_arg, args_info.outer_flag, args_info.noLP_flag, args_info.shift_flag, args_info.include_higher_flag, args_info.debug_flag);
   //dsu.PrintUBoutput(stderr);
 
   if (args_info.just_ub_flag) {
-    printf("%.2f %d\n", (clock()-time)/(double)CLOCKS_PER_SEC, dsu.Size());
+    printf("%.2f %d\n", (clock()-time)/(double)CLOCKS_PER_SEC, dsu.Size()); time = clock();
 
   } else {
     fprintf(stderr, "computation of UB list took %.2f secs.\n", (clock()-time)/(double)CLOCKS_PER_SEC); time = clock();
@@ -102,7 +108,15 @@ int main(int argc, char **argv)
     if (args_info.energy_rank_given) {
       FILE *file_h;
       file_h = fopen(args_info.energy_rank_arg, "w");
-      dsu.ERank(file_h);
+      dsu.ERank(file_h, false);
+      fclose(file_h);
+    }
+
+    // evaluation
+    if (args_info.energy_barrier_given) {
+      FILE *file_h;
+      file_h = fopen(args_info.energy_barrier_arg, "w");
+      dsu.ERank(file_h, true);
       fclose(file_h);
     }
   }

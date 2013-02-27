@@ -18,6 +18,55 @@
 
 using namespace std;
 
+enum type1 {INTER_CLUSTER, REPRESENT, CRIT_EDGE, NEW_FOUND};
+const char type1_str[][14] = {"INTER_CLUSTER", "REPRESENT", "CRIT_EDGE", "NEW_FOUND"};
+const int type1_len = 4;
+enum type2 {UNKNOWN, FIBER_UNPROC, FIBER_PROC, NONFIBER_PROC};
+const int type2_len = 4;
+
+
+struct TBDentry {
+  int i, j; // two LM indexes
+  type1 type_clust;
+  bool fiber;
+  //bool processed;
+
+  TBDentry(int i, int j, type1 type, bool fiber) {
+    this->i = i;
+    this->j = j;
+    this->type_clust = type;
+    this->fiber = fiber;
+  }
+
+  bool operator <(const TBDentry &scnd) const {
+    // first processed
+    //if (processed != scnd.processed) return processed < scnd.processed;
+    //else
+    if (fiber != scnd.fiber) return fiber > scnd.fiber; //fibers do first
+    else if (type_clust != scnd.type_clust) return type_clust < scnd.type_clust;
+    else if (i != scnd.i) return i < scnd.i;
+    else return j < scnd.j;
+  }
+};
+
+struct TBD {
+  // sets of lm to be processed
+private:
+  priority_queue<TBDentry> tbd;
+
+  // set that already is processsed
+  set<std::pair<int, int> > done;
+public:
+  int sizes[type1_len];
+
+
+public:
+  TBD();
+  bool insert(int i, int j, type1 type, bool fiber);
+  TBDentry get_first();
+  int size();
+};
+
 class DSU {
 
 private:
@@ -76,9 +125,14 @@ public:
 
 public:
   // big ones
-  int ComputeUB(int maxkeep, int num_threshold, bool outer, bool noLP, bool shifts, bool debug);          // compute all UB (outer - add to UB also outer structures? - we will not have only direct saddles then)
+    // obsolete
+  int ComputeUB(int maxkeep, int num_threshold, bool outer, bool noLP, bool shifts, bool include, bool debug);          // compute all UB (outer - add to UB also outer structures? - we will not have only direct saddles then)
   int LinkCPLM(Opt opt, bool debug);       // construct vertex and edge set from UBoutput (lm to *)
   int LinkCPsaddle(Opt opt, bool debug);       // construct vertex and edge set from UBoutput (saddle to saddle)
+
+  // clustering
+  int Cluster(int kmax, TBD &list);
+  int ProcessTBD(TBD &list, int maxkeep, int num_threshold, int hd_threshold, bool outer, bool noLP, bool shifts, bool debug);
 
   // helpers
   int CreateList(int hd_threshold, bool debug);  // create TBDlist
@@ -124,6 +178,6 @@ public:
 
   // evaluation
   void EHeights(FILE *heights, bool full);
-  void ERank(FILE *rank);
+  void ERank(FILE *rank, bool barrier);
 };
 #endif
