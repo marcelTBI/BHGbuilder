@@ -29,13 +29,15 @@ int main(int argc, char **argv)
     // DSUeval
   DSU dsu(stdin, args_info.noLP_flag, args_info.shift_flag, args_info.time_max_arg);
 
-  TBD output;
-  dsu.Cluster(args_info.cluster_Kmax_arg, output);
-  fprintf(stderr, "clustering took %.2f secs.\n", (clock()-time)/(double)CLOCKS_PER_SEC); time = clock();
-
-
-  dsu.CreateList(args_info.hd_threshold_arg, args_info.debug_flag);
-  dsu.ComputeUB(args_info.depth_arg, args_info.num_threshold_arg, args_info.outer_flag, args_info.noLP_flag, args_info.shift_flag, args_info.include_higher_flag, args_info.debug_flag);
+  if (!args_info.cluster_off_flag) {
+    TBD output;
+    dsu.Cluster(args_info.cluster_Kmax_arg, output);
+    dsu.ComputeTBD(output, args_info.depth_arg, args_info.num_threshold_arg, args_info.outer_flag, args_info.noLP_flag, args_info.shift_flag, args_info.debug_flag);
+    fprintf(stderr, "clustering took %.2f secs.\n", (clock()-time)/(double)CLOCKS_PER_SEC); time = clock();
+  } else {
+    dsu.CreateList(args_info.hd_threshold_arg, args_info.debug_flag);
+    dsu.ComputeUB(args_info.depth_arg, args_info.num_threshold_arg, args_info.outer_flag, args_info.noLP_flag, args_info.shift_flag, args_info.include_higher_flag, args_info.debug_flag);
+  }
   //dsu.PrintUBoutput(stderr);
 
   if (args_info.just_ub_flag) {

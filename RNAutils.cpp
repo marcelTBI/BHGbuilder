@@ -246,7 +246,7 @@ void UF_set_child::union_set(int x, int y) {
   int u, v;
   u = find(x);
   v = find(y);
-  if (v<u) swap(u,v);
+  if (v>u) swap(u,v);
   if (u != v && u>=0 && v>=0) {
     UF_set::union_set(u,v);
     children[v].insert(children[u].begin(), children[u].end());

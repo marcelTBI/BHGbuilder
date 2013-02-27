@@ -21,8 +21,6 @@ using namespace std;
 enum type1 {INTER_CLUSTER, REPRESENT, CRIT_EDGE, NEW_FOUND};
 const char type1_str[][14] = {"INTER_CLUSTER", "REPRESENT", "CRIT_EDGE", "NEW_FOUND"};
 const int type1_len = 4;
-enum type2 {UNKNOWN, FIBER_UNPROC, FIBER_PROC, NONFIBER_PROC};
-const int type2_len = 4;
 
 
 struct TBDentry {
@@ -42,10 +40,10 @@ struct TBDentry {
     // first processed
     //if (processed != scnd.processed) return processed < scnd.processed;
     //else
-    if (fiber != scnd.fiber) return fiber > scnd.fiber; //fibers do first
-    else if (type_clust != scnd.type_clust) return type_clust < scnd.type_clust;
-    else if (i != scnd.i) return i < scnd.i;
-    else return j < scnd.j;
+    if (fiber != scnd.fiber) return fiber < scnd.fiber; //fibers do first
+    else if (type_clust != scnd.type_clust) return type_clust > scnd.type_clust;
+    else if (i != scnd.i) return i > scnd.i;
+    else return j > scnd.j;
   }
 };
 
@@ -132,7 +130,8 @@ public:
 
   // clustering
   int Cluster(int kmax, TBD &list);
-  int ProcessTBD(TBD &list, int maxkeep, int num_threshold, int hd_threshold, bool outer, bool noLP, bool shifts, bool debug);
+  int ComputeTBD(TBD &pqueue, int maxkeep, int num_threshold, bool outer, bool noLP, bool shifts, bool debug);
+  int AddLMtoTBD(short *tmp_str, int tmp_en, LMtype type, bool debug);
 
   // helpers
   int CreateList(int hd_threshold, bool debug);  // create TBDlist
