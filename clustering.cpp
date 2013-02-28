@@ -78,6 +78,8 @@ int DSU::Cluster(int kmax, TBD &output)
   UF_set_child ufset;
   ufset.enlarge_parent(LM.size());
 
+  set<int> represents;
+
   // fill it
   for (unsigned int i=0; i<LM.size(); i++) {
     for (unsigned int j=i+1; j<LM.size(); j++) {
@@ -108,8 +110,10 @@ int DSU::Cluster(int kmax, TBD &output)
         set<int> first = ufset.get_children(ufset.find(cp.i));
         set<int> second = ufset.get_children(ufset.find(cp.j));
 
-        // insert rpresentative edge
-        output.insert(*first.begin(), *second.begin(), REPRESENT, false);
+        // insert rpresentative minima:
+        represents.insert(*first.begin());
+        represents.insert(*second.begin());
+        //output.insert(*first.begin(), *second.begin(), REPRESENT, false);
 
         // insert all inter edges:
         for (set<int>::iterator it=first.begin(); it!=first.end(); it++) {
@@ -151,6 +155,14 @@ int DSU::Cluster(int kmax, TBD &output)
     }
   }
 
+  // and finally add represen edges:
+  for (set<int>::iterator it=represents.begin(); it!=represents.end(); it++) {
+    set<int>::iterator it2 = it; it2++;
+    for (;it2!=represents.end(); it2++) {
+      output.insert(*it, *it2, REPRESENT, false);
+    }
+  }
+
 
   fprintf(stderr, "output size = %d = (%d, %d, %d)\n", output.size(), output.sizes[0], output.sizes[1], output.sizes[2]);
 
@@ -161,25 +173,29 @@ int DSU::ComputeTBD(TBD &pqueue, int maxkeep, int num_threshold, bool outer, boo
 {
   int dbg_count = 0;
   int cnt = 0;
-  int hd_threshold = INT_MAX;
   int norm_cf = 0;
 
   // go through all pairs in queue
   while (pqueue.size()>0) {
     // check time:
-    if (stop_after && (time  - clock())/(double)CLOCKS_PER_SEC > stop_after) {
+    double time_secs = ((clock()  - time)/(double)CLOCKS_PER_SEC);
+    if (stop_after && (time_secs > stop_after)) {
+      fprintf(stderr, "Time threshold reached (%d secs.), processed %d/%d\n", stop_after, cnt, pqueue.size()+cnt);
       break;
+    }
+
+    // apply threshold
+    if (cnt>num_threshold) {
+      fprintf(stderr, "Number threshold reached, processed %d/%d\n", cnt, pqueue.size()+cnt);
+      break;
+    } else {
+      cnt++;
     }
 
     // get next
     TBDentry tbd = pqueue.get_first();
 
-    // apply threshold
-    if (cnt>num_threshold) {
-      break;
-    } else {
-      cnt++;
-    }
+
 
     // get path
     if (debug) fprintf(stderr, "path between (%3d, %3d) type=%s fiber=%d:\n", tbd.i, tbd.j, type1_str[tbd.type_clust], tbd.fiber);

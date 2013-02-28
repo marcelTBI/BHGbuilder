@@ -217,7 +217,9 @@ int DSU::ComputeUB(int maxkeep, int num_threshold, bool outer, bool noLP, bool s
   // go through all pairs in queue
   while (!TBDlist.empty()) {
     // check time:
-    if (stop_after && (time  - clock())/(double)CLOCKS_PER_SEC > stop_after) {
+    double time_secs = ((clock()  - time)/(double)CLOCKS_PER_SEC);
+    if (stop_after && (time_secs > stop_after)) {
+      fprintf(stderr, "Time threshold reached (%d secs.), processed %d/%d\n", stop_after, cnt, (int)TBDlist.size()+cnt);
       break;
     }
 
@@ -226,7 +228,10 @@ int DSU::ComputeUB(int maxkeep, int num_threshold, bool outer, bool noLP, bool s
     TBDlist.pop();
 
     // apply threhold
-    if (pq.hd > hd_threshold) break;
+    if (pq.hd > hd_threshold) {
+      fprintf(stderr, "Number threshold reached, processed %d/%d\n", cnt, (int)TBDlist.size()+cnt);
+      break;
+    }
     if (cnt>num_threshold) {
       if (hd_threshold==INT_MAX) {
         hd_threshold = pq.hd;
