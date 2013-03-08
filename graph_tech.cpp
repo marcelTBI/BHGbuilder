@@ -100,7 +100,7 @@ void DSU::EHeights(FILE *heights, bool full)
 }
 
 
-void DSU::ERank(FILE *rank, bool barrier)
+void DSU::ERank(FILE *rank, bool barr, bool out_conns)
 {
   // saddle point energies + distances
   vector<vector<std::pair<int, int> > > res(number_lm);
@@ -126,7 +126,7 @@ void DSU::ERank(FILE *rank, bool barrier)
       if (res[i][j].first<1e8) {
         energy_pair ep;
         ep.barrier = res[i][j].first/100.0;
-        if (barrier) {
+        if (barr) {
           ep.barrier -= max(LM[i].energy, LM[j].energy);
         }
         ep.i=i;
@@ -138,6 +138,8 @@ void DSU::ERank(FILE *rank, bool barrier)
 
   int count = 1;
 
+
+  // build a tree.
   UF_set ufset;
   ufset.enlarge_parent(n);
   while (!saddles.empty()) {
@@ -154,7 +156,11 @@ void DSU::ERank(FILE *rank, bool barrier)
       int father = min(i, j);
       int child = max(i, j);
 
-      fprintf(rank, "%4d %8.2f\n", count++, ep.barrier);
+      fprintf(rank, "%4d %8.2f", count++, ep.barrier);
+      if (out_conns) {
+        fprintf(rank, " %4d %4d", ep.i+1, ep.j+1);
+      }
+      fprintf(rank, "\n");
 
       // finally join them
       ufset.union_set(father, child);

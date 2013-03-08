@@ -36,7 +36,7 @@ int main(int argc, char **argv)
     fprintf(stderr, "clustering took %.2f secs.\n", (clock()-time)/(double)CLOCKS_PER_SEC); time = clock();
   } else {
     dsu.CreateList(args_info.hd_threshold_arg, args_info.debug_flag);
-    dsu.ComputeUB(args_info.depth_arg, args_info.num_threshold_arg, args_info.outer_flag, args_info.noLP_flag, args_info.shift_flag, args_info.include_higher_flag, args_info.debug_flag);
+    dsu.ComputeUB(args_info.depth_arg, args_info.num_threshold_arg, args_info.outer_flag, args_info.noLP_flag, args_info.shift_flag, args_info.debug_flag);
   }
   //dsu.PrintUBoutput(stderr);
 
@@ -110,7 +110,7 @@ int main(int argc, char **argv)
     if (args_info.energy_rank_given) {
       FILE *file_h;
       file_h = fopen(args_info.energy_rank_arg, "w");
-      dsu.ERank(file_h, false);
+      dsu.ERank(file_h, false, true);
       fclose(file_h);
     }
 

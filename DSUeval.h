@@ -124,7 +124,7 @@ public:
 public:
   // big ones
     // obsolete
-  int ComputeUB(int maxkeep, int num_threshold, bool outer, bool noLP, bool shifts, bool include, bool debug);          // compute all UB (outer - add to UB also outer structures? - we will not have only direct saddles then)
+  int ComputeUB(int maxkeep, int num_threshold, bool outer, bool noLP, bool shifts, bool debug);          // compute all UB (outer - add to UB also outer structures? - we will not have only direct saddles then)
   int LinkCPLM(Opt opt, bool debug);       // construct vertex and edge set from UBoutput (lm to *)
   int LinkCPsaddle(Opt opt, bool debug);       // construct vertex and edge set from UBoutput (saddle to saddle)
 
@@ -177,6 +177,6 @@ public:
 
   // evaluation
   void EHeights(FILE *heights, bool full);
-  void ERank(FILE *rank, bool barrier);
+  void ERank(FILE *rank, bool barrier, bool out_conns = false);
 };
 #endif

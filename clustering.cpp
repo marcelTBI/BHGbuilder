@@ -164,7 +164,7 @@ int DSU::Cluster(int kmax, TBD &output)
   }
 
 
-  fprintf(stderr, "output size = %d = (%d, %d, %d)\n", output.size(), output.sizes[0], output.sizes[1], output.sizes[2]);
+  fprintf(stderr, "output size = %d (%d, %d, %d)\n", output.size(), output.sizes[0], output.sizes[1], output.sizes[2]);
 
   return 0;
 }
