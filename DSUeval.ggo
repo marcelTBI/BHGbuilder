@@ -5,7 +5,7 @@ purpose "Landscape analysis: using near minima connections, tries to recompute l
   output: (stdout) saddles and which minima they connect\n\
           (stdout) component information about graph after LinkCP function\n\
           .dot file with landmap graph in DOT language\n\
-          additional: see options under \"Output\" section"
+          additional: see options under \"Output\" an \"Evaluation\" section"
 
 # Version of your program
 version "0.1"   # don't use version if you're using automake

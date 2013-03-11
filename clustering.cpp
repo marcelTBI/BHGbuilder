@@ -154,6 +154,8 @@ int DSU::Cluster(int kmax, TBD &output)
       output.insert(*it, *it2, INTER_CLUSTER, false);
     }
   }
+  // and its represent node
+  represents.insert(father);
 
   // and finally add represen edges:
   for (set<int>::iterator it=represents.begin(); it!=represents.end(); it++) {
