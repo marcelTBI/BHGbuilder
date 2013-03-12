@@ -84,7 +84,7 @@ private:
 
   // lists
   priority_queue<pq_entry> TBDlist;
-  map<pq_entry, RNAsaddle, pq_setcomp> UBlist; // its free in the end
+
 
   // output
   vector<std::pair<RNAsaddle, pq_entry> > UBoutput; // contains memory
@@ -110,7 +110,6 @@ private:
     vector<Component> comps;
     map<int, int> LM_to_comp;
     map<int, int> saddle_to_comp;
-
   // -- Height-first Search
 
 
@@ -132,11 +131,12 @@ public:
   int Cluster(int kmax, TBD &list);
   int ComputeTBD(TBD &pqueue, int maxkeep, int num_threshold, bool outer, bool noLP, bool shifts, bool debug);
   int AddLMtoTBD(short *tmp_str, int tmp_en, LMtype type, bool debug);
+  int JoinClusters(UF_set_child &ufset, set<int> &represents, TBD &output, int i, int j);
 
   // helpers
   int CreateList(int hd_threshold, bool debug);  // create TBDlist
   int FindNum(int energy, short *str);           // find number of structure
-  bool InsertUB(int i, int j, int energy, short *saddle, bool outer, bool debug); // insert into UBlist
+  bool InsertUB(map<pq_entry, RNAsaddle, pq_setcomp> &UBlist, int i, int j, int energy, short *saddle, bool outer, bool debug); // insert into UBlist
   int AddLMtoDSU(short *tmp_str, int tmp_en, int hd_threshold, LMtype type, bool debug);
     // link cp
   void PrintMatrix(char *filename); // print energy barrier matrix

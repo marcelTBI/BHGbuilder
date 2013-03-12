@@ -78,6 +78,7 @@ int DSU::Cluster(int kmax, TBD &output)
   UF_set_child ufset;
   ufset.enlarge_parent(LM.size());
 
+  // representative nodes
   set<int> represents;
 
   // fill it
@@ -102,38 +103,12 @@ int DSU::Cluster(int kmax, TBD &output)
 
       //fprintf(stderr, "clustering %d %d (%d)\n", cp.i, cp.j, cp.d);
       // try to connect
+      int father1 = ufset.find(cp.i);
+      int father2 = ufset.find(cp.j);
+      if (ufset.count(father1) + ufset.count(father2) > kmax) { // cannot connect them, need to insert all edges into the TBD
 
-      if (ufset.count(ufset.find(cp.i)) + ufset.count(ufset.find(cp.j)) > kmax) { // cannot connect them, need to insert all edges into the TBD
-        // insert crit edge:
-        output.insert(cp.i, cp.j, CRIT_EDGE, false);
-
-        set<int> first = ufset.get_children(ufset.find(cp.i));
-        set<int> second = ufset.get_children(ufset.find(cp.j));
-
-        // insert rpresentative minima:
-        represents.insert(*first.begin());
-        represents.insert(*second.begin());
-        //output.insert(*first.begin(), *second.begin(), REPRESENT, false);
-
-        // insert all inter edges:
-        for (set<int>::iterator it=first.begin(); it!=first.end(); it++) {
-          set<int>::iterator it2 = it; it2++;
-          for (;it2!=first.end(); it2++) {
-            output.insert(*it, *it2, INTER_CLUSTER, false);
-          }
-        }
-
-        for (set<int>::iterator it=second.begin(); it!=second.end(); it++) {
-          set<int>::iterator it2 = it; it2++;
-          for (;it2!=second.end(); it2++) {
-            output.insert(*it, *it2, INTER_CLUSTER, false);
-          }
-        }
-
-        // now make from this group only one vertex (maybe wrong)
-        ufset.union_set(cp.i, cp.j);
-        ufset.make_single(cp.i);
-
+        // join clusters
+        JoinClusters(ufset, represents, output, cp.i, cp.j);
 
       } else {
         // connect them
@@ -171,11 +146,48 @@ int DSU::Cluster(int kmax, TBD &output)
   return 0;
 }
 
+int DSU::JoinClusters(UF_set_child &ufset, set<int> &represents, TBD &output, int i, int j) {
+  // insert crit edge:
+  output.insert(i, j, CRIT_EDGE, false);
+
+  set<int> first = ufset.get_children(ufset.find(i));
+  set<int> second = ufset.get_children(ufset.find(j));
+
+  // insert rpresentative minima:
+  represents.insert(*first.begin());
+  represents.insert(*second.begin());
+  //output.insert(*first.begin(), *second.begin(), REPRESENT, false);
+
+  // insert all inter edges:
+  for (set<int>::iterator it=first.begin(); it!=first.end(); it++) {
+    set<int>::iterator it2 = it; it2++;
+    for (;it2!=first.end(); it2++) {
+      output.insert(*it, *it2, INTER_CLUSTER, false);
+    }
+  }
+
+  for (set<int>::iterator it=second.begin(); it!=second.end(); it++) {
+    set<int>::iterator it2 = it; it2++;
+    for (;it2!=second.end(); it2++) {
+      output.insert(*it, *it2, INTER_CLUSTER, false);
+    }
+  }
+
+  // now make from this group only one vertex (maybe wrong)
+  ufset.union_set(i, j);
+  ufset.make_single(i);
+
+  return 0;
+}
+
 int DSU::ComputeTBD(TBD &pqueue, int maxkeep, int num_threshold, bool outer, bool noLP, bool shifts, bool debug)
 {
   int dbg_count = 0;
   int cnt = 0;
   int norm_cf = 0;
+
+  // partial results
+  map<pq_entry, RNAsaddle, pq_setcomp> UBlist;
 
   // go through all pairs in queue
   while (pqueue.size()>0) {
@@ -261,7 +273,7 @@ int DSU::ComputeTBD(TBD &pqueue, int maxkeep, int num_threshold, bool outer, boo
           // store (maybe) better saddle to UB
           int en_tmp = en_fltoi(max(last->en, tmp->en));
           short *saddle = (last->en > tmp->en ? make_pair_table(last->s) : make_pair_table(tmp->s));
-          InsertUB(num1, num2, en_tmp, saddle, false, debug);
+          InsertUB(UBlist, num1, num2, en_tmp, saddle, false, debug);
 
 
           // try to insert new things into TBD:
@@ -291,7 +303,7 @@ int DSU::ComputeTBD(TBD &pqueue, int maxkeep, int num_threshold, bool outer, boo
     } // crawling path
 
     // insert saddle between outer structures
-    if (outer) InsertUB(tbd.i, tbd.j, en_fltoi(max_energy), make_pair_table(max_path->s), true, debug);
+    if (outer) InsertUB(UBlist, tbd.i, tbd.j, en_fltoi(max_energy), make_pair_table(max_path->s), true, debug);
 
     // free stuff
     if (last_str) free(last_str);
@@ -313,6 +325,8 @@ int DSU::ComputeTBD(TBD &pqueue, int maxkeep, int num_threshold, bool outer, boo
 
   return 0;
 }
+
+
 
 int DSU::AddLMtoTBD(short *tmp_str, int tmp_en, LMtype type, bool debug)
 {

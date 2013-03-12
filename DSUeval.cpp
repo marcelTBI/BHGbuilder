@@ -130,12 +130,6 @@ DSU::~DSU() {
     if (saddles[i].str_ch) free(saddles[i].str_ch);
   }
 
-  // always should be empty
-  for (map<pq_entry, RNAsaddle, pq_setcomp>::iterator it=UBlist.begin(); it!=UBlist.end(); it++) {
-    if (it->second.structure) free(it->second.structure);
-    if (it->second.str_ch) free(it->second.str_ch);
-  }
-
   /*for (unsigned int i=0; i<UBoutput.size(); i++) {  // converted to saddles
     if (UBoutput[i].first.structure) free(UBoutput[i].first.structure);
     if (UBoutput[i].first.str_ch) free(UBoutput[i].first.str_ch);
@@ -177,42 +171,14 @@ int DSU::FindNum(int en_par, short *str_par)
   return -1;  // old version*/
 }
 
-bool DSU::InsertUB(int i, int j, int energy_par, short *saddle_par, bool outer, bool debug)
-{
-  pq_entry pq(i, j, 0);
-  map<pq_entry, RNAsaddle, pq_setcomp>::iterator it = UBlist.find(pq);
-  if (it==UBlist.end()) {
-    RNAsaddle saddle(i, j);
-    saddle.energy = energy_par;
-    saddle.structure = saddle_par;
-    saddle.str_ch = NULL;
-    saddle.type = (outer?NOT_SURE:DIRECT);
-    if (debug) fprintf(stderr, "UBins: (%3d, %3d) insert saddle  %6.2f %s\n", i, j, saddle.energy/100.0, pt_to_str(saddle.structure).c_str());
-    UBlist.insert(make_pair(pq, saddle));
-    return true;
-    //fprintf(stderr, "cannot find (UB  ): (%3d, %3d)\n", num1, num2);
-  } else {
-    // update it
-    if (energy_par < it->second.energy) {
-      if (debug) fprintf(stderr, "UBupd: (%3d, %3d) from %6.2f to %6.2f %s\n", i, j, it->second.energy/100.0, energy_par/100.0, pt_to_str(it->second.structure).c_str());
-      it->second.energy = energy_par;
-      if (it->second.structure) free(it->second.structure);
-      it->second.structure = saddle_par;
-      it->second.str_ch = NULL;
-      it->second.type = (outer?NOT_SURE:DIRECT);
-      return true;
-    }
-  }
-  free(saddle_par);
-  return false;
-}
-
 int DSU::ComputeUB(int maxkeep, int num_threshold, bool outer, bool noLP, bool shifts, bool debug)
 {
   int dbg_count = 0;
   int cnt = 0;
   int hd_threshold = INT_MAX;
   int norm_cf = 0;
+
+  map<pq_entry, RNAsaddle, pq_setcomp> UBlist;
 
   // go through all pairs in queue
   while (!TBDlist.empty()) {
@@ -298,7 +264,7 @@ int DSU::ComputeUB(int maxkeep, int num_threshold, bool outer, bool noLP, bool s
           // store (maybe) better saddle to UB
           int en_tmp = en_fltoi(max(last->en, tmp->en));
           short *saddle = (last->en > tmp->en ? make_pair_table(last->s) : make_pair_table(tmp->s));
-          InsertUB(num1, num2, en_tmp, saddle, false, debug);
+          InsertUB(UBlist, num1, num2, en_tmp, saddle, false, debug);
         }
 
         // change last_num
@@ -314,7 +280,7 @@ int DSU::ComputeUB(int maxkeep, int num_threshold, bool outer, bool noLP, bool s
     } // crawling path
 
     // insert saddle between outer structures
-    if (outer) InsertUB(pq.i, pq.j, en_fltoi(max_energy), make_pair_table(max_path->s), true, debug);
+    if (outer) InsertUB(UBlist, pq.i, pq.j, en_fltoi(max_energy), make_pair_table(max_path->s), true, debug);
 
     // free stuff
     if (last_str) free(last_str);
@@ -370,6 +336,36 @@ void DSU::PrintUBoutput(FILE *output)
   for (unsigned int i=0; i<UBoutput.size(); i++) {
     fprintf(output, "%4d (%4d,%4d) %s %6.2f\n", i+1, UBoutput[i].second.i+1, UBoutput[i].second.j+1, pt_to_str(UBoutput[i].first.structure).c_str(), UBoutput[i].first.energy/100.0);
   }
+}
+
+bool DSU::InsertUB(map<pq_entry, RNAsaddle, pq_setcomp> &UBlist, int i, int j, int energy_par, short *saddle_par, bool outer, bool debug)
+{
+  pq_entry pq(i, j, 0);
+  map<pq_entry, RNAsaddle, pq_setcomp>::iterator it = UBlist.find(pq);
+  if (it==UBlist.end()) {
+    RNAsaddle saddle(i, j);
+    saddle.energy = energy_par;
+    saddle.structure = saddle_par;
+    saddle.str_ch = NULL;
+    saddle.type = (outer?NOT_SURE:DIRECT);
+    if (debug) fprintf(stderr, "UBins: (%3d, %3d) insert saddle  %6.2f %s\n", i, j, saddle.energy/100.0, pt_to_str(saddle.structure).c_str());
+    UBlist.insert(make_pair(pq, saddle));
+    return true;
+    //fprintf(stderr, "cannot find (UB  ): (%3d, %3d)\n", num1, num2);
+  } else {
+    // update it
+    if (energy_par < it->second.energy) {
+      if (debug) fprintf(stderr, "UBupd: (%3d, %3d) from %6.2f to %6.2f %s\n", i, j, it->second.energy/100.0, energy_par/100.0, pt_to_str(it->second.structure).c_str());
+      it->second.energy = energy_par;
+      if (it->second.structure) free(it->second.structure);
+      it->second.structure = saddle_par;
+      it->second.str_ch = NULL;
+      it->second.type = (outer?NOT_SURE:DIRECT);
+      return true;
+    }
+  }
+  free(saddle_par);
+  return false;
 }
 
 int DSU::LinkCPLM(Opt opt, bool debug)
