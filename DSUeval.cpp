@@ -284,9 +284,7 @@ int DSU::ComputeUB(int maxkeep, int num_threshold, bool outer, bool noLP, bool s
           if (num2==-1) {
             if (gl_maxen <= tmp_en) {
               //fprintf(stderr, "exceeds en.: %s %6.2f\n", pt_to_str(tmp_str).c_str(), tmp_en/100.0);
-              if (include) {
-                num2 = AddLMtoDSU(tmp_str, tmp_en, hd_threshold, EE_DSU, debug);
-              }
+              num2 = AddLMtoDSU(tmp_str, tmp_en, hd_threshold, EE_DSU, debug);
             } else {
               fprintf(stderr, "cannot find: %s %6.2f\n", pt_to_str(tmp_str).c_str(), tmp_en/100.0);
               // add to list of minima and count with them later...

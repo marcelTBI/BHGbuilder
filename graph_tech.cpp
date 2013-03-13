@@ -127,7 +127,7 @@ void DSU::ERank(FILE *rank, bool barrier)
         energy_pair ep;
         ep.barrier = res[i][j].first/100.0;
         if (barrier) {
-          ep.barrier -= max(LM[i].energy, LM[j].energy);
+          ep.barrier -= max(LM[i].energy, LM[j].energy)/100.0;
         }
         ep.i=i;
         ep.j=j;
@@ -154,7 +154,7 @@ void DSU::ERank(FILE *rank, bool barrier)
       int father = min(i, j);
       int child = max(i, j);
 
-      fprintf(rank, "%4d %8.2f\n", count++, ep.barrier);
+      fprintf(rank, "%4d %8.2f %d %d\n", count++, ep.barrier, ep.i+1, ep.j+1);
 
       // finally join them
       ufset.union_set(father, child);
