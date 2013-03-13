@@ -55,4 +55,4 @@ option "energy-barrier"			- "output sorted barrier heights between fibers (pairs
 section "Clustering"
 option "cluster-off"        - "Switch off clustering" flag off
 option "cluster-Kmax"       K "Size of maximal cluster" int default="100" no
-option "cluster-repre"      - "Portion of nodes taken as representatives from each cluster (always at least one)" float default="0.1" no
+option "cluster-repre"      - "Portion of saddles, which end points are taken as representatives from each cluster (always at least one)" float default="0.05" no

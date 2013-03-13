@@ -176,17 +176,27 @@ int DSU::JoinClusters(Opt &opt, UF_set_child &ufset, set<int> &represents, TBD &
   output.join(clusterj);
 
   // and add "many" representatives into represents.
-  int manyi = max(1, (int)(opt.repre_portion*UBouti.size()));
-  for (int i=0; i<manyi; i++) {
-    int pos = UBouti.size()-1-i;
-    represents.insert(UBouti[pos].second.i);
-    represents.insert(UBouti[pos].second.j);
+  if (UBouti.size() != 0) {
+    int manyi = max(1, (int)(opt.repre_portion/2.0*childreni.size()));
+    for (int i=0; i<manyi; i++) {
+      int pos = UBouti.size()-1-i;
+      represents.insert(UBouti[pos].second.i);
+      represents.insert(UBouti[pos].second.j);
+    }
+    fprintf(stderr, "cluster size: %5d, acquiring %3d represents, repre size: %4d\n", (int)childreni.size(), manyi*2, (int)represents.size());
+  } else {
+    fprintf(stderr, "cluster size: %5d, acquiring %3d represents, repre size: %4d\n", 0, 0, (int)represents.size());
   }
-  int manyj = max(1, (int)(opt.repre_portion*UBoutj.size()));
-  for (int i=0; i<manyj; i++) {
-    int pos = UBoutj.size()-1-i;
-    represents.insert(UBoutj[pos].second.i);
-    represents.insert(UBoutj[pos].second.j);
+  if (UBoutj.size() != 0) {
+    int manyj = max(1, (int)(opt.repre_portion/2.0*childrenj.size()));
+    for (int i=0; i<manyj; i++) {
+      int pos = UBoutj.size()-1-i;
+      represents.insert(UBoutj[pos].second.i);
+      represents.insert(UBoutj[pos].second.j);
+    }
+    fprintf(stderr, "cluster size: %5d, acquiring %3d represents, repre size: %4d\n", (int)childrenj.size(), manyj*2, (int)represents.size());
+  } else {
+    fprintf(stderr, "cluster size: %5d, acquiring %3d represents, repre size: %4d\n", 0, 0, (int)represents.size());
   }
 
   // add them to global output.
