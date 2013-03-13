@@ -19,23 +19,18 @@ extern "C" {
 
 using namespace std;
 
-pq_entry::pq_entry(int i, int j, int hd)
-{
-  this->i = min(i, j);
-  this->j = max(i, j);
-  this->hd = hd;
-}
-
-pq_entry::~pq_entry() {
-}
-
-Opt::Opt(bool noLP, bool shifts, bool saddle, int num, int height)
+Opt::Opt(bool noLP, bool shifts, bool saddle, int num, int height, bool debug, int maxkeep, int num_threshold, bool outer, float repre_portion)
 {
   this->noLP = noLP;
   this->shifts = shifts;
   this->saddle_conn = saddle;
   this->flood_num = num;
   this->flood_height = height;
+  this->debug = debug;
+  this->maxkeep = maxkeep;
+  this->num_threshold = num_threshold;
+  this->outer = outer;
+  this->repre_portion = repre_portion;
 }
 
 void RNAstruc::freeMEM() {

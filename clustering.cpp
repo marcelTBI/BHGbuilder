@@ -14,29 +14,6 @@ extern "C" {
 
 #include "DSUeval.h"
 
-struct cluster_pair {
-  int i, j;
-  int d;
-
-  cluster_pair(int i, int j, int d) {
-    this->i = i;
-    this->j = j;
-    this->d = d;
-  }
-
-  bool operator <(const cluster_pair &sec) const {
-    if (d != sec.d) {
-      return d<sec.d;
-    } else {
-      if (i != sec.i) {
-        return i<sec.i;
-      } else {
-        return j<sec.j;
-      }
-    }
-  }
-};
-
 TBD::TBD()
 {
   for (int i=0; i<type1_len; i++) {
@@ -69,11 +46,16 @@ TBDentry TBD::get_first()
   return tbde;
 }
 
+void TBD::join(TBD &second) {
+  //assert(second.size()==0);
+  done.insert(second.done.begin(), second.done.end());
+}
 
-int DSU::Cluster(int kmax, TBD &output)
+
+int DSU::Cluster(Opt &opt, int kmax, TBD &output)
 {
   // create data structures
-  vector<cluster_pair> to_cluster;
+  vector<lm_pair> to_cluster;
   to_cluster.reserve(LM.size());
   UF_set_child ufset;
   ufset.enlarge_parent(LM.size());
@@ -84,17 +66,17 @@ int DSU::Cluster(int kmax, TBD &output)
   // fill it
   for (unsigned int i=0; i<LM.size(); i++) {
     for (unsigned int j=i+1; j<LM.size(); j++) {
-      to_cluster.push_back(cluster_pair(i,j,HammingDist(LM[i].structure, LM[j].structure)));
+      to_cluster.push_back(lm_pair(i,j,HammingDist(LM[i].structure, LM[j].structure)));
     }
   }
   sort(to_cluster.begin(), to_cluster.end());
 
   // process:
-  int last_hd = to_cluster[0].d;
+  int last_hd = to_cluster[0].hd;
   for (unsigned int i=0; i<to_cluster.size(); i++) {
-    cluster_pair &cp = to_cluster[i];
+    lm_pair &cp = to_cluster[i];
 
-    if (cp.d!=last_hd) {
+    if (cp.hd!=last_hd) {
       // do something, cause we are on higher level...
     }
 
@@ -108,7 +90,7 @@ int DSU::Cluster(int kmax, TBD &output)
       if (ufset.count(father1) + ufset.count(father2) > kmax) { // cannot connect them, need to insert all edges into the TBD
 
         // join clusters
-        JoinClusters(ufset, represents, output, cp.i, cp.j);
+        JoinClusters(opt, ufset, represents, output, cp.i, cp.j);
 
       } else {
         // connect them
@@ -116,7 +98,7 @@ int DSU::Cluster(int kmax, TBD &output)
 
       }
     }
-    last_hd = cp.d;
+    last_hd = cp.hd;
   }
 
   // now we have just one cluster, we have to add all intercluster connections that are left:
@@ -143,35 +125,73 @@ int DSU::Cluster(int kmax, TBD &output)
 
   fprintf(stderr, "output size = %d (%d, %d, %d)\n", output.size(), output.sizes[0], output.sizes[1], output.sizes[2]);
 
+  // now finish:
+  vector<std::pair<RNAsaddle, lm_pair> > UBout;
+  UBout = ComputeTBD2(output, opt.maxkeep, opt.num_threshold, opt.outer, opt.noLP, opt.shifts, opt.debug);
+  UBoutput.insert(UBoutput.end(), UBout.begin(), UBout.end());
+  sort(UBoutput.begin(), UBoutput.end());
+
   return 0;
 }
 
-int DSU::JoinClusters(UF_set_child &ufset, set<int> &represents, TBD &output, int i, int j) {
+int DSU::JoinClusters(Opt &opt, UF_set_child &ufset, set<int> &represents, TBD &output, int i, int j) {
+
   // insert crit edge:
   output.insert(i, j, CRIT_EDGE, false);
 
-  set<int> first = ufset.get_children(ufset.find(i));
-  set<int> second = ufset.get_children(ufset.find(j));
+  // do inside job:
+  TBD clusteri;
+  TBD clusterj;
 
-  // insert rpresentative minima:
-  represents.insert(*first.begin());
-  represents.insert(*second.begin());
+  set<int> childreni = ufset.get_children(ufset.find(i));
+  set<int> childrenj = ufset.get_children(ufset.find(j));
+
+  // insert representative minima:
+  represents.insert(*childreni.begin());
+  represents.insert(*childrenj.begin());
+
   //output.insert(*first.begin(), *second.begin(), REPRESENT, false);
 
   // insert all inter edges:
-  for (set<int>::iterator it=first.begin(); it!=first.end(); it++) {
+  for (set<int>::iterator it=childreni.begin(); it!=childreni.end(); it++) {
     set<int>::iterator it2 = it; it2++;
-    for (;it2!=first.end(); it2++) {
-      output.insert(*it, *it2, INTER_CLUSTER, false);
+    for (;it2!=childreni.end(); it2++) {
+      clusteri.insert(*it, *it2, INTER_CLUSTER, false);
     }
   }
 
-  for (set<int>::iterator it=second.begin(); it!=second.end(); it++) {
+  for (set<int>::iterator it=childrenj.begin(); it!=childrenj.end(); it++) {
     set<int>::iterator it2 = it; it2++;
-    for (;it2!=second.end(); it2++) {
-      output.insert(*it, *it2, INTER_CLUSTER, false);
+    for (;it2!=childrenj.end(); it2++) {
+      clusterj.insert(*it, *it2, INTER_CLUSTER, false);
     }
   }
+
+  // Compute inside saddles:
+  vector<std::pair<RNAsaddle, lm_pair> > UBouti, UBoutj;
+  UBouti = ComputeTBD2(clusteri, opt.maxkeep, opt.num_threshold, opt.outer, opt.noLP, opt.shifts, opt.debug);
+  UBoutj = ComputeTBD2(clusterj, opt.maxkeep, opt.num_threshold, opt.outer, opt.noLP, opt.shifts, opt.debug);
+
+  output.join(clusteri);
+  output.join(clusterj);
+
+  // and add "many" representatives into represents.
+  int manyi = max(1, (int)(opt.repre_portion*UBouti.size()));
+  for (int i=0; i<manyi; i++) {
+    int pos = UBouti.size()-1-i;
+    represents.insert(UBouti[pos].second.i);
+    represents.insert(UBouti[pos].second.j);
+  }
+  int manyj = max(1, (int)(opt.repre_portion*UBoutj.size()));
+  for (int i=0; i<manyj; i++) {
+    int pos = UBoutj.size()-1-i;
+    represents.insert(UBoutj[pos].second.i);
+    represents.insert(UBoutj[pos].second.j);
+  }
+
+  // add them to global output.
+  UBoutput.insert(UBoutput.end(), UBouti.begin(), UBouti.end());
+  UBoutput.insert(UBoutput.end(), UBoutj.begin(), UBoutj.end());
 
   // now make from this group only one vertex (maybe wrong)
   ufset.union_set(i, j);
@@ -180,14 +200,14 @@ int DSU::JoinClusters(UF_set_child &ufset, set<int> &represents, TBD &output, in
   return 0;
 }
 
-int DSU::ComputeTBD(TBD &pqueue, int maxkeep, int num_threshold, bool outer, bool noLP, bool shifts, bool debug)
+vector<std::pair<RNAsaddle, lm_pair> > DSU::ComputeTBD2(TBD &pqueue, int maxkeep, int num_threshold, bool outer, bool noLP, bool shifts, bool debug)
 {
   int dbg_count = 0;
   int cnt = 0;
   int norm_cf = 0;
 
   // partial results
-  map<pq_entry, RNAsaddle, pq_setcomp> UBlist;
+  map<lm_pair, RNAsaddle, pq_setcomp> UBlist;
 
   // go through all pairs in queue
   while (pqueue.size()>0) {
@@ -311,8 +331,9 @@ int DSU::ComputeTBD(TBD &pqueue, int maxkeep, int num_threshold, bool outer, boo
   } // all doing while
 
   // now just resort UBlist to something sorted according energy
+  vector<std::pair<RNAsaddle, lm_pair> > UBoutput;
   UBoutput.reserve(UBlist.size());
-  for (map<pq_entry, RNAsaddle, pq_setcomp>::iterator it=UBlist.begin(); it!=UBlist.end(); it++) {
+  for (map<lm_pair, RNAsaddle, pq_setcomp>::iterator it=UBlist.begin(); it!=UBlist.end(); it++) {
     if (it->second.str_ch) free(it->second.str_ch);
     it->second.str_ch = pt_to_char(it->second.structure);
     UBoutput.push_back(make_pair(it->second, it->first));
@@ -320,12 +341,8 @@ int DSU::ComputeTBD(TBD &pqueue, int maxkeep, int num_threshold, bool outer, boo
   sort(UBoutput.begin(), UBoutput.end());
   UBlist.clear();
 
-  // check if everything has been found:
-  fprintf(stderr, "Found: %d connections\nLM resized from: %d to %d (%d missing, %d above the energy threshold)\n", (int)UBoutput.size(), number_lm, (int)LM.size(), norm_cf, (int)LM.size()-number_lm-norm_cf);
-
-  return 0;
+  return UBoutput;
 }
-
 
 
 int DSU::AddLMtoTBD(short *tmp_str, int tmp_en, LMtype type, bool debug)

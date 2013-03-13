@@ -104,7 +104,14 @@ struct Opt {
   int flood_num;
   int flood_height;
 
-  Opt(bool noLP, bool shifts, bool saddle, int num, int height);
+  // for clustering
+  bool debug;
+  int maxkeep;
+  int num_threshold;
+  bool outer;
+  float repre_portion;
+
+  Opt(bool noLP, bool shifts, bool saddle, int num, int height, bool debug, int maxkeep, int num_threshold, bool outer, float repre_portion);
 };
 
 // just for reverse ordering
@@ -129,32 +136,31 @@ struct RNAstruc_rev {
 };
 
 // entry for priority queue
-class pq_entry {
-public:
-  int i;       // i is always smaller
-  int j;
-  int hd;     // hamming dist
+struct lm_pair {
+  int i, j;
+  int hd;
 
-public:
-  bool operator<(const pq_entry &second) const {
-    if (hd==second.hd) {
-      if (i==second.i) {
-        return j<second.j;
-      } else return i<second.i;
-    } else return hd>second.hd;
+  lm_pair(int i, int j, int hd) {
+    this->i = i;
+    this->j = j;
+    this->hd = hd;
   }
 
-private:
-  pq_entry() {};
-
-public:
-  pq_entry(int i, int j, int hd);
-  ~pq_entry();
+  bool operator <(const lm_pair &sec) const {
+    if (hd != sec.hd) {
+      return hd<sec.hd;
+    } else {
+      if (i != sec.i) {
+        return i<sec.i;
+      } else {
+        return j<sec.j;
+      }
+    }
+  }
 };
-
 // maybe we dont need this for map...
 struct pq_setcomp {
-  long operator() (const pq_entry &l, const pq_entry &r) const {
+  long operator() (const lm_pair &l, const lm_pair &r) const {
     if (l.i == r.i) return l.j<r.j;
     else return l.i < r.i;
   }

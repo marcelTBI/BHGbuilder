@@ -142,7 +142,7 @@ int DSU::CreateList(int hd_threshold, bool debug)
     for (unsigned int j=i+1; j<LM.size(); j++) {
       int hd = HammingDist(LM[i].structure, LM[j].structure);
       if (hd < hd_threshold) {
-        TBDlist.push(pq_entry(i, j, hd));
+        TBDlist.push(lm_pair(i, j, hd));
         if (debug) {
           fprintf(stderr, "%s insert que\n%s (%4d,%4d) %3d\n", pt_to_str(LM[i].structure).c_str(), pt_to_str(LM[j].structure).c_str(), i, j, hd);
         }
@@ -178,7 +178,7 @@ int DSU::ComputeUB(int maxkeep, int num_threshold, bool outer, bool noLP, bool s
   int hd_threshold = INT_MAX;
   int norm_cf = 0;
 
-  map<pq_entry, RNAsaddle, pq_setcomp> UBlist;
+  map<lm_pair, RNAsaddle, pq_setcomp> UBlist;
 
   // go through all pairs in queue
   while (!TBDlist.empty()) {
@@ -190,7 +190,7 @@ int DSU::ComputeUB(int maxkeep, int num_threshold, bool outer, bool noLP, bool s
     }
 
     // get pair
-    pq_entry pq = TBDlist.top();
+    lm_pair pq = TBDlist.top();
     TBDlist.pop();
 
     // apply threhold
@@ -289,7 +289,7 @@ int DSU::ComputeUB(int maxkeep, int num_threshold, bool outer, bool noLP, bool s
 
   // now just resort UBlist to something sorted according energy
   UBoutput.reserve(UBlist.size());
-  for (map<pq_entry, RNAsaddle, pq_setcomp>::iterator it=UBlist.begin(); it!=UBlist.end(); it++) {
+  for (map<lm_pair, RNAsaddle, pq_setcomp>::iterator it=UBlist.begin(); it!=UBlist.end(); it++) {
     if (it->second.str_ch) free(it->second.str_ch);
     it->second.str_ch = pt_to_char(it->second.structure);
     UBoutput.push_back(make_pair(it->second, it->first));
@@ -316,7 +316,7 @@ int DSU::AddLMtoDSU(short *tmp_str, int tmp_en, int hd_threshold, LMtype type, b
     for (unsigned int i=0; i<LM.size(); i++) {
       int hd = HammingDist(LM[i].structure, tmp_str);
       if (hd < hd_threshold) {
-        TBDlist.push(pq_entry(i, LM.size(), hd));
+        TBDlist.push(lm_pair(i, LM.size(), hd));
         if (debug) {
           fprintf(stderr, "%s insert que\n%s (%4d,%4d) %3d\n", pt_to_str(LM[i].structure).c_str(), pt_to_str(rna.structure).c_str(), i, (int)LM.size(), hd);
         }
@@ -338,10 +338,10 @@ void DSU::PrintUBoutput(FILE *output)
   }
 }
 
-bool DSU::InsertUB(map<pq_entry, RNAsaddle, pq_setcomp> &UBlist, int i, int j, int energy_par, short *saddle_par, bool outer, bool debug)
+bool DSU::InsertUB(map<lm_pair, RNAsaddle, pq_setcomp> &UBlist, int i, int j, int energy_par, short *saddle_par, bool outer, bool debug)
 {
-  pq_entry pq(i, j, 0);
-  map<pq_entry, RNAsaddle, pq_setcomp>::iterator it = UBlist.find(pq);
+  lm_pair pq(i, j, 0);
+  map<lm_pair, RNAsaddle, pq_setcomp>::iterator it = UBlist.find(pq);
   if (it==UBlist.end()) {
     RNAsaddle saddle(i, j);
     saddle.energy = energy_par;
@@ -379,7 +379,7 @@ int DSU::LinkCPLM(Opt opt, bool debug)
   // create lm-saddle and lm-lm edges
   for (unsigned int i=0; i<UBoutput.size(); i++) {
     RNAsaddle stru = UBoutput[i].first;
-    pq_entry pq = UBoutput[i].second;
+    lm_pair pq = UBoutput[i].second;
 
     // flood them up!
     int res = FloodUp(LM[pq.i], LM[pq.j], stru, opt, debug);

@@ -53,8 +53,8 @@ private:
   priority_queue<TBDentry> tbd;
 
   // set that already is processsed
-  set<std::pair<int, int> > done;
 public:
+  set<std::pair<int, int> > done;
   int sizes[type1_len];
 
 
@@ -63,6 +63,7 @@ public:
   bool insert(int i, int j, type1 type, bool fiber);
   TBDentry get_first();
   int size();
+  void join(TBD &second);
 };
 
 class DSU {
@@ -83,11 +84,11 @@ private:
   int gl_maxen;
 
   // lists
-  priority_queue<pq_entry> TBDlist;
+  priority_queue<lm_pair> TBDlist;
 
 
   // output
-  vector<std::pair<RNAsaddle, pq_entry> > UBoutput; // contains memory
+  vector<std::pair<RNAsaddle, lm_pair> > UBoutput; // contains memory
 
   // -- linkCP
     // vertex sets
@@ -128,15 +129,16 @@ public:
   int LinkCPsaddle(Opt opt, bool debug);       // construct vertex and edge set from UBoutput (saddle to saddle)
 
   // clustering
-  int Cluster(int kmax, TBD &list);
-  int ComputeTBD(TBD &pqueue, int maxkeep, int num_threshold, bool outer, bool noLP, bool shifts, bool debug);
+  int Cluster(Opt &opt, int kmax, TBD &list);
+  //int ComputeTBD(TBD &pqueue, int maxkeep, int num_threshold, bool outer, bool noLP, bool shifts, bool debug);
+  vector<std::pair<RNAsaddle, lm_pair> > ComputeTBD2(TBD &pqueue, int maxkeep, int num_threshold, bool outer, bool noLP, bool shifts, bool debug);
   int AddLMtoTBD(short *tmp_str, int tmp_en, LMtype type, bool debug);
-  int JoinClusters(UF_set_child &ufset, set<int> &represents, TBD &output, int i, int j);
+  int JoinClusters(Opt &opt, UF_set_child &ufset, set<int> &represents, TBD &output, int i, int j);
 
   // helpers
   int CreateList(int hd_threshold, bool debug);  // create TBDlist
   int FindNum(int energy, short *str);           // find number of structure
-  bool InsertUB(map<pq_entry, RNAsaddle, pq_setcomp> &UBlist, int i, int j, int energy, short *saddle, bool outer, bool debug); // insert into UBlist
+  bool InsertUB(map<lm_pair, RNAsaddle, pq_setcomp> &UBlist, int i, int j, int energy, short *saddle, bool outer, bool debug); // insert into UBlist
   int AddLMtoDSU(short *tmp_str, int tmp_en, int hd_threshold, LMtype type, bool debug);
     // link cp
   void PrintMatrix(char *filename); // print energy barrier matrix
