@@ -88,7 +88,7 @@ private:
 
 
   // output
-  vector<std::pair<RNAsaddle, lm_pair> > UBoutput; // contains memory
+  vector<RNAsaddle> UBoutput; // contains memory
 
   // -- linkCP
     // vertex sets
@@ -131,7 +131,7 @@ public:
   // clustering
   int Cluster(Opt &opt, int kmax, TBD &list);
   //int ComputeTBD(TBD &pqueue, int maxkeep, int num_threshold, bool outer, bool noLP, bool shifts, bool debug);
-  vector<std::pair<RNAsaddle, lm_pair> > ComputeTBD2(TBD &pqueue, int maxkeep, int num_threshold, bool outer, bool noLP, bool shifts, bool debug);
+  vector<RNAsaddle> ComputeTBD2(TBD &pqueue, int maxkeep, int num_threshold, bool outer, bool noLP, bool shifts, bool debug);
   int AddLMtoTBD(short *tmp_str, int tmp_en, LMtype type, bool debug);
   int JoinClusters(Opt &opt, UF_set_child &ufset, set<int> &represents, TBD &output, int i, int j);
 

@@ -292,7 +292,7 @@ int DSU::ComputeUB(int maxkeep, int num_threshold, bool outer, bool noLP, bool s
   for (map<lm_pair, RNAsaddle, pq_setcomp>::iterator it=UBlist.begin(); it!=UBlist.end(); it++) {
     if (it->second.str_ch) free(it->second.str_ch);
     it->second.str_ch = pt_to_char(it->second.structure);
-    UBoutput.push_back(make_pair(it->second, it->first));
+    UBoutput.push_back(it->second);
   }
   sort(UBoutput.begin(), UBoutput.end());
   UBlist.clear();
@@ -334,7 +334,7 @@ void DSU::PrintUBoutput(FILE *output)
 {
   fprintf(output, "                 %s\n", seq);
   for (unsigned int i=0; i<UBoutput.size(); i++) {
-    fprintf(output, "%4d (%4d,%4d) %s %6.2f\n", i+1, UBoutput[i].second.i+1, UBoutput[i].second.j+1, pt_to_str(UBoutput[i].first.structure).c_str(), UBoutput[i].first.energy/100.0);
+    fprintf(output, "%4d (%4d,%4d) %s %6.2f\n", i+1, UBoutput[i].lm1+1, UBoutput[i].lm2+1, pt_to_str(UBoutput[i].structure).c_str(), UBoutput[i].energy/100.0);
   }
 }
 
@@ -378,11 +378,10 @@ int DSU::LinkCPLM(Opt opt, bool debug)
   int trueds = 0;
   // create lm-saddle and lm-lm edges
   for (unsigned int i=0; i<UBoutput.size(); i++) {
-    RNAsaddle stru = UBoutput[i].first;
-    lm_pair pq = UBoutput[i].second;
+    RNAsaddle stru = UBoutput[i];
 
     // flood them up!
-    int res = FloodUp(LM[pq.i], LM[pq.j], stru, opt, debug);
+    int res = FloodUp(LM[stru.lm1], LM[stru.lm2], stru, opt, debug);
     if (res == 1 || res == 2) {  // we have found better saddle (1) or reached threshold (2) so better saddle is not possible
       stru.type = LDIRECT; // so our saddle is for sure lowest direct saddle
       trueds ++;
@@ -428,15 +427,15 @@ int DSU::LinkCPLM(Opt opt, bool debug)
     saddles.push_back(stru);
 
     // edges ll
-    edgeLL e(pq.i, pq.j, stru.energy, saddle_num);
+    edgeLL e(stru.lm1, stru.lm2, stru.energy, saddle_num);
     edges_l.insert(e);
 
-    edgesV_l[pq.i].insert(e);
-    edgesV_l[pq.j].insert(e);
+    edgesV_l[stru.lm1].insert(e);
+    edgesV_l[stru.lm2].insert(e);
 
     // edges ls
-    edges_ls.insert(edgeLS(pq.i, saddle_num));
-    edges_ls.insert(edgeLS(pq.j, saddle_num));
+    edges_ls.insert(edgeLS(stru.lm1, saddle_num));
+    edges_ls.insert(edgeLS(stru.lm2, saddle_num));
   }
 
   fprintf(stderr, "Recomputed %d edges (%d are true direct saddles)\n", (int)edges_l.size(), trueds);
