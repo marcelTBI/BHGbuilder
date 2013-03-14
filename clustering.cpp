@@ -42,6 +42,11 @@ TBDentry TBD::get_first()
   if (size()==0) return TBDentry(-1,-1,NEW_FOUND,-1);
   TBDentry tbde = tbd.top();
   tbd.pop();
+  while (size() > 0 && done.count(make_pair(tbde.i, tbde.j))>0) {  // maybe we dont need this
+    tbde = tbd.top();
+    tbd.pop();
+  }
+  if (size() == 0) return TBDentry(-1,-1,NEW_FOUND,-1);
   done.insert(make_pair(tbde.i, tbde.j));
   return tbde;
 }
@@ -50,7 +55,6 @@ void TBD::join(TBD &second) {
   //assert(second.size()==0);
   done.insert(second.done.begin(), second.done.end());
 }
-
 
 int DSU::Cluster(Opt &opt, int kmax, TBD &output)
 {
@@ -183,9 +187,9 @@ int DSU::JoinClusters(Opt &opt, UF_set_child &ufset, set<int> &represents, TBD &
       represents.insert(UBouti[pos].lm1);
       represents.insert(UBouti[pos].lm2);
     }
-    fprintf(stderr, "cluster size: %5d, acquiring %3d represents, repre size: %4d\n", (int)childreni.size(), manyi*2, (int)represents.size());
+    if (opt.debug) fprintf(stderr, "cluster size: %5d, acquiring %3d represents, repre size: %4d\n", (int)childreni.size(), manyi*2, (int)represents.size());
   } else {
-    fprintf(stderr, "cluster size: %5d, acquiring %3d represents, repre size: %4d\n", 0, 0, (int)represents.size());
+    if (opt.debug) fprintf(stderr, "cluster size: %5d, acquiring %3d represents, repre size: %4d\n", 0, 0, (int)represents.size());
   }
   if (UBoutj.size() != 0) {
     int manyj = max(1, (int)(opt.repre_portion/2.0*childrenj.size()));
@@ -194,9 +198,9 @@ int DSU::JoinClusters(Opt &opt, UF_set_child &ufset, set<int> &represents, TBD &
       represents.insert(UBoutj[pos].lm1);
       represents.insert(UBoutj[pos].lm2);
     }
-    fprintf(stderr, "cluster size: %5d, acquiring %3d represents, repre size: %4d\n", (int)childrenj.size(), manyj*2, (int)represents.size());
+    if (opt.debug) fprintf(stderr, "cluster size: %5d, acquiring %3d represents, repre size: %4d\n", (int)childrenj.size(), manyj*2, (int)represents.size());
   } else {
-    fprintf(stderr, "cluster size: %5d, acquiring %3d represents, repre size: %4d\n", 0, 0, (int)represents.size());
+    if (opt.debug) fprintf(stderr, "cluster size: %5d, acquiring %3d represents, repre size: %4d\n", 0, 0, (int)represents.size());
   }
 
   // add them to global output.
@@ -238,7 +242,7 @@ vector<RNAsaddle> DSU::ComputeTBD2(TBD &pqueue, int maxkeep, int num_threshold, 
 
     // get next
     TBDentry tbd = pqueue.get_first();
-
+    if (tbd.i==-1) break;
 
 
     // get path
