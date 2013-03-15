@@ -110,8 +110,9 @@ struct Opt {
   int num_threshold;
   bool outer;
   float repre_portion;
+  bool fbarrier;
 
-  Opt(bool noLP, bool shifts, bool saddle, int num, int height, bool debug, int maxkeep, int num_threshold, bool outer, float repre_portion);
+  Opt(bool noLP, bool shifts, bool saddle, int num, int height, bool debug, int maxkeep, int num_threshold, bool outer, float repre_portion, bool fbarrier);
 };
 
 // just for reverse ordering

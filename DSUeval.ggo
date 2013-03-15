@@ -55,4 +55,5 @@ option "energy-barrier"			- "output sorted barrier heights between fibers (pairs
 section "Clustering"
 option "cluster-off"        - "Switch off clustering" flag off
 option "cluster-Kmax"       K "Size of maximal cluster" int default="100" no
-option "cluster-repre"      - "Portion of saddles, which end points are taken as representatives from each cluster (always at least one)" float default="0.05" no
+option "cluster-repre"      - "Portion of LMs taken as representatives from each cluster" float default="0.05" no
+option "cluster-fbarrier"   - "Insert to representatives those LM, which have highest barrier height between themselves (instead of LM, which have highest saddle point connecting them)" flag off

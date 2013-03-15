@@ -24,8 +24,9 @@ TBD::TBD()
 bool TBD::insert(int i, int j, type1 type, bool fiber)
 {
   sizes[type]++;
+  ResizeDone(max(i,j)+1);
 
-  if (done.count(make_pair(i,j))>0) return false;
+  if (done[i][j]) return false;
   else {
     //fprintf(stderr, "inserting %d %d %s\n", i, j, type1_str[type]);
     tbd.push(TBDentry(i, j, type, fiber));
@@ -37,23 +38,42 @@ int TBD::size() {
   return tbd.size();
 }
 
+void TBD::ResizeDone(int new_size) {
+  if (new_size>(int)done.size()) {
+    // resize existing:
+    for (unsigned int i=0; i<done.size(); i++) {
+      done[i].resize(new_size, false);
+    }
+
+    done.resize(new_size, vector<bool> (new_size, false));
+  }
+}
+
 TBDentry TBD::get_first()
 {
   if (size()==0) return TBDentry(-1,-1,NEW_FOUND,-1);
   TBDentry tbde = tbd.top();
   tbd.pop();
-  while (size() > 0 && done.count(make_pair(tbde.i, tbde.j))>0) {  // maybe we dont need this
+  ResizeDone(max(tbde.i, tbde.j)+1);
+  while ((size() > 0) && (done[tbde.i][tbde.j])) {  // maybe we dont need this
     tbde = tbd.top();
+    ResizeDone(max(tbde.i, tbde.j)+1);
     tbd.pop();
   }
   if (size() == 0) return TBDentry(-1,-1,NEW_FOUND,-1);
-  done.insert(make_pair(tbde.i, tbde.j));
+  ResizeDone(max(tbde.i, tbde.j)+1);
+  done[tbde.i][tbde.j] = true;
   return tbde;
 }
 
-void TBD::join(TBD &second) {
+void TBD::join(TBD &second) {   // can be efficient
   //assert(second.size()==0);
-  done.insert(second.done.begin(), second.done.end());
+  ResizeDone(second.done.size()+1);
+  for (unsigned int i=0; i<second.done.size(); i++) {
+    for (unsigned int j=0; j<second.done[i].size(); j++) {
+      done[i][j] = max(second.done[i][j], done[i][j]);
+    }
+  }
 }
 
 int DSU::Cluster(Opt &opt, int kmax, TBD &output)
@@ -138,78 +158,105 @@ int DSU::Cluster(Opt &opt, int kmax, TBD &output)
   return 0;
 }
 
+void DSU::GetRepre(vector<RNAsaddle> &UBoutput, TBD &output, set<int> &represents, set<int> &children, Opt &opt) {
+
+  // get intercluster connections
+  TBD cluster;
+  for (set<int>::iterator it=children.begin(); it!=children.end(); it++) {
+    set<int>::iterator it2 = it; it2++;
+    for (;it2!=children.end(); it2++) {
+      cluster.insert(*it, *it2, INTER_CLUSTER, false);
+    }
+  }
+
+  // insert representative minima:
+  represents.insert(*children.begin());
+
+  // do we want exactly number of represents?
+  int more = true; // now hardcoded, and I dont think it would be different ;-)
+  int rsize = represents.size();
+
+  // collect saddles for intercluster connections
+  vector<RNAsaddle> input;
+  input = ComputeTBD2(cluster, opt.maxkeep, opt.num_threshold, opt.outer, opt.noLP, opt.shifts, opt.debug);
+
+  // insert new representatives
+  if (opt.fbarrier) {
+    // insert according to highest barrier
+    vector<std::pair<int, int> > sort_by_barr;
+    for (unsigned int i=0; i<input.size(); i++) {
+      int barrier = input[i].energy - max(LM[input[i].lm1].energy, LM[input[i].lm2].energy);
+      sort_by_barr.push_back(make_pair(barrier, i));
+    }
+    sort(sort_by_barr.begin(), sort_by_barr.end());
+
+
+    int many = max(1, (int)(opt.repre_portion*children.size()));
+    if (more) {
+      // insert as loong as we need them
+      int pos = sort_by_barr.size()-1;
+      while (pos>=0 && (int)represents.size() - rsize < many*2) {
+        represents.insert(input[sort_by_barr[pos].second].lm1);
+        represents.insert(input[sort_by_barr[pos].second].lm2);
+        pos--;
+      }
+    } else {
+      // get repre
+      for (int i=0; i<many; i++) {
+        int pos = sort_by_barr.size()-1-i;
+        if (pos<0) break;
+        represents.insert(input[sort_by_barr[pos].second].lm1);
+        represents.insert(input[sort_by_barr[pos].second].lm2);
+      }
+    }
+
+  } else {
+    // insert according to highest saddl
+    int many = max(1, (int)(opt.repre_portion/2.0*children.size()));
+
+    if (more) {
+      // insert as long as we need them
+      int pos = input.size()-1;
+      while (pos>=0 && (int)represents.size() - rsize < many*2) {
+        represents.insert(input[pos].lm1);
+        represents.insert(input[pos].lm2);
+        pos--;
+      }
+    } else {
+      // insert just approx.
+      for (int i=0; i<many; i++) {
+        int pos = input.size()-1-i;
+        if (pos<0) break;
+        represents.insert(input[pos].lm1);
+        represents.insert(input[pos].lm2);
+      }
+    }
+    if (opt.debug) fprintf(stderr, "cluster size: %5d, acquiring %3d represents, repre size: %4d\n", (int)children.size(), many*2, (int)represents.size());
+  }
+
+  // add them to global output.
+  UBoutput.insert(UBoutput.end(), input.begin(), input.end());
+  // join queues
+  output.join(cluster);
+}
+
 int DSU::JoinClusters(Opt &opt, UF_set_child &ufset, set<int> &represents, TBD &output, int i, int j) {
 
   // insert crit edge:
   output.insert(i, j, CRIT_EDGE, false);
 
-  // do inside job:
-  TBD clusteri;
-  TBD clusterj;
-
   set<int> childreni = ufset.get_children(ufset.find(i));
   set<int> childrenj = ufset.get_children(ufset.find(j));
 
-  // insert representative minima:
-  represents.insert(*childreni.begin());
-  represents.insert(*childrenj.begin());
-
-  //output.insert(*first.begin(), *second.begin(), REPRESENT, false);
-
-  // insert all inter edges:
-  for (set<int>::iterator it=childreni.begin(); it!=childreni.end(); it++) {
-    set<int>::iterator it2 = it; it2++;
-    for (;it2!=childreni.end(); it2++) {
-      clusteri.insert(*it, *it2, INTER_CLUSTER, false);
-    }
-  }
-
-  for (set<int>::iterator it=childrenj.begin(); it!=childrenj.end(); it++) {
-    set<int>::iterator it2 = it; it2++;
-    for (;it2!=childrenj.end(); it2++) {
-      clusterj.insert(*it, *it2, INTER_CLUSTER, false);
-    }
-  }
-
-  // Compute inside saddles:
-  vector<RNAsaddle> UBouti, UBoutj;
-  UBouti = ComputeTBD2(clusteri, opt.maxkeep, opt.num_threshold, opt.outer, opt.noLP, opt.shifts, opt.debug);
-  UBoutj = ComputeTBD2(clusterj, opt.maxkeep, opt.num_threshold, opt.outer, opt.noLP, opt.shifts, opt.debug);
-
-  output.join(clusteri);
-  output.join(clusterj);
-
-  // and add "many" representatives into represents.
-  if (UBouti.size() != 0) {
-    int manyi = max(1, (int)(opt.repre_portion/2.0*childreni.size()));
-    for (int i=0; i<manyi; i++) {
-      int pos = UBouti.size()-1-i;
-      represents.insert(UBouti[pos].lm1);
-      represents.insert(UBouti[pos].lm2);
-    }
-    if (opt.debug) fprintf(stderr, "cluster size: %5d, acquiring %3d represents, repre size: %4d\n", (int)childreni.size(), manyi*2, (int)represents.size());
-  } else {
-    if (opt.debug) fprintf(stderr, "cluster size: %5d, acquiring %3d represents, repre size: %4d\n", 0, 0, (int)represents.size());
-  }
-  if (UBoutj.size() != 0) {
-    int manyj = max(1, (int)(opt.repre_portion/2.0*childrenj.size()));
-    for (int i=0; i<manyj; i++) {
-      int pos = UBoutj.size()-1-i;
-      represents.insert(UBoutj[pos].lm1);
-      represents.insert(UBoutj[pos].lm2);
-    }
-    if (opt.debug) fprintf(stderr, "cluster size: %5d, acquiring %3d represents, repre size: %4d\n", (int)childrenj.size(), manyj*2, (int)represents.size());
-  } else {
-    if (opt.debug) fprintf(stderr, "cluster size: %5d, acquiring %3d represents, repre size: %4d\n", 0, 0, (int)represents.size());
-  }
-
-  // add them to global output.
-  UBoutput.insert(UBoutput.end(), UBouti.begin(), UBouti.end());
-  UBoutput.insert(UBoutput.end(), UBoutj.begin(), UBoutj.end());
+  // do computation + represent LM generation for each of 2 clusters:
+  GetRepre(UBoutput, output, represents, childreni, opt);
+  GetRepre(UBoutput, output, represents, childrenj, opt);
 
   // now make from this group only one vertex (maybe wrong)
   ufset.union_set(i, j);
   ufset.make_single(i);
+
+  fprintf(stderr, "repre size = %d\n", represents.size());
 
   return 0;
 }

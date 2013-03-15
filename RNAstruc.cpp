@@ -19,7 +19,7 @@ extern "C" {
 
 using namespace std;
 
-Opt::Opt(bool noLP, bool shifts, bool saddle, int num, int height, bool debug, int maxkeep, int num_threshold, bool outer, float repre_portion)
+Opt::Opt(bool noLP, bool shifts, bool saddle, int num, int height, bool debug, int maxkeep, int num_threshold, bool outer, float repre_portion, bool fbarrier)
 {
   this->noLP = noLP;
   this->shifts = shifts;
@@ -31,6 +31,7 @@ Opt::Opt(bool noLP, bool shifts, bool saddle, int num, int height, bool debug, i
   this->num_threshold = num_threshold;
   this->outer = outer;
   this->repre_portion = repre_portion;
+  this->fbarrier = fbarrier;
 }
 
 void RNAstruc::freeMEM() {

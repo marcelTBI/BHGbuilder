@@ -31,7 +31,7 @@ int main(int argc, char **argv)
   // code
     // DSUeval
   DSU dsu(stdin, args_info.noLP_flag, args_info.shift_flag, args_info.time_max_arg);
-  Opt opt(args_info.noLP_flag, args_info.shift_flag, !args_info.noSaddle_flag, args_info.floodMax_arg, args_info.floodHeight_arg, args_info.debug_flag, args_info.depth_arg, args_info.num_threshold_arg, args_info.outer_flag, args_info.cluster_repre_arg);
+  Opt opt(args_info.noLP_flag, args_info.shift_flag, !args_info.noSaddle_flag, args_info.floodMax_arg, args_info.floodHeight_arg, args_info.debug_flag, args_info.depth_arg, args_info.num_threshold_arg, args_info.outer_flag, args_info.cluster_repre_arg, args_info.cluster_fbarrier_flag);
 
   if (!args_info.cluster_off_flag) {
     TBD output;

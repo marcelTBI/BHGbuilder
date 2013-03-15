@@ -54,7 +54,7 @@ private:
 
   // set that already is processsed
 public:
-  set<std::pair<int, int> > done;
+  vector <vector<bool> > done;
   int sizes[type1_len];
 
 
@@ -64,6 +64,8 @@ public:
   TBDentry get_first();
   int size();
   void join(TBD &second);
+private:
+  void ResizeDone(int new_size);
 };
 
 class DSU {
@@ -134,6 +136,7 @@ public:
   vector<RNAsaddle> ComputeTBD2(TBD &pqueue, int maxkeep, int num_threshold, bool outer, bool noLP, bool shifts, bool debug);
   int AddLMtoTBD(short *tmp_str, int tmp_en, LMtype type, bool debug);
   int JoinClusters(Opt &opt, UF_set_child &ufset, set<int> &represents, TBD &output, int i, int j);
+  void GetRepre(vector<RNAsaddle> &UBoutput, TBD &output, set<int> &represents, set<int> &children, Opt &opt);
 
   // helpers
   int CreateList(int hd_threshold, bool debug);  // create TBDlist
