@@ -375,6 +375,11 @@ int DSU::LinkCPLM(Opt opt, bool debug)
 
   fprintf(stderr, "Computing lm-* edges.\n");
 
+  /*for (unsigned int i=0; i<UBoutput.size(); i++) {
+    RNAsaddle stru = UBoutput[i];
+    fprintf(stderr, "%4d %4d (%.2f)\n", stru.lm1, stru.lm2, stru.energy/100.0);
+  }*/
+
   int trueds = 0;
   // create lm-saddle and lm-lm edges
   for (unsigned int i=0; i<UBoutput.size(); i++) {
@@ -438,7 +443,7 @@ int DSU::LinkCPLM(Opt opt, bool debug)
     edges_ls.insert(edgeLS(stru.lm2, saddle_num));
   }
 
-  fprintf(stderr, "Recomputed %d edges (%d are true direct saddles)\n", (int)edges_l.size(), trueds);
+  fprintf(stderr, "Recomputed %d(%d) edges (%d are true direct saddles)\n", (int)edges_l.size(), (int)UBoutput.size(), trueds);
   return 0;
 }
 

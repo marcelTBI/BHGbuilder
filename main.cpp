@@ -65,19 +65,19 @@ int main(int argc, char **argv)
       //dsu.PrintComps();
       dsu.ConnectComps(args_info.depth_arg, args_info.debug_flag);
       //dsu.PrintDot(args_info.name_dot_arg, args_info.dot_flag, args_info.print_graph_flag, args_info.name_graph_arg, args_info.tree_visualise_flag);
+      dsu.PrintDot(args_info.name_dot_arg, args_info.dot_flag, args_info.print_graph_flag, args_info.name_graph_arg, args_info.tree_visualise_flag);
+      fprintf(stderr, "connnecting components took %.2f secs.\n", (clock()-time)/(double)CLOCKS_PER_SEC); time = clock();
     }
     /*// just debug
     dsu.PrintComps();
     dsu.PrintLinkCP(false);
   */
-    fprintf(stderr, "connnecting components took %.2f secs.\n", (clock()-time)/(double)CLOCKS_PER_SEC); time = clock();
+
 
     // real output:
     dsu.PrintLM(stdout);
     //dsu.PrintSaddles(stderr);
     //dsu.PrintComps(stderr, true);
-
-    dsu.PrintDot(args_info.name_dot_arg, args_info.dot_flag, args_info.print_graph_flag, args_info.name_graph_arg, args_info.tree_visualise_flag);
 
     // print energy matrix
     if (args_info.print_energy_flag) dsu.PrintMatrix(args_info.energy_file_arg);

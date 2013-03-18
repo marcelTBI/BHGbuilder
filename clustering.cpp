@@ -23,11 +23,13 @@ TBD::TBD()
 
 bool TBD::insert(int i, int j, type1 type, bool fiber)
 {
-  sizes[type]++;
   ResizeDone(max(i,j)+1);
+
+  if (i>j) swap(i, j);
 
   if (done[i][j]) return false;
   else {
+    sizes[type]++;
     //fprintf(stderr, "inserting %d %d %s\n", i, j, type1_str[type]);
     tbd.push(TBDentry(i, j, type, fiber));
     return true;
@@ -66,7 +68,7 @@ TBDentry TBD::get_first()
   return tbde;
 }
 
-void TBD::join(TBD &second) {   // can be efficient
+void TBD::join(TBD &second) {   // can be more efficient
   //assert(second.size()==0);
   ResizeDone(second.done.size()+1);
   for (unsigned int i=0; i<second.done.size(); i++) {
@@ -115,6 +117,10 @@ int DSU::Cluster(Opt &opt, int kmax, TBD &output)
 
         // join clusters
         JoinClusters(opt, ufset, represents, output, cp.i, cp.j);
+          for (unsigned int i=0; i<UBoutput.size(); i++) {
+    RNAsaddle stru = UBoutput[i];
+    fprintf(stderr, "%4d %4d (%.2f)\n", stru.lm1, stru.lm2, stru.energy/100.0);
+  }
 
       } else {
         // connect them
@@ -138,7 +144,7 @@ int DSU::Cluster(Opt &opt, int kmax, TBD &output)
   // and its represent node
   represents.insert(father);
 
-  // and finally add represen edges:
+  // and finally add represent edges:
   for (set<int>::iterator it=represents.begin(); it!=represents.end(); it++) {
     set<int>::iterator it2 = it; it2++;
     for (;it2!=represents.end(); it2++) {
@@ -149,11 +155,11 @@ int DSU::Cluster(Opt &opt, int kmax, TBD &output)
 
   fprintf(stderr, "output size = %d (%d, %d, %d)\n", output.size(), output.sizes[0], output.sizes[1], output.sizes[2]);
 
-  // now finish:
+  // now finish: (we have already something in UBoutput, so we have to add on end)
   vector<RNAsaddle> UBout;
   UBout = ComputeTBD2(output, opt.maxkeep, opt.num_threshold, opt.outer, opt.noLP, opt.shifts, opt.debug);
   UBoutput.insert(UBoutput.end(), UBout.begin(), UBout.end());
-  sort(UBoutput.begin(), UBoutput.end());
+  sort(UBoutput.begin(), UBoutput.end()); // maybe remove duplicates??
 
   return 0;
 }
@@ -256,7 +262,7 @@ int DSU::JoinClusters(Opt &opt, UF_set_child &ufset, set<int> &represents, TBD &
   ufset.union_set(i, j);
   ufset.make_single(i);
 
-  fprintf(stderr, "repre size = %d\n", represents.size());
+  fprintf(stderr, "repre size = %d\n", (int)represents.size());
 
   return 0;
 }
@@ -392,17 +398,17 @@ vector<RNAsaddle> DSU::ComputeTBD2(TBD &pqueue, int maxkeep, int num_threshold, 
   } // all doing while
 
   // now just resort UBlist to something sorted according energy
-  vector<RNAsaddle> UBoutput;
-  UBoutput.reserve(UBlist.size());
+  vector<RNAsaddle> UBout;
+  UBout.reserve(UBlist.size());
   for (map<lm_pair, RNAsaddle, pq_setcomp>::iterator it=UBlist.begin(); it!=UBlist.end(); it++) {
     if (it->second.str_ch) free(it->second.str_ch);
     it->second.str_ch = pt_to_char(it->second.structure);
-    UBoutput.push_back(it->second);
+    UBout.push_back(it->second);
   }
-  sort(UBoutput.begin(), UBoutput.end());
+  sort(UBout.begin(), UBout.end());
   UBlist.clear();
 
-  return UBoutput;
+  return UBout;
 }
 
 
