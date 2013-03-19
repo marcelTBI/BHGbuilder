@@ -129,28 +129,6 @@ DSU::~DSU() {
     if (saddles[i].structure) free(saddles[i].structure);
     if (saddles[i].str_ch) free(saddles[i].str_ch);
   }
-
-  /*for (unsigned int i=0; i<UBoutput.size(); i++) {  // converted to saddles
-    if (UBoutput[i].first.structure) free(UBoutput[i].first.structure);
-    if (UBoutput[i].first.str_ch) free(UBoutput[i].first.str_ch);
-  }*/
-}
-
-int DSU::CreateList(int hd_threshold, bool debug)
-{
-  for (unsigned int i=0; i<LM.size(); i++) {
-    for (unsigned int j=i+1; j<LM.size(); j++) {
-      int hd = HammingDist(LM[i].structure, LM[j].structure);
-      if (hd < hd_threshold) {
-        TBDlist.push(lm_pair(i, j, hd));
-        if (debug) {
-          fprintf(stderr, "%s insert que\n%s (%4d,%4d) %3d\n", pt_to_str(LM[i].structure).c_str(), pt_to_str(LM[j].structure).c_str(), i, j, hd);
-        }
-      }
-    }
-  }
-
-  return 0;
 }
 
 int DSU::FindNum(int en_par, short *str_par)
@@ -171,200 +149,26 @@ int DSU::FindNum(int en_par, short *str_par)
   return -1;  // old version*/
 }
 
-int DSU::ComputeUB(int maxkeep, int num_threshold, bool outer, bool noLP, bool shifts, bool debug)
+bool DSU::InsertUB(RNAsaddle saddle, bool debug)
 {
-  int dbg_count = 0;
-  int cnt = 0;
-  int hd_threshold = INT_MAX;
-  int norm_cf = 0;
-
-  map<lm_pair, RNAsaddle, pq_setcomp> UBlist;
-
-  // go through all pairs in queue
-  while (!TBDlist.empty()) {
-    // check time:
-    double time_secs = ((clock()  - time)/(double)CLOCKS_PER_SEC);
-    if (stop_after && (time_secs > stop_after)) {
-      fprintf(stderr, "Time threshold reached (%d secs.), processed %d/%d\n", stop_after, cnt, (int)TBDlist.size()+cnt);
-      break;
-    }
-
-    // get pair
-    lm_pair pq = TBDlist.top();
-    TBDlist.pop();
-
-    // apply threhold
-    if (pq.hd > hd_threshold) {
-      fprintf(stderr, "Number threshold reached, processed %d/%d\n", cnt, (int)TBDlist.size()+cnt);
-      break;
-    }
-    if (cnt>num_threshold) {
-      if (hd_threshold==INT_MAX) {
-        hd_threshold = pq.hd;
-        fprintf(stderr, "hd threshold set to %4d\n", hd_threshold);
-      }
-    } else {
-      cnt++;
-    }
-
-    // get path
-    if (debug) fprintf(stderr, "path between (%3d, %3d) hd=%3d:\n", pq.i, pq.j, pq.hd);
-    path_t *path = get_path(seq, LM[pq.i].str_ch, LM[pq.j].str_ch, maxkeep);
-
-    // variables for outer insertion
-    double max_energy= -1e8;
-    path_t *max_path = path;
-
-    // variables for inner loops and insertions
-    path_t *tmp = path;
-    path_t *last = NULL;
-    short *last_str = NULL;
-    int last_en;
-    int last_num = -1;
-
-    // loop through whole path
-    while (tmp && tmp->s) {
-      dbg_count++;
-      // debug??
-      if (debug) fprintf(stderr, "%s %6.2f\n", tmp->s, tmp->en);
-
-      // update max_energy
-      if (max_energy < tmp->en) {
-        max_energy = tmp->en;
-        max_path = tmp;
-      }
-      // find adaptive walk
-      short *tmp_str = make_pair_table(tmp->s);
-      //int tmp_en = move_rand(seq, tmp_str, s0, s1, 0);
-      int tmp_en = move_deepest(seq, tmp_str, s0, s1, 0, shifts, noLP);
-
-      // do the stuff if we have 2 structs and they are not equal
-      if (last && !str_eq(last_str, tmp_str)) {
-        // not equal LM - we can update something in UBlist
-          // find LM num:
-        int num1 = (last_num!=-1?last_num:FindNum(last_en, last_str));
-        int num2 = FindNum(tmp_en, tmp_str);
-
-        // update UBlist
-        if (num1==-1 || num2==-1) {
-          if (num2==-1) {
-            if (gl_maxen <= tmp_en) {
-              //fprintf(stderr, "exceeds en.: %s %6.2f\n", pt_to_str(tmp_str).c_str(), tmp_en/100.0);
-              num2 = AddLMtoDSU(tmp_str, tmp_en, hd_threshold, EE_DSU, debug);
-            } else {
-              fprintf(stderr, "cannot find: %s %6.2f\n", pt_to_str(tmp_str).c_str(), tmp_en/100.0);
-              // add to list of minima and count with them later...
-              num2 = AddLMtoDSU(tmp_str, tmp_en, hd_threshold, NORM_CF, debug);
-              norm_cf++;
-            }
-          }
-        }
-        // again check if we can add better saddle
-        if (num1!=-1 && num2!=-1) {
-          // store (maybe) better saddle to UB
-          int en_tmp = en_fltoi(max(last->en, tmp->en));
-          short *saddle = (last->en > tmp->en ? make_pair_table(last->s) : make_pair_table(tmp->s));
-          InsertUB(UBlist, num1, num2, en_tmp, saddle, false, debug);
-        }
-
-        // change last_num
-        last_num = num2;
-      }
-
-      // move one next
-      if (last_str) free(last_str);
-      last_en = tmp_en;
-      last_str = tmp_str;
-      last = tmp;
-      tmp++;
-    } // crawling path
-
-    // insert saddle between outer structures
-    if (outer) InsertUB(UBlist, pq.i, pq.j, en_fltoi(max_energy), make_pair_table(max_path->s), true, debug);
-
-    // free stuff
-    if (last_str) free(last_str);
-    free_path(path);
-  } // all doing while
-
-  // now just resort UBlist to something sorted according energy
-  UBoutput.reserve(UBlist.size());
-  for (map<lm_pair, RNAsaddle, pq_setcomp>::iterator it=UBlist.begin(); it!=UBlist.end(); it++) {
-    if (it->second.str_ch) free(it->second.str_ch);
-    it->second.str_ch = pt_to_char(it->second.structure);
-    UBoutput.push_back(it->second);
-  }
-  sort(UBoutput.begin(), UBoutput.end());
-  UBlist.clear();
-
-  // check if everything has been found:
-  fprintf(stderr, "Found: %d connections\nLM resized from: %d to %d (%d missing, %d above the energy threshold)\n", (int)UBoutput.size(), number_lm, (int)LM.size(), norm_cf, (int)LM.size()-number_lm-norm_cf);
-
-  return 0;
-}
-
-int DSU::AddLMtoDSU(short *tmp_str, int tmp_en, int hd_threshold, LMtype type, bool debug)
-{
-  RNAlocmin rna;
-  rna.energy = tmp_en;
-  rna.structure = allocopy(tmp_str);
-  rna.str_ch = pt_to_char(tmp_str);
-  rna.type = type;
-
-  // add pairs to TBDlist
-  if (type == NORMAL || type == NORM_CF) {
-    for (unsigned int i=0; i<LM.size(); i++) {
-      int hd = HammingDist(LM[i].structure, tmp_str);
-      if (hd < hd_threshold) {
-        TBDlist.push(lm_pair(i, LM.size(), hd));
-        if (debug) {
-          fprintf(stderr, "%s insert que\n%s (%4d,%4d) %3d\n", pt_to_str(LM[i].structure).c_str(), pt_to_str(rna.structure).c_str(), i, (int)LM.size(), hd);
-        }
-      }
-    }
-  }
-
-  // insert LM and return its number
-  LM.push_back(rna);
-  vertex_l[rna]=LM.size()-1;
-  return LM.size()-1;
-}
-
-void DSU::PrintUBoutput(FILE *output)
-{
-  fprintf(output, "                 %s\n", seq);
-  for (unsigned int i=0; i<UBoutput.size(); i++) {
-    fprintf(output, "%4d (%4d,%4d) %s %6.2f\n", i+1, UBoutput[i].lm1+1, UBoutput[i].lm2+1, pt_to_str(UBoutput[i].structure).c_str(), UBoutput[i].energy/100.0);
-  }
-}
-
-bool DSU::InsertUB(map<lm_pair, RNAsaddle, pq_setcomp> &UBlist, int i, int j, int energy_par, short *saddle_par, bool outer, bool debug)
-{
-  lm_pair pq(i, j, 0);
-  map<lm_pair, RNAsaddle, pq_setcomp>::iterator it = UBlist.find(pq);
+  set<RNAsaddle, RNAsaddle_comp>::iterator it = UBlist.find(saddle);
   if (it==UBlist.end()) {
-    RNAsaddle saddle(i, j);
-    saddle.energy = energy_par;
-    saddle.structure = saddle_par;
-    saddle.str_ch = NULL;
-    saddle.type = (outer?NOT_SURE:DIRECT);
-    if (debug) fprintf(stderr, "UBins: (%3d, %3d) insert saddle  %6.2f %s\n", i, j, saddle.energy/100.0, pt_to_str(saddle.structure).c_str());
-    UBlist.insert(make_pair(pq, saddle));
+    if (debug) fprintf(stderr, "UBins: (%3d, %3d) insert saddle  %6.2f %s\n", saddle.lm1, saddle.lm2, saddle.energy/100.0, pt_to_str(saddle.structure).c_str());
+    UBlist.insert(saddle);
     return true;
     //fprintf(stderr, "cannot find (UB  ): (%3d, %3d)\n", num1, num2);
   } else {
     // update it
-    if (energy_par < it->second.energy) {
-      if (debug) fprintf(stderr, "UBupd: (%3d, %3d) from %6.2f to %6.2f %s\n", i, j, it->second.energy/100.0, energy_par/100.0, pt_to_str(it->second.structure).c_str());
-      it->second.energy = energy_par;
-      if (it->second.structure) free(it->second.structure);
-      it->second.structure = saddle_par;
-      it->second.str_ch = NULL;
-      it->second.type = (outer?NOT_SURE:DIRECT);
+    if (saddle.energy < it->energy) {
+      if (debug) fprintf(stderr, "UBupd: (%3d, %3d) from %6.2f to %6.2f %s\n", saddle.lm1, saddle.lm2, it->energy/100.0, saddle.energy/100.0, pt_to_str(it->structure).c_str());
+
+      if (it->structure) free(it->structure);
+      UBlist.erase(it);
+      UBlist.insert(saddle);
       return true;
     }
   }
-  free(saddle_par);
+  free(saddle.structure);
   return false;
 }
 
@@ -375,15 +179,10 @@ int DSU::LinkCPLM(Opt opt, bool debug)
 
   fprintf(stderr, "Computing lm-* edges.\n");
 
-  /*for (unsigned int i=0; i<UBoutput.size(); i++) {
-    RNAsaddle stru = UBoutput[i];
-    fprintf(stderr, "%4d %4d (%.2f)\n", stru.lm1, stru.lm2, stru.energy/100.0);
-  }*/
-
   int trueds = 0;
   // create lm-saddle and lm-lm edges
-  for (unsigned int i=0; i<UBoutput.size(); i++) {
-    RNAsaddle stru = UBoutput[i];
+  for (unsigned int i=0; i<saddles.size(); i++) {
+    RNAsaddle stru = saddles[i];
 
     // flood them up!
     int res = FloodUp(LM[stru.lm1], LM[stru.lm2], stru, opt, debug);
@@ -425,29 +224,27 @@ int DSU::LinkCPLM(Opt opt, bool debug)
       //fprintf(stderr, "saddle_num = %d\n", saddle_num);
     } else {*/
 
-    // add to sets:
-    int saddle_num = saddles.size();
     // update vertex
     //vertex_s.insert(make_pair(stru, saddle_num));
-    saddles.push_back(stru);
+    saddles[i] = stru;
 
     // edges ll
-    edgeLL e(stru.lm1, stru.lm2, stru.energy, saddle_num);
+    edgeLL e(stru.lm1, stru.lm2, stru.energy, i);
     edges_l.insert(e);
 
     edgesV_l[stru.lm1].insert(e);
     edgesV_l[stru.lm2].insert(e);
 
     // edges ls
-    edges_ls.insert(edgeLS(stru.lm1, saddle_num));
-    edges_ls.insert(edgeLS(stru.lm2, saddle_num));
+    edges_ls.insert(edgeLS(stru.lm1, i));
+    edges_ls.insert(edgeLS(stru.lm2, i));
   }
 
-  fprintf(stderr, "Recomputed %d(%d) edges (%d are true direct saddles)\n", (int)edges_l.size(), (int)UBoutput.size(), trueds);
+  fprintf(stderr, "Recomputed %d(%d) edges (%d are true direct saddles)\n", (int)edges_l.size(), (int)saddles.size(), trueds);
   return 0;
 }
 
-int DSU::LinkCPsaddle(Opt opt, bool debug) {       // construct vertex and edge set from UBoutput (saddle to saddle)
+int DSU::LinkCPsaddle(Opt opt, bool debug) {       // construct vertex and edge set from saddles (saddle to saddle)
 
   fprintf(stderr, "Computing saddle-saddle edges.\n");
   set<std::pair<int, int> > saddle_pairs;
@@ -1092,7 +889,7 @@ int DSU::AddLMtoComp(short *structure, int energy, bool debug, UF_set &connected
   }
 
   // add new LM to LMs
-  int numLM = AddLMtoDSU(structure, energy, 0, EE_COMP, debug);
+  int numLM = AddLMtoTBD(structure, energy, EE_COMP, debug);
 
 
   // add new component to map

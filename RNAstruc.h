@@ -95,6 +95,14 @@ struct RNAsaddle: public RNAstruc {
   }
 };
 
+// just for reverse ordering
+struct RNAsaddle_comp {
+  bool operator()(const RNAsaddle &first, const RNAsaddle &second) const {
+    if (first.lm1 == second.lm1) return first.lm2 < second.lm2;
+    else return first.lm1 < second.lm1;
+  }
+};
+
 // options structure;
 struct Opt {
   bool noLP;
