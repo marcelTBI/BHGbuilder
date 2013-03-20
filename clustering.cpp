@@ -256,7 +256,7 @@ int DSU::JoinClusters(Opt &opt, UF_set_child &ufset, set<int> &represents, TBD &
   ufset.union_set(i, j);
   ufset.make_single(i);
 
-  fprintf(stderr, "repre size = %d\n", represents.size());
+  if (opt.debug) fprintf(stderr, "repre size = %d\n", represents.size());
 
   return 0;
 }

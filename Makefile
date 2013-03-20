@@ -15,6 +15,7 @@ OBJ = $(NAME)_cmdline.o\
 			RNAutils.o\
 			flooding.o\
 			graph_tech.o\
+			RNAstruc.o\
 			clustering.o
 
 # should stay unchanged: 
