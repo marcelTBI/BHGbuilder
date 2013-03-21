@@ -54,16 +54,13 @@ void TBD::ResizeDone(int new_size) {
 TBDentry TBD::get_first()
 {
   if (size()==0) return TBDentry(-1,-1,NEW_FOUND,-1);
-  TBDentry tbde = tbd.top();
-  tbd.pop();
+  TBDentry tbde = tbd.top(); tbd.pop();
   ResizeDone(max(tbde.i, tbde.j)+1);
-  while ((size() > 0) && (done[tbde.i][tbde.j])) {  // maybe we dont need this
-    tbde = tbd.top();
+  while (done[tbde.i][tbde.j]) {  // maybe we dont need this
+    if (size()==0) return TBDentry(-1,-1,NEW_FOUND,-1);
+    tbde = tbd.top(); tbd.pop();
     ResizeDone(max(tbde.i, tbde.j)+1);
-    tbd.pop();
   }
-  if (size() == 0) return TBDentry(-1,-1,NEW_FOUND,-1);
-  ResizeDone(max(tbde.i, tbde.j)+1);
   done[tbde.i][tbde.j] = true;
   return tbde;
 }
@@ -123,6 +120,7 @@ int DSU::Cluster(Opt &opt, int kmax, bool cluster_off)
           JoinClusters(opt, ufset, represents, output, cp.i, cp.j);
 
         } else {
+
           // connect them
           ufset.union_set(cp.i, cp.j);
 
@@ -175,6 +173,10 @@ int DSU::Cluster(Opt &opt, int kmax, bool cluster_off)
   }
   sort(saddles.begin(), saddles.end());
   UBlist.clear();
+/*
+  for (int i=0; i<saddles.size(); i++) {
+    fprintf(stderr, "%d %d %.2f\n", saddles[i].lm1, saddles[i].lm2, saddles[i].energy/100.0);
+  }*/
 
   return 0;
 }
@@ -195,7 +197,7 @@ int DSU::JoinClusters(Opt &opt, UF_set_child &ufset, set<int> &represents, TBD &
   ufset.union_set(i, j);
   ufset.make_single(i);
 
-  fprintf(stderr, "repre size = %d\n", (int)represents.size());
+  //fprintf(stderr, "repre size = %d\n", (int)represents.size());
 
   return 0;
 }
@@ -203,13 +205,16 @@ int DSU::JoinClusters(Opt &opt, UF_set_child &ufset, set<int> &represents, TBD &
 void DSU::GetRepre(TBD &output, set<int> &represents, set<int> &children, Opt &opt) {
 
   // get intercluster connections
+  if (opt.debug) fprintf(stderr, "Children: ");
   TBD cluster;
   for (set<int>::iterator it=children.begin(); it!=children.end(); it++) {
+    if (opt.debug) fprintf(stderr, "%d ", *it);
     set<int>::iterator it2 = it; it2++;
     for (;it2!=children.end(); it2++) {
       cluster.insert(*it, *it2, INTER_CLUSTER, false);
     }
   }
+  if (opt.debug) fprintf(stderr, "\n");
 
   // insert representative minima:
   represents.insert(*children.begin());
@@ -332,7 +337,7 @@ void DSU::ComputeTBD(TBD &pqueue, int maxkeep, int num_threshold, bool outer, bo
     while (tmp && tmp->s) {
       dbg_count++;
       // debug??
-      if (debug) fprintf(stderr, "%s %6.2f\n", tmp->s, tmp->en);
+      if (debug) fprintf(stderr, "%s %6.2f", tmp->s, tmp->en);
 
       // update max_energy
       if (max_energy < tmp->en) {
@@ -351,6 +356,10 @@ void DSU::ComputeTBD(TBD &pqueue, int maxkeep, int num_threshold, bool outer, bo
           // find LM num:
         int num1 = (last_num!=-1?last_num:FindNum(last_en, last_str));
         int num2 = FindNum(tmp_en, tmp_str);
+
+        if (debug) fprintf(stderr, " %d\n", num2);
+
+
 
         // update UBlist
         if (num1==-1 || num2==-1) {
@@ -397,7 +406,7 @@ void DSU::ComputeTBD(TBD &pqueue, int maxkeep, int num_threshold, bool outer, bo
 
         // change last_num
         last_num = num2;
-      }
+      } else if (debug) fprintf(stderr, "\n");
 
       // move one next
       if (last_str) free(last_str);
