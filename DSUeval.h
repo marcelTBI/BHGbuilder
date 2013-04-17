@@ -80,6 +80,9 @@ private:
   clock_t time;
   int stop_after;
 
+  // temperature
+  double _kT;
+
   // structures
   vector<RNAlocmin> LM;  // contains memory (after split - should be in both programs)
   int number_lm;  // number of lm in the beginning
@@ -114,7 +117,7 @@ private:
   DSU() {};
 
 public:
-  DSU(FILE *input, bool noLP, bool shifts, int time_max = 0); // read seq + structs from input (barriers/RNAlocmin output)
+  DSU(FILE *input, bool noLP, bool shifts, int time_max, float temp); // read seq + structs from input (barriers/RNAlocmin output)
   ~DSU();
 
 public:
@@ -134,7 +137,7 @@ public:
   int FindNum(int energy, short *str);           // find number of structure
   bool InsertUB(RNAsaddle saddle, bool debug); // insert into UBlist
     // link cp
-  void PrintMatrix(char *filename); // print energy barrier matrix
+  void PrintMatrix(char *filename, bool full, char type); // print matrices (E - energy, D - distance, G - graph distance, R - rates)
   int FloodUp(RNAlocmin &i, RNAlocmin &j, RNAsaddle &saddle, Opt &opt, bool debug); // flood up from i and j to find direct saddle
   bool FloodSaddle(RNAsaddle &saddle_lower, RNAsaddle &saddle_higher, Opt &opt, bool debug); // flood saddle
 
@@ -149,6 +152,7 @@ public:
   void PrintLM(FILE *output = stdout, bool fix = true);
   void PrintSaddles(FILE *output = stdout, bool fix = true);
   void PrintComps(FILE *output = stdout, bool fill = true);
+  void PrintBarr(FILE *output = stdout);
 
     // find components
   void FillComps();

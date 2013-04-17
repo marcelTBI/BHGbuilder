@@ -7,7 +7,7 @@ extern "C" {
   #include "fold_vars.h"
   #include "pair_mat.h"
 
-  #include "fold_dsu.h"
+  #include "fold.h"
   #include "findpath.h"
   #include "move_set.h"
 }
@@ -19,7 +19,7 @@ extern "C" {
 
 using namespace std;
 
-DSU::DSU(FILE *input, bool noLP, bool shifts, int time_max) {
+DSU::DSU(FILE *input, bool noLP, bool shifts, int time_max, float temp) {
 
   // NULL::
   seq = NULL;
@@ -32,6 +32,10 @@ DSU::DSU(FILE *input, bool noLP, bool shifts, int time_max) {
     time = clock();
   }
   stop_after = time_max;
+
+  // maybe temp
+  _kT = 0.00198717*(273.15 + temp);
+  //fprintf(stderr, "kt = %g\n", _kT);
 
   if (!input) return ;
 
@@ -531,33 +535,40 @@ void DSU::VisPath(int src, int dest, bool en_barriers, int max_length, bool dot_
   //printf("%s returned %d", syst, res);
 }
 
-void DSU::PrintMatrix(char *filename)
+void DSU::PrintMatrix(char *filename, bool full, char type)
 {
+  int size = (full?LM.size():number_lm);
   FILE *energies;
   energies = fopen(filename, "w");
   if (energies) {
     // create matrix
-    vector<vector<float> > matrix;
-    matrix.resize(LM.size());
-    for (unsigned int i=0; i<LM.size(); i++) {
-      matrix[i].resize(LM.size(), INFINITY);
-    }
-
-    // fill it with edges:
-    for (set<edgeLL>::iterator it=edges_l.begin(); it!=edges_l.end(); it++) {
-      matrix[it->i][it->j] = it->en/100.0;
-      matrix[it->j][it->i] = it->en/100.0;
+    vector<vector<std::pair<int, int> > > matrix;
+    for (int i=0; i<size; i++) {
+      matrix.push_back(HeightSearch(i, edgesV_l));
+      if (matrix[i].size()!=size) {
+        matrix[i].resize(size);
+      }
     }
 
     // resolve i==i
     for (unsigned int i=0; i<matrix.size(); i++) {
-      matrix[i][i] = LM[i].energy/100.0;
+      matrix[i][i] = make_pair(LM[i].energy, 0);
     }
+
+    double res;
 
     // print
     for (unsigned int i=0; i<matrix.size(); i++) {
       for (unsigned int j=0; j<matrix[i].size(); j++) {
-        fprintf(energies, "%6.2g ", matrix[i][j]);
+        switch (type) {
+        case 'E': fprintf(energies, "%6.2f ", matrix[i][j].first/100.0); break;
+        case 'R':
+          res = 1.0*exp(-(matrix[i][j].first-LM[i].energy)/100.0/_kT);
+          fprintf(energies, "%8.4g ", res);
+          break;
+        case 'D': fprintf(energies, "%5d ", HammingDist(LM[i].structure, LM[j].structure)); break;
+        case 'G': fprintf(energies, "%5d ", matrix[i][j].second); break;
+        }
       }
       fprintf(energies, "\n");
     }
@@ -936,6 +947,42 @@ void DSU::PrintLM(FILE *output, bool fix)
     fprintf(output, "%4d  %s %7.2f %8s\n", i+1, LM[i].str_ch, LM[i].energy/100.0, type[LM[i].type]);
   }
 }
+
+void DSU::PrintBarr(FILE *output)
+{
+  fprintf(output, "     %s\n", seq);
+
+  //get heights
+  vector<vector<std::pair<int, int> > > res(number_lm);
+  for (int i=0; i<number_lm; i++) {
+    res[i] = HeightSearch(i, edgesV_l);
+  }
+
+  // get minimal height:
+  vector<int> saddle_en(number_lm);
+  vector<int> father(number_lm);
+  for (int i=number_lm-1; i>=1; i--) {
+    int minim = INT_MAX;
+    int index;
+    for (int j=i-1; j>=0; j--) {
+      if (res[i][j].first <= minim) {
+        minim = res[i][j].first;
+        index = j;
+      }
+    }
+    saddle_en[i] = minim;
+    father[i] = index+1;
+  }
+
+  saddle_en[0] = LM[0].energy+0.1;
+  father[0] = 0;
+
+
+  for (int i=0; i<number_lm; i++) {
+    fprintf(output, "%4d %s %6.2f %4d %6.2f\n", i+1, LM[i].str_ch, LM[i].energy/100.0, father[i], (saddle_en[i]-LM[i].energy)/100.0);
+  }
+}
+
 
 void DSU::PrintSaddles(FILE *output, bool fix)
 {

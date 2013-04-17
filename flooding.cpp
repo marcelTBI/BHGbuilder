@@ -3,7 +3,7 @@
 #include <stdlib.h>
 
 extern "C" {
-  #include "fold_dsu.h"
+  #include "fold.h"
   #include "findpath.h"
   #include "move_set.h"
 }

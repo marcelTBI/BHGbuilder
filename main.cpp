@@ -26,11 +26,11 @@ int main(int argc, char **argv)
   if (args_info.num_threshold_arg <= 0) args_info.num_threshold_arg = INT_MAX;
   if (args_info.cluster_repre_arg <= 0.0) args_info.cluster_repre_arg = 0.0;
   if (args_info.cluster_repre_arg > 1.0) args_info.cluster_repre_arg = 1.0;
-
+  if (args_info.print_full_flag || args_info.energy_file_given) args_info.print_energy_flag = 1;
 
   // code
     // DSUeval
-  DSU dsu(stdin, args_info.noLP_flag, args_info.shift_flag, args_info.time_max_arg);
+  DSU dsu(stdin, args_info.noLP_flag, args_info.shift_flag, args_info.time_max_arg, args_info.temp_arg);
   Opt opt(args_info.noLP_flag, args_info.shift_flag, !args_info.noSaddle_flag, args_info.floodMax_arg, args_info.floodHeight_arg, args_info.debug_flag, args_info.depth_arg, args_info.num_threshold_arg, args_info.outer_flag, args_info.cluster_repre_arg, !args_info.cluster_fsaddle_flag);
 
   // adjust args_info:
@@ -73,13 +73,39 @@ int main(int argc, char **argv)
 
     // real output:
     dsu.PrintLM(stdout);
+
+    // barriers-like output
+    if (args_info.barr_file_given) {
+      FILE *file_h;
+      file_h = fopen(args_info.barr_file_arg, "w");
+      dsu.PrintBarr(file_h);
+      fclose(file_h);
+    }
+
     //dsu.PrintSaddles(stderr);
     //dsu.PrintComps(stderr, true);
 
     // print energy matrix
-    if (args_info.print_energy_flag) dsu.PrintMatrix(args_info.energy_file_arg);
+    if (args_info.print_energy_flag) {
+      dsu.PrintMatrix(args_info.energy_file_arg, args_info.print_full_flag, 'E');
+    }
 
-      // visualisation
+    // print dist matrix
+    if (args_info.dist_file_given) {
+      dsu.PrintMatrix(args_info.dist_file_arg, args_info.print_full_flag, 'D');
+    }
+
+    // print rates matrix
+    if (args_info.rates_file_given) {
+      dsu.PrintMatrix(args_info.rates_file_arg, args_info.print_full_flag, 'R');
+    }
+
+    // print graph distance matrix
+    if (args_info.gdist_file_given) {
+      dsu.PrintMatrix(args_info.gdist_file_arg, args_info.print_full_flag, 'G');
+    }
+
+    // visualisation
     for (unsigned int i=0; i<args_info.visualise_given; i++) {
       int a, b;
       if (sscanf(args_info.visualise_arg[i], "%d=%d", &a, &b)!=2) {

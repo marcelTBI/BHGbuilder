@@ -7,7 +7,7 @@ extern "C" {
   #include "fold_vars.h"
   #include "pair_mat.h"
 
-  #include "fold_dsu.h"
+  #include "fold.h"
   #include "findpath.h"
   #include "move_set.h"
 }
@@ -300,6 +300,11 @@ void DSU::ComputeTBD(TBD &pqueue, int maxkeep, int num_threshold, bool outer, bo
     if (stop_after && (time_secs > stop_after)) {
       fprintf(stderr, "Time threshold reached (%d secs.), processed %d/%d\n", stop_after, cnt, pqueue.size()+cnt);
       break;
+    }
+
+    // just visualisation
+    if (cnt%10000==0) {
+      fprintf(stderr, "Finding path: %7d/%7d\n", cnt, pqueue.size()+cnt);
     }
 
     // apply threshold
