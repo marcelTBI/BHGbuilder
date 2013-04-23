@@ -142,8 +142,8 @@ struct lm_pair {
   int hd;
 
   lm_pair(int i, int j, int hd) {
-    this->i = i;
-    this->j = j;
+    this->i = min(i,j);
+    this->j = max(i,j);
     this->hd = hd;
   }
 
