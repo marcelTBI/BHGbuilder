@@ -555,6 +555,19 @@ void DSU::PrintMatrix(char *filename, bool full, char type)
       matrix[i][i] = make_pair(LM[i].energy, 0);
     }
 
+    if (type == 'R') {
+      Graph graph(edges_l, LM.size());
+      for(int i=LM.size()-1; i>=number_lm; i--) {
+        char filename[20];
+        char filename_eps[20];
+        sprintf(filename, "smth%d.dot", i);
+        sprintf(filename_eps, "smth%d.eps", i);
+        graph.PrintDot(filename, LM, true, true, filename_eps);
+        graph.RemovePoint(i, 2);
+      }
+      graph.PrintDot("smth.dot", LM, true, true, "smth.eps");
+    }
+
     double res;
 
     // print
