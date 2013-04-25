@@ -117,7 +117,7 @@ private:
   DSU() {};
 
 public:
-  DSU(FILE *input, bool noLP, bool shifts, int time_max, float temp); // read seq + structs from input (barriers/RNAlocmin output)
+  DSU(FILE *input, bool noLP, bool shifts, int time_max, int max_lm); // read seq + structs from input (barriers/RNAlocmin output)
   ~DSU();
 
 public:
@@ -137,7 +137,6 @@ public:
   int FindNum(int energy, short *str);           // find number of structure
   bool InsertUB(RNAsaddle saddle, bool debug); // insert into UBlist
     // link cp
-  void PrintMatrix(char *filename, bool full, char type); // print matrices (E - energy, D - distance, G - graph distance, R - rates)
   int FloodUp(RNAlocmin &i, RNAlocmin &j, RNAsaddle &saddle, Opt &opt, bool debug); // flood up from i and j to find direct saddle
   bool FloodSaddle(RNAsaddle &saddle_lower, RNAsaddle &saddle_higher, Opt &opt, bool debug); // flood saddle
 
@@ -153,6 +152,10 @@ public:
   void PrintSaddles(FILE *output = stdout, bool fix = true);
   void PrintComps(FILE *output = stdout, bool fill = true);
   void PrintBarr(FILE *output = stdout);
+
+  // print files:
+  void PrintMatrix(char *filename, bool full, char type); // print matrices (E - energy, D - distance, G - graph distance)
+  void PrintRates(char *filename, bool full, double temp, char mode);
 
     // find components
   void FillComps();

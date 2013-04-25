@@ -19,7 +19,7 @@ extern "C" {
 
 using namespace std;
 
-DSU::DSU(FILE *input, bool noLP, bool shifts, int time_max, float temp) {
+DSU::DSU(FILE *input, bool noLP, bool shifts, int time_max, int max_lm) {
 
   // NULL::
   seq = NULL;
@@ -32,10 +32,6 @@ DSU::DSU(FILE *input, bool noLP, bool shifts, int time_max, float temp) {
     time = clock();
   }
   stop_after = time_max;
-
-  // maybe temp
-  _kT = 0.00198717*(273.15 + temp);
-  //fprintf(stderr, "kt = %g\n", _kT);
 
   if (!input) return ;
 
@@ -101,6 +97,10 @@ DSU::DSU(FILE *input, bool noLP, bool shifts, int time_max, float temp) {
         LM.push_back(struc);
 
         gl_maxen = max(gl_maxen, en);
+        if (max_lm>0 && max_lm==(int)LM.size()) {
+          free(line);
+          break;
+        }
       } else {
         free(tmp);
       }
@@ -545,7 +545,7 @@ void DSU::PrintMatrix(char *filename, bool full, char type)
     vector<vector<std::pair<int, int> > > matrix;
     for (int i=0; i<size; i++) {
       matrix.push_back(HeightSearch(i, edgesV_l));
-      if (matrix[i].size()!=size) {
+      if ((int)matrix[i].size()!=size) {
         matrix[i].resize(size);
       }
     }
@@ -555,19 +555,6 @@ void DSU::PrintMatrix(char *filename, bool full, char type)
       matrix[i][i] = make_pair(LM[i].energy, 0);
     }
 
-    if (type == 'R') {
-      Graph graph(edges_l, LM.size());
-      for(int i=LM.size()-1; i>=number_lm; i--) {
-        char filename[20];
-        char filename_eps[20];
-        sprintf(filename, "smth%d.dot", i);
-        sprintf(filename_eps, "smth%d.eps", i);
-        graph.PrintDot(filename, LM, true, true, filename_eps);
-        graph.RemovePoint(i, 2);
-      }
-      graph.PrintDot("smth.dot", LM, true, true, "smth.eps");
-    }
-
     double res;
 
     // print
@@ -575,16 +562,39 @@ void DSU::PrintMatrix(char *filename, bool full, char type)
       for (unsigned int j=0; j<matrix[i].size(); j++) {
         switch (type) {
         case 'E': fprintf(energies, "%6.2f ", matrix[i][j].first/100.0); break;
-        case 'R':
-          res = 1.0*exp(-(matrix[i][j].first-LM[i].energy)/100.0/_kT);
-          fprintf(energies, "%8.4g ", res);
-          break;
         case 'D': fprintf(energies, "%5d ", HammingDist(LM[i].structure, LM[j].structure)); break;
         case 'G': fprintf(energies, "%5d ", matrix[i][j].second); break;
         }
       }
       fprintf(energies, "\n");
     }
+  }
+  fclose(energies);
+}
+
+void DSU::PrintRates(char *filename, bool full, double temp, char mode)
+{
+  int size = (full?LM.size():number_lm);
+  FILE *energies;
+  energies = fopen(filename, "w");
+  if (energies) {
+    Graph graph(edges_l, LM);
+    for(int i=LM.size()-1; i>=number_lm; i--) {
+      char filename[20];
+      char filename_eps[20];
+      sprintf(filename, "smth%d.dot", i);
+      sprintf(filename_eps, "smth%d.eps", i);
+      graph.PrintDot(filename, true, true, filename_eps);
+      graph.RemovePoint(i, 10);
+    }
+    graph.PrintDot("smth.dot", true, true, "smth.eps");
+    mode_rates mod;
+    switch (mode) {
+      case 'F': mod = JUST_BEST; break;
+      case 'A': mod = ADDITIVE; break;
+      default: mod = JUST_BEST;
+    }
+    graph.PrintRates(energies, temp, mod);
   }
   fclose(energies);
 }

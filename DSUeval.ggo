@@ -19,6 +19,7 @@ option "depth"              - "Depth of findpath search (higher value increases 
 option "noLP"								- "Process structures without lonely pairs (helices of length 1)." flag off
 option "shift"							- "Assume also shift moves (in addition to insertion and deletions)." flag off
 option "time-max"           - "Quit after computing for specified time (in seconds)" int default="0" no
+option "number-lm"          n "Maximum number of LM (default=everything in input file)" int default="0" no
 
 section "UBlist"
 option "hd-threshold"       - "Do not try to process pairs with Hamming distance more than this. (0 means no threshold)" int default="0" no
@@ -48,7 +49,8 @@ option "energy-file"        - "Fileneme for energy barrier matrix (switches on -
 option "dist-file"          - "Filename for distance matrix (does not print by default)" string no
 option "gdist-file"         - "Filename for graph distance matrix (does not print by default)" string no
 option "rates-file"         - "File for rates for treekin (does not print by default)" string no
-option "temp"               T "Temperature for rates (in Celsius)" float default="37.0" no
+option "rates-temp"         T "Temperature for rates (in Celsius)" float default="37.0" no
+option "rates-mode"         - "Mode for rates generation (F - use only first refolding path; A - use first X refolding paths (currently X=2))" string default="F" no
 
 option "visualise"          v "Visualise paths between 2 structures, can be specified multiple times, output goes to file pathL1_L2.eps" typestr="<l1>=<l2>" string multiple
 option "vis-dist"           - "Set distance as a bounding condition for visualisation (instead of energy)" flag off
