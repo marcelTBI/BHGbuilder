@@ -95,6 +95,14 @@ struct RNAsaddle: public RNAstruc {
   }
 };
 
+// just for reverse ordering
+struct RNAsaddle_comp {
+  bool operator()(const RNAsaddle &first, const RNAsaddle &second) const {
+    if (first.lm1 == second.lm1) return first.lm2 < second.lm2;
+    else return first.lm1 < second.lm1;
+  }
+};
+
 // options structure;
 struct Opt {
   bool noLP;
@@ -206,6 +214,194 @@ struct edgeSS : public edge {
 
 struct edgeLS : public edge {
   edgeLS(int lm, int saddle):edge(lm,saddle) {}
+};
+
+// edge that has whole refolding path inside (just one refolding path)
+class edgeAdv : public edge {
+public:
+  // lowest saddle height
+  int max_height;
+
+  // saddle numbers and their energies
+  vector<int> saddles;
+  vector<int> energies;
+
+  edgeAdv(int ii, int jj, int energy, int saddle):edge(ii,jj) {
+    if (i > j) swap(i,j);
+    saddles.push_back(saddle);
+    energies.push_back(energy);
+    max_height = energy;
+  }
+
+  int length() const { return saddles.size(); }
+};
+
+// comparator according to lowest energy (and length)
+struct edge_comp {
+  bool operator ()(const edgeAdv &a, const edgeAdv &b) const {
+    if (a.max_height == b.max_height) {
+      if (a.length() == b.length()) return a<b;
+      else return a.length() < b.length();
+    } else return a.max_height < b.max_height;
+  }
+};
+
+struct Graph {
+
+  // maximal_node
+  int max_node;
+
+  // lm for printing:
+  int number_lm;
+
+  // edges
+  vector< vector< multiset<edgeAdv, edge_comp> > > adjacency;
+
+  Graph(set<edgeLL> &edges, int max_node) {
+    this->max_node = this->number_lm = max_node;
+    adjacency.resize(max_node);
+    for (int i=0; i<max_node; i++) {
+      adjacency[i].resize(max_node);
+    }
+    for (set<edgeLL>::iterator it=edges.begin(); it!=edges.end(); it++) {
+      int i=min(it->i, it->j);
+      int j=max(it->i, it->j);
+      adjacency[i][j].insert(edgeAdv(i, j, it->en, it->saddle));
+    }
+  }
+
+  int Join(edgeAdv &src, edgeAdv &dst, int joining_node, edgeAdv &res) {
+
+    res = src;
+
+    // in and out node
+    int src_node, dst_node;
+    if (src.i == joining_node) {
+      src_node = src.j;
+    } else {
+      src_node = src.i;
+      if (src.j != joining_node) {fprintf(stderr, "ERROR: joining node not found(src)\n"); return -1;}
+    }
+    if (dst.i == joining_node) {
+      dst_node = dst.j;
+    } else {
+      dst_node = dst.i;
+      if (dst.j != joining_node) {fprintf(stderr, "ERROR: joining node not found(dst)\n"); return -1;}
+    }
+
+    // edges that are parrallel
+    if (dst_node == src_node) return 1;
+
+    // start and end point
+    res.i = min(dst_node, src_node);
+    res.j = max(dst_node, src_node);
+
+    // energies & saddles
+    res.saddles.insert(res.saddles.end(), dst.saddles.begin(), dst.saddles.end());
+    res.energies.insert(res.energies.end(), dst.energies.begin(), dst.energies.end());
+
+    // max_height
+    for(unsigned int i=0; i<dst.energies.size(); i++) {
+      res.max_height = max(res.max_height, dst.energies[i]);
+    }
+
+    return 0;
+  }
+
+  int RemovePoint(int point, int keep) {
+
+    // sets the number of active nodes
+    if (number_lm > point) number_lm = point;
+
+    int count = 0;
+    // find candidates + delete old ones
+    vector<edgeAdv> candidates;
+    for (int i=0; i<max_node; i++) {
+      for (multiset<edgeAdv, edge_comp>::iterator it = adjacency[min(i,point)][max(i,point)].begin(); it!=adjacency[min(i,point)][max(i,point)].end(); it++) {
+        edgeAdv res = *it;
+        candidates.push_back(res);
+      }
+      count-= adjacency[min(i,point)][max(i,point)].size();
+      adjacency[min(i,point)][max(i,point)].clear();
+    }
+
+    // get there "keep" new ones:
+    for (unsigned int i=0; i<candidates.size(); i++) {
+      for (unsigned int j=i+1; j<candidates.size(); j++) {
+        edgeAdv res(candidates[i]);
+        int status = Join(candidates[i], candidates[j], point, res);
+        if (status==0) {
+          adjacency[res.i][res.j].insert(res);
+          count++;
+          if (adjacency[res.i][res.j].size()>keep) {
+            multiset<edgeAdv, edge_comp>::iterator it = adjacency[res.i][res.j].end(); it--;
+            adjacency[res.i][res.j].erase(it);
+            count--;
+          }
+        }
+      }
+    }
+
+  return count; //  returns change in edge count
+
+  }
+  void PrintDot(char *filename, vector<RNAlocmin> &LM, bool dot_prog, bool print, char *file_print)
+{
+  int color = 180;
+  //open file
+  FILE *dot;
+  dot = fopen(filename, "w");
+  if (dot) {
+    fprintf(dot, "Graph G {\n\tnode [width=0.1, height=0.1, shape=circle];\n");
+    //nodes LM:
+    for (unsigned int i=0; i<number_lm; i++) {
+      switch (LM[i].type) {
+        case NORMAL:
+        case NORM_CF: fprintf(dot, "\"%d\" [label=\"%d\"]\n", i+1, i+1); break;
+        case EE_DSU: fprintf(dot, "\"%d\" [label=\"%d\", color=\"%s\", fontcolor=\"%s\"]\n", i+1, i+1, rgb(0, 0, 255), rgb(0, 0, 255)); break;
+        case EE_COMP: fprintf(dot, "\"%d\" [label=\"%d\", color=\"%s\", fontcolor=\"%s\"]\n", i+1, i+1, rgb(255, 0, 0), rgb(255, 0, 0)); break;
+      }
+    }
+    fprintf(dot, "\n");
+
+    // edges l-l
+    for (int i=0; i<max_node; i++) {
+      for (int j=0; j<max_node; j++) {
+        for (multiset<edgeAdv>::iterator it=adjacency[i][j].begin(); it!=adjacency[i][j].end(); it++) {
+          char length[10]="";
+          bool component = (it->length()>1);
+          if (component) sprintf(length, "(%d)", it->length());
+          fprintf(dot, "\"%d\" -- \"%d\" [label=\"%.2f%s\", color=\"%s\", fontcolor=\"%s\"]\n", (it->i)+1, (it->j)+1, it->max_height/100.0, length, (component?rgb(255, 0, 0):rgb(0, 0, 0)), (component?rgb(255, 0, 0):rgb(0, 0, 0)));
+        }
+      }
+    }
+    fprintf(dot, "\n}\n");
+  }
+
+  fclose(dot);
+
+  // start neato/dot:
+  if (dot && print && file_print) {
+    char syst[200];
+    sprintf(syst, "%s -Tps < %s > %s", (dot_prog ? "dot" : "neato"), filename, file_print);
+    system(syst);
+    //printf("%s returned %d\n", syst, res);
+  }
+}
+
+
+  void PrintRates(FILE *rates, double temp) {
+
+    double _kT = 0.00198717*(273.15 + temp);
+    for (int i=0; i<max_node; i++) {
+      for (int j=0; j<max_node; j++) {
+        //double res = 1.0*exp(-(matrix[i][j].first-LM[i].energy)/100.0/_kT);
+        //fprintf(rates, "%8.4g ", res);
+      }
+      fprintf(rates, "\n");
+    }
+
+  }
 };
 
 // energy comparator

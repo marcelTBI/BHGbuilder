@@ -31,7 +31,7 @@ vector<std::pair<int, int> > DSU::HeightSearch(int start, vector< set<edgeLL> > 
 
   priority_queue<pq_height> que;
 
-  // starting point
+  // starting point -- all points from start
   done[start] = true;
   distance[start] = 0;
   heights[start] = LM[start].energy;
@@ -39,7 +39,7 @@ vector<std::pair<int, int> > DSU::HeightSearch(int start, vector< set<edgeLL> > 
     que.push(pq_height(it->en, 1, it->goesTo(start), start));
   }
 
-  // main loop
+  // main loop -- dijkstra-like (take one with lowest energy, proceed it)
   while (!que.empty()) {
     // get next one to do
     pq_height pq = que.top(); que.pop();
@@ -161,7 +161,7 @@ void DSU::ERank(FILE *rank, bool barr, bool out_conns)
         fprintf(rank, " %4d %4d", ep.i+1, ep.j+1);
       }
       fprintf(rank, "\n");
-      
+
       // finally join them
       ufset.union_set(father, child);
     }

@@ -80,26 +80,23 @@ private:
   clock_t time;
   int stop_after;
 
+  // temperature
+  double _kT;
+
   // structures
   vector<RNAlocmin> LM;  // contains memory (after split - should be in both programs)
   int number_lm;  // number of lm in the beginning
   int gl_maxen;
 
-  // lists
-  priority_queue<lm_pair> TBDlist;
-
-
   // output
-  vector<RNAsaddle> UBoutput; // contains memory
+  set<RNAsaddle, RNAsaddle_comp> UBlist; // set of saddles (cannot be two with same connection)
 
   // -- linkCP
     // vertex sets
     map<RNAstruc, int> vertex_l;  // points to number in LM
     //map<RNAstruc, int> vertex_s;  // points to number in saddles
 
-    vector<RNAsaddle> saddles; // contains memory (replaces saddles)
-
-    //vector<RNAstruc> saddles; // contains memory (same as UBoutput)
+    vector<RNAsaddle> saddles; // contains memory
 
     // edge sets
     set<edgeLL> edges_l; // LM to LM
@@ -120,31 +117,27 @@ private:
   DSU() {};
 
 public:
-  DSU(FILE *input, bool noLP, bool shifts, int time_max = 0); // read seq + structs from input (barriers/RNAlocmin output)
+  DSU(FILE *input, bool noLP, bool shifts, int time_max, float temp); // read seq + structs from input (barriers/RNAlocmin output)
   ~DSU();
 
 public:
   // big ones
     // obsolete
-  int ComputeUB(int maxkeep, int num_threshold, bool outer, bool noLP, bool shifts, bool debug);          // compute all UB (outer - add to UB also outer structures? - we will not have only direct saddles then)
-  int LinkCPLM(Opt opt, bool debug);       // construct vertex and edge set from UBoutput (lm to *)
-  int LinkCPsaddle(Opt opt, bool debug);       // construct vertex and edge set from UBoutput (saddle to saddle)
+  int LinkCPLM(Opt opt, bool debug);       // construct vertex and edge set from saddles (lm to *)
+  int LinkCPsaddle(Opt opt, bool debug);       // construct vertex and edge set from saddles (saddle to saddle)
 
   // clustering
-  int Cluster(Opt &opt, int kmax, TBD &list);
-  //int ComputeTBD(TBD &pqueue, int maxkeep, int num_threshold, bool outer, bool noLP, bool shifts, bool debug);
-  vector<RNAsaddle> ComputeTBD2(TBD &pqueue, int maxkeep, int num_threshold, bool outer, bool noLP, bool shifts, bool debug);
+  int Cluster(Opt &opt, int kmax, bool cluster_off);
+  void ComputeTBD(TBD &pqueue, int maxkeep, int num_threshold, bool outer, bool noLP, bool shifts, bool debug, vector<RNAsaddle> *output_saddles = NULL);
   int AddLMtoTBD(short *tmp_str, int tmp_en, LMtype type, bool debug);
   int JoinClusters(Opt &opt, UF_set_child &ufset, set<int> &represents, TBD &output, int i, int j);
-  void GetRepre(vector<RNAsaddle> &UBoutput, TBD &output, set<int> &represents, set<int> &children, Opt &opt);
+  void GetRepre(TBD &output, set<int> &represents, set<int> &children, Opt &opt);
 
   // helpers
-  int CreateList(int hd_threshold, bool debug);  // create TBDlist
   int FindNum(int energy, short *str);           // find number of structure
-  bool InsertUB(map<lm_pair, RNAsaddle, pq_setcomp> &UBlist, int i, int j, int energy, short *saddle, bool outer, bool debug); // insert into UBlist
-  int AddLMtoDSU(short *tmp_str, int tmp_en, int hd_threshold, LMtype type, bool debug);
+  bool InsertUB(RNAsaddle saddle, bool debug); // insert into UBlist
     // link cp
-  void PrintMatrix(char *filename); // print energy barrier matrix
+  void PrintMatrix(char *filename, bool full, char type); // print matrices (E - energy, D - distance, G - graph distance, R - rates)
   int FloodUp(RNAlocmin &i, RNAlocmin &j, RNAsaddle &saddle, Opt &opt, bool debug); // flood up from i and j to find direct saddle
   bool FloodSaddle(RNAsaddle &saddle_lower, RNAsaddle &saddle_higher, Opt &opt, bool debug); // flood saddle
 
@@ -159,7 +152,7 @@ public:
   void PrintLM(FILE *output = stdout, bool fix = true);
   void PrintSaddles(FILE *output = stdout, bool fix = true);
   void PrintComps(FILE *output = stdout, bool fill = true);
-  void PrintUBoutput(FILE *output = stdout); // print UBlist to stdout
+  void PrintBarr(FILE *output = stdout);
 
     // find components
   void FillComps();

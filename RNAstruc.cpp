@@ -7,7 +7,7 @@ extern "C" {
   #include "fold_vars.h"
   #include "pair_mat.h"
 
-  #include "fold_dsu.h"
+  #include "fold.h"
   #include "findpath.h"
   #include "move_set.h"
 }

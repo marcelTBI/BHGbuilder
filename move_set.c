@@ -5,7 +5,7 @@
 #include <limits.h>
 #include <time.h>
 
-#include "fold_dsu.h"
+#include "fold.h"
 
 #include "move_set.h"
 
@@ -740,6 +740,13 @@ int find_lone_pair(short* str)
   return -1;
 }
 
+void print_struct(FILE *output, short *str) {
+  int i;
+  for (i=1; i<=str[0]; i++) {
+    fprintf(output, "%c", str[i]==0?'.':(str[i]>i?'(':')'));
+  }
+}
+
 
 int move_deepest( char *string,
                   short *ptable,
@@ -783,12 +790,25 @@ int move_deepest( char *string,
 
   struct_en str;
   str.structure = allocopy(ptable);
+
+  /*fprintf(stderr, "%s\n", string);
+  print_struct(stderr, str.structure);
+  fprintf(stderr, " %6.2f\n", str.energy/100.0);*/
+
   str.energy = energy_of_structure_pt(enc.seq, str.structure, enc.s0, enc.s1, 0);
+
+  /*fprintf(stderr, "%s\n", string);
+  print_struct(stderr, str.structure);
+  fprintf(stderr, " %6.2f\n", str.energy/100.0);*/
 
   while (move_set(&enc, &str)!=0) {
     free_degen(&enc);
   }
   free_degen(&enc);
+
+  /*fprintf(stderr, "%s\n", string);
+  print_struct(stderr, str.structure);
+  fprintf(stderr, " %6.2f\n", str.energy/100.0);*/
 
   copy_arr(ptable, str.structure);
   free(str.structure);
