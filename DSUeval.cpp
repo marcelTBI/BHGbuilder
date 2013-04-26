@@ -328,10 +328,15 @@ void DSU::PrintDot(char *filename, bool dot_prog, bool print, char *file_print, 
       //nodes saddle:
       for (unsigned int i=0; i<saddles.size(); i++) {
         switch (saddles[i].type) {
-          case DIRECT: fprintf(dot, "\"S%d\" [label=\"S%d (%d %d)\", color=\"%s\", fontcolor=\"%s\"]\n", i+1, i+1, saddles[i].lm1+1, saddles[i].lm2+1, rgb(color, color, color), rgb(color, color, color)); break;
+          /*case DIRECT: fprintf(dot, "\"S%d\" [label=\"S%d (%d %d)\", color=\"%s\", fontcolor=\"%s\"]\n", i+1, i+1, saddles[i].lm1+1, saddles[i].lm2+1, rgb(color, color, color), rgb(color, color, color)); break;
           case LDIRECT: fprintf(dot, "\"S%d\" [label=\"S%d (%d %d)\", color=\"%s\", fontcolor=\"%s\"]\n", i+1, i+1, saddles[i].lm1+1, saddles[i].lm2+1, rgb(color+30, color+30, color+30), rgb(color+30, color+30, color+30)); break;
           case NOT_SURE: fprintf(dot, "\"S%d\" [label=\"S%d (%d %d)\", color=\"%s\", fontcolor=\"%s\"]\n", i+1, i+1, saddles[i].lm1+1, saddles[i].lm2+1, rgb(color-30, color-30, color-30), rgb(color-30, color-30, color-30)); break;
-          case COMP: fprintf(dot, "\"S%d\" [label=\"S%d (%d %d)\", color=\"%s\", fontcolor=\"%s\"]\n", i+1, i+1, saddles[i].lm1+1, saddles[i].lm2+1, rgb(255, color, color), rgb(255, color, color)); break;
+          case COMP: fprintf(dot, "\"S%d\" [label=\"S%d (%d %d)\", color=\"%s\", fontcolor=\"%s\"]\n", i+1, i+1, saddles[i].lm1+1, saddles[i].lm2+1, rgb(255, color, color), rgb(255, color, color)); break;*/
+
+          case DIRECT: fprintf(dot, "\"S%d\" [label=\"S%d\", color=\"%s\", fontcolor=\"%s\"]\n", i+1, i+1, rgb(color, color, color), rgb(color, color, color)); break;
+          case LDIRECT: fprintf(dot, "\"S%d\" [label=\"S%d\", color=\"%s\", fontcolor=\"%s\"]\n", i+1, i+1, rgb(color+30, color+30, color+30), rgb(color+30, color+30, color+30)); break;
+          case NOT_SURE: fprintf(dot, "\"S%d\" [label=\"S%d\", color=\"%s\", fontcolor=\"%s\"]\n", i+1, i+1, rgb(color-30, color-30, color-30), rgb(color-30, color-30, color-30)); break;
+          case COMP: fprintf(dot, "\"S%d\" [label=\"S%d\", color=\"%s\", fontcolor=\"%s\"]\n", i+1, i+1, rgb(255, color, color), rgb(255, color, color)); break;
         }
       }
       fprintf(dot, "\n");
