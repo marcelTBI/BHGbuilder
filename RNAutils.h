@@ -49,10 +49,12 @@ public:
 };
 
 class UF_set_child : public UF_set {
-private:
+public:
   vector<set<int> > children;
+  int reduced;
 public:
   // and union-find set functions
+  int dimension();
   UF_set_child();
   void union_set(int x, int y);
   void enlarge_parent();

@@ -200,21 +200,22 @@ void UF_set::clear() {
 
 set<int> UF_set_child::get_children(int which)
 {
-  if (which < children.size() && which>=0) return children[which];
+  if (which < (int)children.size() && which>=0) return children[which];
   else return set<int>();
 }
 
 int UF_set_child::count(int which)
 {
-  if (which < children.size() && which>=0) return children[which].size();
+  if (which < (int)children.size() && which>=0) return children[which].size();
   else return -1;
 }
 
 void UF_set_child::make_single(int which)
 {
   // just try to simulate that we have only one vertex, so count = 1 and children = this
-  if (which < children.size() && which>=0) {
+  if (which < (int)children.size() && which>=0) {
     which = find(which);
+    reduced += children[which].size()-1;
     children[which].clear();
     children[which].insert(which);
   }
@@ -223,7 +224,7 @@ void UF_set_child::make_single(int which)
 UF_set_child::UF_set_child():
   UF_set()
 {
-  children.clear();
+  clear();
 }
 
 void UF_set_child::enlarge_parent() {
@@ -240,6 +241,11 @@ void UF_set_child::enlarge_parent(int cnt) {
 void UF_set_child::clear() {
   UF_set::clear();
   children.clear();
+  reduced = 0;
+}
+
+int UF_set_child::dimension() {
+  return size()-reduced;
 }
 
 void UF_set_child::union_set(int x, int y) {

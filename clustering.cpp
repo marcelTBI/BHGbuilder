@@ -197,6 +197,9 @@ int DSU::JoinClusters(Opt &opt, UF_set_child &ufset, set<int> &represents, TBD &
   ufset.union_set(i, j);
   ufset.make_single(i);
 
+  // message:
+  fprintf(stderr, "Joining clusters, reduced to dimension %6d/%6d \n", ufset.dimension(), ufset.size());
+
   //fprintf(stderr, "repre size = %d\n", (int)represents.size());
 
   return 0;
@@ -302,7 +305,7 @@ void DSU::ComputeTBD(TBD &pqueue, int maxkeep, int num_threshold, bool outer, bo
     }
 
     // just visualisation
-    if (cnt%10000==0) {
+    if (!output_saddles && cnt%10000==0) {
       fprintf(stderr, "Finding path: %7d/%7d\n", cnt, pqueue.size()+cnt);
     }
 

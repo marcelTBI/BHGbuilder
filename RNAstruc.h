@@ -269,7 +269,7 @@ struct Graph {
   int number_lm;
 
   // lm - just shallow copy for now
-  vector<RNAlocmin> LM;
+  vector<RNAlocmin> &LM;
 
   // edges
   vector< vector< multiset<edgeAdv, edge_comp> > > adjacency;

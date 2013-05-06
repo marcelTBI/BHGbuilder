@@ -555,8 +555,6 @@ void DSU::PrintMatrix(char *filename, bool full, char type)
       matrix[i][i] = make_pair(LM[i].energy, 0);
     }
 
-    double res;
-
     // print
     for (unsigned int i=0; i<matrix.size(); i++) {
       for (unsigned int j=0; j<matrix[i].size(); j++) {
@@ -579,15 +577,17 @@ void DSU::PrintRates(char *filename, bool full, double temp, char mode)
   energies = fopen(filename, "w");
   if (energies) {
     Graph graph(edges_l, LM);
-    for(int i=LM.size()-1; i>=number_lm; i--) {
-      char filename[20];
+    fprintf(stderr, "graph created...\n");
+    for(int i=LM.size()-1; i>=size; i--) {
+      /*char filename[20];
       char filename_eps[20];
       sprintf(filename, "smth%d.dot", i);
       sprintf(filename_eps, "smth%d.eps", i);
-      graph.PrintDot(filename, true, true, filename_eps);
-      graph.RemovePoint(i, 10);
+      graph.PrintDot(filename, true, true, filename_eps);*/
+      graph.RemovePoint(i, 2);
+      fprintf(stderr, "removed point %d\n", i);
     }
-    graph.PrintDot("smth.dot", true, true, "smth.eps");
+    //graph.PrintDot("smth.dot", true, true, "smth.eps");
     mode_rates mod;
     switch (mode) {
       case 'F': mod = JUST_BEST; break;
