@@ -202,6 +202,7 @@ void Graph::PrintRates(FILE *rates, double temp, mode_rates mode)
   for (int i=0; i<number_lm; i++) {
     for (int j=i+1; j<number_lm; j++) {
       for (multiset<edgeAdv, edge_comp>::iterator it=adjacency[i][j].begin(); it!=adjacency[i][j].end(); it++) {
+        //fprintf(stderr, "%d %d %f(%d)\n", i, j, it->max_height/100.0, it->length());
         switch (mode) {
           case JUST_BEST:
             mat_rates[i][j] = 1.0*exp(-(it->max_height-LM[i].energy)/100.0/_kT);
@@ -213,6 +214,7 @@ void Graph::PrintRates(FILE *rates, double temp, mode_rates mode)
             break;
         }
         if (mode==JUST_BEST) break;
+        //fprintf(stderr, "%d %d %f(%d)\n", i, j, it->max_height/100.0, it->length());
       }
     }
   }
