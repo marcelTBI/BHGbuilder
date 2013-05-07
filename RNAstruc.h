@@ -268,23 +268,27 @@ struct Graph {
   // lm for printing:
   int number_lm;
 
+  // mode for joining
+  mode_rates mode;
+
   // lm - just shallow copy for now
   vector<RNAlocmin> &LM;
 
-  // edges
-  vector< vector< multiset<edgeAdv, edge_comp> > > adjacency;
+  // edges -- sparse format adjacency[x]=y only if x>y
+  vector< set<edgeAdv> > adjacency;
 
 public:
   // constructor
-  Graph(set<edgeLL> &edges, vector<RNAlocmin> &LM);
+  Graph(set<edgeLL> &edges, vector<RNAlocmin> &LM, mode_rates mode);
 private:
   // helpers
-  int Join(edgeAdv &src, edgeAdv &dst, int joining_node, edgeAdv &res);
+  int Join(const edgeAdv &src, const edgeAdv &dst, int joining_node, edgeAdv &res);
+  bool AddEdges(const edgeAdv &found, edgeAdv &res, mode_rates);
 public:
   // methods
-  int RemovePoint(int point, int keep);
+  int RemovePoint(int point);
   void PrintDot(char *filename, bool dot_prog, bool print, char *file_print);
-  void PrintRates(FILE *rates, double temp, mode_rates mode);
+  void PrintRates(FILE *rates, double temp);
 };
 
 // component structure

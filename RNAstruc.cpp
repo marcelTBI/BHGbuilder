@@ -46,30 +46,22 @@ void RNAstruc::recompute_str()
   else str_ch = pt_to_char(structure);
 }
 
-Graph::Graph(set<edgeLL> &edges, vector<RNAlocmin> &LM)
+Graph::Graph(set<edgeLL> &edges, vector<RNAlocmin> &LM, mode_rates mode)
+  :LM(LM) //shallow copy
 {
-
+  this->mode = mode;
   this->max_node = this->number_lm = LM.size();
   adjacency.resize(max_node);
-  for (int i=0; i<max_node; i++) {
-    adjacency[i].resize(max_node);
-  }
 
   // adjacency creation
   for (set<edgeLL>::iterator it=edges.begin(); it!=edges.end(); it++) {
     int i=min(it->i, it->j);
     int j=max(it->i, it->j);
-    adjacency[i][j].insert(edgeAdv(i, j, it->en, it->saddle));
+    adjacency[j].insert(edgeAdv(i, j, it->en, it->saddle));
   }
-
-  // just shallow copy
-  this->LM = LM;
-  /*for (unsigned int i=0; i<LM.size(); i++) {
-    this->LM[i] = LM[i];
-  }*/
 }
 
-int Graph::Join(edgeAdv &src, edgeAdv &dst, int joining_node, edgeAdv &res)
+int Graph::Join(const edgeAdv &src, const edgeAdv &dst, int joining_node, edgeAdv &res)
 {
   res = src;
 
@@ -107,36 +99,50 @@ int Graph::Join(edgeAdv &src, edgeAdv &dst, int joining_node, edgeAdv &res)
   return 0;
 }
 
-int Graph::RemovePoint(int point, int keep) {
+bool Graph::AddEdges(const edgeAdv &found, edgeAdv &res, mode_rates mode)
+{
+  bool changed = false;
+  switch (mode) {
+    case ADDITIVE:
+    // SOMETHING SHOULD BE IMPLEMENTED... TODO
+    case JUST_BEST:
+      // found is smaller == better?
+      if (edge_comp::operator() (found, res)) {
+        res = found;
+        changed = true;
+      }
+      break;
+  }
+
+  return changed;
+}
+
+int Graph::RemovePoint(int point) {
 
   // sets the number of active nodes
   if (number_lm > point) number_lm = point;
 
   int count = 0;
-  // find candidates + delete old ones
-  vector<edgeAdv> candidates;
-  for (int i=0; i<max_node; i++) {
-    for (multiset<edgeAdv, edge_comp>::iterator it = adjacency[min(i,point)][max(i,point)].begin(); it!=adjacency[min(i,point)][max(i,point)].end(); it++) {
-      edgeAdv res = *it;
-      candidates.push_back(res);
-    }
-    count-= adjacency[min(i,point)][max(i,point)].size();
-    adjacency[min(i,point)][max(i,point)].clear();
-  }
-
-  // get there "keep" new ones:
-  for (unsigned int i=0; i<candidates.size(); i++) {
-    for (unsigned int j=i+1; j<candidates.size(); j++) {
-      edgeAdv res(candidates[i]);
-      int status = Join(candidates[i], candidates[j], point, res);
+  // try to join every possible pair of edges:
+  for (set<edgeAdv>::iterator it=adjacency[point].begin(); it!=adjacency[point].end(); it++) {
+    set<edgeAdv>::iterator it2 = it; it2++;
+    set<edgeAdv>::iterator found;
+    for (; it2!=adjacency[point].end(); it2++) {
+      edgeAdv res(*it);
+      int status = Join(*it, *it2, point, res);
       if (status==0) {
-        adjacency[res.i][res.j].insert(res);
-        count++;
-        if ((int)adjacency[res.i][res.j].size()>keep) {
-          multiset<edgeAdv, edge_comp>::iterator it = adjacency[res.i][res.j].end(); it--;
-          adjacency[res.i][res.j].erase(it);
-          count--;
+        // if we have not found already some edge:
+        if ((found = adjacency[res.j].find(res))==adjacency[res.j].end()) {
+          adjacency[res.j].insert(res);
+        } else {
+          bool changed = AddEdges(*found, res, mode);
+          if (changed) {
+            adjacency[res.j].erase(found);
+            adjacency[res.j].insert(res);
+          }
         }
+
+        count++;
       }
     }
   }
@@ -163,14 +169,12 @@ void Graph::PrintDot(char *filename, bool dot_prog, bool print, char *file_print
     fprintf(dot, "\n");
 
     // edges l-l
-    for (int i=0; i<max_node; i++) {
-      for (int j=0; j<max_node; j++) {
-        for (multiset<edgeAdv>::iterator it=adjacency[i][j].begin(); it!=adjacency[i][j].end(); it++) {
-          char length[10]="";
-          bool component = (it->length()>1);
-          if (component) sprintf(length, "(%d)", it->length());
-          fprintf(dot, "\"%d\" -- \"%d\" [label=\"%.2f%s\", color=\"%s\", fontcolor=\"%s\"]\n", (it->i)+1, (it->j)+1, it->max_height/100.0, length, (component?rgb(255, 0, 0):rgb(0, 0, 0)), (component?rgb(255, 0, 0):rgb(0, 0, 0)));
-        }
+    for (int i=0; i<number_lm; i++) {
+      for (set<edgeAdv>::iterator it=adjacency[i].begin(); it!=adjacency[i].end(); it++) {
+        char length[10]="";
+         bool component = (it->length()>1);
+         if (component) sprintf(length, "(%d)", it->length());
+         fprintf(dot, "\"%d\" -- \"%d\" [label=\"%.2f%s\", color=\"%s\", fontcolor=\"%s\"]\n", (it->i)+1, (it->j)+1, it->max_height/100.0, length, (component?rgb(255, 0, 0):rgb(0, 0, 0)), (component?rgb(255, 0, 0):rgb(0, 0, 0)));
       }
     }
     fprintf(dot, "\n}\n");
@@ -188,7 +192,7 @@ void Graph::PrintDot(char *filename, bool dot_prog, bool print, char *file_print
 }
 
 
-void Graph::PrintRates(FILE *rates, double temp, mode_rates mode)
+void Graph::PrintRates(FILE *rates, double temp)
 {
   double _kT = 0.00198717*(273.15 + temp);
 
@@ -200,22 +204,10 @@ void Graph::PrintRates(FILE *rates, double temp, mode_rates mode)
 
   // fill rates matrix
   for (int i=0; i<number_lm; i++) {
-    for (int j=i+1; j<number_lm; j++) {
-      for (multiset<edgeAdv, edge_comp>::iterator it=adjacency[i][j].begin(); it!=adjacency[i][j].end(); it++) {
-        //fprintf(stderr, "%d %d %f(%d)\n", i, j, it->max_height/100.0, it->length());
-        switch (mode) {
-          case JUST_BEST:
-            mat_rates[i][j] = 1.0*exp(-(it->max_height-LM[i].energy)/100.0/_kT);
-            mat_rates[j][i] = 1.0*exp(-(it->max_height-LM[j].energy)/100.0/_kT);
-            break;
-          case ADDITIVE:
-            mat_rates[i][j] += 1.0*exp(-(it->max_height-LM[i].energy)/100.0/_kT);
-            mat_rates[j][i] += 1.0*exp(-(it->max_height-LM[j].energy)/100.0/_kT);
-            break;
-        }
-        if (mode==JUST_BEST) break;
-        //fprintf(stderr, "%d %d %f(%d)\n", i, j, it->max_height/100.0, it->length());
-      }
+    for (set<edgeAdv>::iterator it=adjacency[i].begin(); it!=adjacency[i].end(); it++) {
+      //fprintf(stderr, "%d %d %f(%d)\n", i, j, it->max_height/100.0, it->length());
+      mat_rates[it->i][it->j] = 1.0*exp(-(it->max_height-LM[it->j].energy)/100.0/_kT);
+      mat_rates[it->j][it->i] = 1.0*exp(-(it->max_height-LM[it->j].energy)/100.0/_kT);
     }
   }
 

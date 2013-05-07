@@ -581,7 +581,13 @@ void DSU::PrintRates(char *filename, bool full, double temp, char mode)
   FILE *energies;
   energies = fopen(filename, "w");
   if (energies) {
-    Graph graph(edges_l, LM);
+    mode_rates mod;
+    switch (mode) {
+      case 'F': mod = JUST_BEST; break;
+      case 'A': mod = ADDITIVE; break;
+      default: mod = JUST_BEST;
+    }
+    Graph graph(edges_l, LM, mod);
     fprintf(stderr, "graph created...\n");
     for(int i=LM.size()-1; i>=size; i--) {
       /*char filename[20];
@@ -589,17 +595,12 @@ void DSU::PrintRates(char *filename, bool full, double temp, char mode)
       sprintf(filename, "smth%d.dot", i);
       sprintf(filename_eps, "smth%d.eps", i);
       graph.PrintDot(filename, true, true, filename_eps);*/
-      graph.RemovePoint(i, 2);
+      graph.RemovePoint(i);
       fprintf(stderr, "removed point %d\n", i);
     }
     //graph.PrintDot("smth.dot", true, true, "smth.eps");
-    mode_rates mod;
-    switch (mode) {
-      case 'F': mod = JUST_BEST; break;
-      case 'A': mod = ADDITIVE; break;
-      default: mod = JUST_BEST;
-    }
-    graph.PrintRates(energies, temp, mod);
+
+    graph.PrintRates(energies, temp);
   }
   fclose(energies);
 }
