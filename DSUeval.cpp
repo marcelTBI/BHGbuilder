@@ -598,7 +598,7 @@ void DSU::PrintRates(char *filename, bool full, double temp, char mode)
       graph.RemovePoint(i);
       fprintf(stderr, "removed point %d\n", i);
     }
-    //graph.PrintDot("smth.dot", true, true, "smth.eps");
+    //graph.PrintDot("smth.dot", true, true, "reduced.eps");
 
     graph.PrintRates(energies, temp);
   }

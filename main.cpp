@@ -81,6 +81,7 @@ int main(int argc, char **argv)
       file_h = fopen(args_info.barr_file_arg, "w");
       dsu.PrintBarr(file_h);
       fclose(file_h);
+      fprintf(stderr, "printing barrier output took %.2f secs.\n", (clock()-time)/(double)CLOCKS_PER_SEC); time = clock();
     }
 
     //dsu.PrintSaddles(stderr);
@@ -96,14 +97,17 @@ int main(int argc, char **argv)
       dsu.PrintMatrix(args_info.dist_file_arg, args_info.print_full_flag, 'D');
     }
 
-    // print rates matrix
-    if (args_info.rates_file_given) {
-      dsu.PrintRates(args_info.rates_file_arg, args_info.print_full_flag, args_info.rates_temp_arg, args_info.rates_mode_arg[0]);
-    }
-
     // print graph distance matrix
     if (args_info.gdist_file_given) {
       dsu.PrintMatrix(args_info.gdist_file_arg, args_info.print_full_flag, 'G');
+    }
+
+    fprintf(stderr, "printing matrices took %.2f secs.\n", (clock()-time)/(double)CLOCKS_PER_SEC); time = clock();
+
+    // print rates matrix
+    if (args_info.rates_file_given) {
+      dsu.PrintRates(args_info.rates_file_arg, args_info.print_full_flag, args_info.rates_temp_arg, args_info.rates_mode_arg[0]);
+      fprintf(stderr, "printing rates took %.2f secs.\n", (clock()-time)/(double)CLOCKS_PER_SEC); time = clock();
     }
 
     // visualisation

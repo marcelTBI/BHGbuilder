@@ -61,6 +61,7 @@ Graph::Graph(set<edgeLL> &edges, vector<RNAlocmin> &LM, mode_rates mode)
   }
 }
 
+// JOIN TWO EDGES TO MAKE ONE LONGER
 int Graph::Join(const edgeAdv &src, const edgeAdv &dst, int joining_node, edgeAdv &res)
 {
   res = src;
@@ -99,6 +100,8 @@ int Graph::Join(const edgeAdv &src, const edgeAdv &dst, int joining_node, edgeAd
   return 0;
 }
 
+edge_comp ec;
+// two parallel edges come together
 bool Graph::AddEdges(const edgeAdv &found, edgeAdv &res, mode_rates mode)
 {
   bool changed = false;
@@ -106,9 +109,8 @@ bool Graph::AddEdges(const edgeAdv &found, edgeAdv &res, mode_rates mode)
     case ADDITIVE:
     // SOMETHING SHOULD BE IMPLEMENTED... TODO
     case JUST_BEST:
-      // found is smaller == better?
-      if (edge_comp::operator() (found, res)) {
-        res = found;
+      // found is smaller == better? res stays as it is, just we must mark "changed=true" to have it updated
+      if (!ec(found, res)) {
         changed = true;
       }
       break;
