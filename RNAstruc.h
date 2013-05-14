@@ -233,9 +233,12 @@ public:
   // highest saddle height
   int max_height;
 
-  // saddle numbers and their energies
+  // saddle numbers and their energies of the best path
   vector<int> saddles;
   vector<int> energies;
+
+  // rate - should not always correspond to the best path...
+  double rate; // now unused
 
   edgeAdv(int ii, int jj, int energy, int saddle):edge(ii,jj) {
     if (i > j) swap(i,j);
@@ -258,7 +261,7 @@ struct edge_comp {
 };
 
 // modes for rates generation
-enum mode_rates {JUST_BEST, ADDITIVE};
+enum mode_rates {VERTEX_CONTR, EDGE_CONTR};
 
 struct Graph {
 
@@ -277,6 +280,8 @@ struct Graph {
   // edges -- sparse format adjacency[x]=y only if x>y
   vector< set<edgeAdv> > adjacency;
 
+  //
+
 public:
   // constructor
   Graph(set<edgeLL> &edges, vector<RNAlocmin> &LM, mode_rates mode);
@@ -286,7 +291,7 @@ private:
   bool AddEdges(const edgeAdv &found, edgeAdv &res, mode_rates);
 public:
   // methods
-  int RemovePoint(int point);
+  int RemoveLastPoint();
   void PrintDot(char *filename, bool dot_prog, bool print, char *file_print);
   void PrintRates(FILE *rates, double temp);
 };

@@ -583,9 +583,9 @@ void DSU::PrintRates(char *filename, bool full, double temp, char mode)
   if (energies) {
     mode_rates mod;
     switch (mode) {
-      case 'F': mod = JUST_BEST; break;
-      case 'A': mod = ADDITIVE; break;
-      default: mod = JUST_BEST;
+      case 'V': mod = VERTEX_CONTR; break;
+      case 'E': mod = EDGE_CONTR; break;
+      default: mod = VERTEX_CONTR;
     }
     Graph graph(edges_l, LM, mod);
     fprintf(stderr, "graph created...\n");
@@ -595,10 +595,10 @@ void DSU::PrintRates(char *filename, bool full, double temp, char mode)
       sprintf(filename, "smth%d.dot", i);
       sprintf(filename_eps, "smth%d.eps", i);
       graph.PrintDot(filename, true, true, filename_eps);*/
-      graph.RemovePoint(i);
-      fprintf(stderr, "removed point %d\n", i);
+      graph.RemoveLastPoint();
+      if (i%1000 ==0) fprintf(stderr, "removed point %d\n", i);
     }
-    //graph.PrintDot("smth.dot", true, true, "reduced.eps");
+    graph.PrintDot("smth.dot", true, true, "reduced.eps");
 
     graph.PrintRates(energies, temp);
   }

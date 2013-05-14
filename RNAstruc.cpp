@@ -100,29 +100,22 @@ int Graph::Join(const edgeAdv &src, const edgeAdv &dst, int joining_node, edgeAd
   return 0;
 }
 
-edge_comp ec;
+static edge_comp ec;
 // two parallel edges come together
 bool Graph::AddEdges(const edgeAdv &found, edgeAdv &res, mode_rates mode)
 {
   bool changed = false;
-  switch (mode) {
-    case ADDITIVE:
-    // SOMETHING SHOULD BE IMPLEMENTED... TODO
-    case JUST_BEST:
-      // found is smaller == better? res stays as it is, just we must mark "changed=true" to have it updated
-      if (!ec(found, res)) {
-        changed = true;
-      }
-      break;
+  if (!ec(found, res)) {
+    changed = true;
   }
 
   return changed;
 }
 
-int Graph::RemovePoint(int point) {
+int Graph::RemoveLastPoint() {
 
-  // sets the number of active nodes
-  if (number_lm > point) number_lm = point;
+  // remove last point;
+  int point = --number_lm;
 
   int count = 0;
   // try to join every possible pair of edges:
