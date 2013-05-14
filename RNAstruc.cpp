@@ -51,13 +51,13 @@ Graph::Graph(set<edgeLL> &edges, vector<RNAlocmin> &LM, mode_rates mode)
 {
   this->mode = mode;
   this->max_node = this->number_lm = LM.size();
-  adjacency.resize(max_node);
 
   // adjacency creation
   for (set<edgeLL>::iterator it=edges.begin(); it!=edges.end(); it++) {
     int i=min(it->i, it->j);
     int j=max(it->i, it->j);
-    adjacency[j].insert(edgeAdv(i, j, it->en, it->saddle));
+    //edgeAdv ea(i, j, it->en, it->saddle);
+    adjacency.insert(make_pair(make_pair(i,j), edgeAdv(i, j, it->en, it->saddle)));
   }
 }
 
@@ -115,9 +115,46 @@ bool Graph::AddEdges(const edgeAdv &found, edgeAdv &res, mode_rates mode)
 int Graph::RemoveLastPoint() {
 
   // remove last point;
-  int point = --number_lm;
+  int point = number_lm-1;
 
   int count = 0;
+
+  // candidates:
+  vector<edgeAdv> candidates;
+  for (int i=0; i<number_lm; i++) {
+    map<std::pair<int, int>, edgeAdv>::iterator it;
+    if ((it = adjacency.find(make_pair(min(point, i), max(point,i))))!=adjacency.end()) {
+      adjacency.erase(it);
+      candidates.push_back(it->second);
+    }
+
+  }
+
+  for (int i=0; i<(int)candidates.size(); i++) {
+    for (int j=i; j<(int)candidates.size(); j++) {
+      edgeAdv res(candidates[i]);
+      int status = Join(candidates[i], candidates[j], point, res);
+      if (status==0) {
+        // if we have not found already some edge:
+        map<std::pair<int, int>, edgeAdv>::iterator it;
+        if  ((it = adjacency.find(make_pair(res.i, res.j)))==adjacency.end()) {
+          adjacency.insert(make_pair(make_pair(res.i, res.j), res));
+        } else {
+          bool changed = AddEdges(it->second, res, mode);
+          if (changed) {
+            adjacency.insert(make_pair(make_pair(res.i, res.j), res));
+          }
+        }
+
+        count++;
+      }
+    }
+  }
+
+  // last was erased
+  number_lm--;
+
+/*
   // try to join every possible pair of edges:
   for (set<edgeAdv>::iterator it=adjacency[point].begin(); it!=adjacency[point].end(); it++) {
     set<edgeAdv>::iterator it2 = it; it2++;
@@ -140,13 +177,14 @@ int Graph::RemoveLastPoint() {
         count++;
       }
     }
-  }
+  }*/
 
   return count; //  returns change in edge count
 }
 
 void Graph::PrintDot(char *filename, bool dot_prog, bool print, char *file_print)
 {
+  fprintf(stderr, "prinitng graph...\n");
   //open file
   FILE *dot;
   dot = fopen(filename, "w");
@@ -163,7 +201,7 @@ void Graph::PrintDot(char *filename, bool dot_prog, bool print, char *file_print
     }
     fprintf(dot, "\n");
 
-    // edges l-l
+  /*  // edges l-l
     for (int i=0; i<number_lm; i++) {
       for (set<edgeAdv>::iterator it=adjacency[i].begin(); it!=adjacency[i].end(); it++) {
         char length[10]="";
@@ -171,7 +209,15 @@ void Graph::PrintDot(char *filename, bool dot_prog, bool print, char *file_print
          if (component) sprintf(length, "(%d)", it->length());
          fprintf(dot, "\"%d\" -- \"%d\" [label=\"%.2f%s\", color=\"%s\", fontcolor=\"%s\"]\n", (it->i)+1, (it->j)+1, it->max_height/100.0, length, (component?rgb(255, 0, 0):rgb(0, 0, 0)), (component?rgb(255, 0, 0):rgb(0, 0, 0)));
       }
+    }*/
+
+    for (map<std::pair<int, int>, edgeAdv>::iterator it = adjacency.begin(); it!=adjacency.end(); it++) {
+      char length[10]="";
+     bool component = (it->second.length()>1);
+     if (component) sprintf(length, "(%d)", it->second.length());
+     fprintf(dot, "\"%d\" -- \"%d\" [label=\"%.2f%s\", color=\"%s\", fontcolor=\"%s\"]\n", (it->second.i)+1, (it->second.j)+1, it->second.max_height/100.0, length, (component?rgb(255, 0, 0):rgb(0, 0, 0)), (component?rgb(255, 0, 0):rgb(0, 0, 0)));
     }
+
     fprintf(dot, "\n}\n");
   }
 
@@ -190,6 +236,7 @@ void Graph::PrintDot(char *filename, bool dot_prog, bool print, char *file_print
 void Graph::PrintRates(FILE *rates, double temp)
 {
   double _kT = 0.00198717*(273.15 + temp);
+  fprintf(stderr, "prinitng rates...\n");
 
   // create matrix
   vector<vector<double> > mat_rates(number_lm);
@@ -198,12 +245,17 @@ void Graph::PrintRates(FILE *rates, double temp)
   }
 
   // fill rates matrix
-  for (int i=0; i<number_lm; i++) {
+  /*for (int i=0; i<number_lm; i++) {
     for (set<edgeAdv>::iterator it=adjacency[i].begin(); it!=adjacency[i].end(); it++) {
       //fprintf(stderr, "%d %d %f(%d)\n", i, j, it->max_height/100.0, it->length());
-      mat_rates[it->i][it->j] = 1.0*exp(-(it->max_height-LM[it->j].energy)/100.0/_kT);
+      mat_rates[it->i][it->j] = 1.0*exp(-(it->max_height-LM[it->i].energy)/100.0/_kT);
       mat_rates[it->j][it->i] = 1.0*exp(-(it->max_height-LM[it->j].energy)/100.0/_kT);
     }
+  }*/
+
+  for (map<std::pair<int, int>, edgeAdv>::iterator it = adjacency.begin(); it!=adjacency.end(); it++) {
+    mat_rates[it->second.i][it->second.j] = 1.0*exp(-(it->second.max_height-LM[it->second.i].energy)/100.0/_kT);
+    mat_rates[it->second.j][it->second.i] = 1.0*exp(-(it->second.max_height-LM[it->second.j].energy)/100.0/_kT);
   }
 
   // print rate matrix

@@ -596,7 +596,7 @@ void DSU::PrintRates(char *filename, bool full, double temp, char mode)
       sprintf(filename_eps, "smth%d.eps", i);
       graph.PrintDot(filename, true, true, filename_eps);*/
       graph.RemoveLastPoint();
-      if (i%1000 ==0) fprintf(stderr, "removed point %d\n", i);
+      if (i%100 ==0) fprintf(stderr, "removed point %d\n", i);
     }
     graph.PrintDot("smth.dot", true, true, "reduced.eps");
 

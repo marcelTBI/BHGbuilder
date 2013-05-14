@@ -278,9 +278,8 @@ struct Graph {
   vector<RNAlocmin> &LM;
 
   // edges -- sparse format adjacency[x]=y only if x>y
-  vector< set<edgeAdv> > adjacency;
+  map<std::pair<int, int>, edgeAdv> adjacency;
 
-  //
 
 public:
   // constructor
