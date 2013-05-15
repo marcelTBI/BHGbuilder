@@ -278,7 +278,12 @@ struct Graph {
   vector<RNAlocmin> &LM;
 
   // edges -- sparse format adjacency[x]=y only if x>y
+    // reimplementation: sparse map map[i,j] = edge i<->j (i<j)
   map<std::pair<int, int>, edgeAdv> adjacency;
+
+  // for EDGE_CONTRACTION:
+  UF_set_child ufset;
+  priority_queue<edgeAdv, vector<edgeAdv>, edge_comp> lowest;
 
 
 public:
@@ -286,11 +291,12 @@ public:
   Graph(set<edgeLL> &edges, vector<RNAlocmin> &LM, mode_rates mode);
 private:
   // helpers
-  int Join(const edgeAdv &src, const edgeAdv &dst, int joining_node, edgeAdv &res);
-  bool AddEdges(const edgeAdv &found, edgeAdv &res, mode_rates);
+  int Join(const edgeAdv &src, const edgeAdv &dst, int joining_node, edgeAdv &res); // create 1 edge from 2 edges, that continue (a<->b<->c  => a<->c)
+  bool AddEdges(const edgeAdv &found, edgeAdv &res, mode_rates); // create 1 edge from 2 edges that have the same src and dest
 public:
   // methods
-  int RemoveLastPoint();
+  int RemoveLastPoint(); // for vertex contraction
+  int RemoveLowestEdge();
   void PrintDot(char *filename, bool dot_prog, bool print, char *file_print);
   void PrintRates(FILE *rates, double temp);
 };

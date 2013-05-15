@@ -57,7 +57,13 @@ Graph::Graph(set<edgeLL> &edges, vector<RNAlocmin> &LM, mode_rates mode)
     int i=min(it->i, it->j);
     int j=max(it->i, it->j);
     //edgeAdv ea(i, j, it->en, it->saddle);
-    adjacency.insert(make_pair(make_pair(i,j), edgeAdv(i, j, it->en, it->saddle)));
+    edgeAdv &edge = (adjacency.insert(make_pair(make_pair(i,j), edgeAdv(i, j, it->en, it->saddle)))).first->second;
+    if (mode == EDGE_CONTR) lowest.push(edge);
+  }
+
+  // edge contraction works with nodes:
+  if (mode == EDGE_CONTR) {
+    ufset.enlarge_parent(number_lm);
   }
 }
 
@@ -111,6 +117,45 @@ bool Graph::AddEdges(const edgeAdv &found, edgeAdv &res, mode_rates mode)
 
   return changed;
 }
+
+int Graph::RemoveLowestEdge() {
+
+  int count = 0;
+
+  // get new lowest edge:
+  edgeAdv edge = lowest.top(); lowest.pop();
+
+  // check if we will reduce nodes:
+  if (ufset.joint(edge.i, edge.j)) {
+    // skip
+    return 0;
+  }
+  ufset.union_set(edge.i, edge.j);
+
+  // remove that edge
+  adjacency.erase(make_pair(edge.i, edge.j));
+
+  // add edges from j to i
+  for (int i=0; i<number_lm; i++) {
+    int point = edge.j;
+    map<std::pair<int, int>, edgeAdv>::iterator it;
+    if ((it = adjacency.find(make_pair(min(point, i), max(point,i))))!=adjacency.end()) {
+      edgeAdv ev = it->second;
+      adjacency.erase(it);
+      int goes = ev.goesTo(point);
+      ev.i = min(goes, edge.i);
+      ev.j = max(goes, edge.i);
+
+      if ((it = adjacency.find(make_pair(ev.i, ev.j))) != adjacency.end()) {
+        bool changed = AddEdges(it->second, ev, mode);
+        if (changed) adjacency.insert(make_pair(make_pair(ev.i, ev.j), ev)); // insert it back modified
+      }
+      count++;
+    }
+  }
+   return count;
+}
+
 
 int Graph::RemoveLastPoint() {
 
@@ -190,15 +235,27 @@ void Graph::PrintDot(char *filename, bool dot_prog, bool print, char *file_print
   dot = fopen(filename, "w");
   if (dot) {
     fprintf(dot, "Graph G {\n\tnode [width=0.1, height=0.1, shape=circle];\n");
-    //nodes LM:
-    for (int i=0; i<number_lm; i++) {
-      switch (LM[i].type) {
-        case NORMAL:
-        case NORM_CF: fprintf(dot, "\"%d\" [label=\"%d\"]\n", i+1, i+1); break;
-        case EE_DSU: fprintf(dot, "\"%d\" [label=\"%d\", color=\"%s\", fontcolor=\"%s\"]\n", i+1, i+1, rgb(0, 0, 255), rgb(0, 0, 255)); break;
-        case EE_COMP: fprintf(dot, "\"%d\" [label=\"%d\", color=\"%s\", fontcolor=\"%s\"]\n", i+1, i+1, rgb(255, 0, 0), rgb(255, 0, 0)); break;
+    if (mode == VERTEX_CONTR) {
+      //nodes LM:
+      for (int i=0; i<number_lm; i++) {
+        switch (LM[i].type) {
+          case NORMAL:
+          case NORM_CF: fprintf(dot, "\"%d\" [label=\"%d\"]\n", i+1, i+1); break;
+          case EE_DSU: fprintf(dot, "\"%d\" [label=\"%d\", color=\"%s\", fontcolor=\"%s\"]\n", i+1, i+1, rgb(0, 0, 255), rgb(0, 0, 255)); break;
+          case EE_COMP: fprintf(dot, "\"%d\" [label=\"%d\", color=\"%s\", fontcolor=\"%s\"]\n", i+1, i+1, rgb(255, 0, 0), rgb(255, 0, 0)); break;
+        }
+      }
+    } else if (mode == EDGE_CONTR) {
+      // nodes LM:
+      for (int i=0; i<number_lm; i++) {
+        if (ufset.count(i)>0) {
+          set<int> childs = ufset.get_children(i);
+
+        }
       }
     }
+
+
     fprintf(dot, "\n");
 
   /*  // edges l-l
