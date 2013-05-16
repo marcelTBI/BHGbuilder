@@ -196,6 +196,25 @@ void UF_set::clear() {
   num_unions = 0;
 }
 
+vector<int> UF_set::get_parents() {
+  vector<int> res;
+  for (int i=0; i<(int)parent.size(); i++) {
+    if (find(i)==i) res.push_back(i);
+  }
+
+  return res;
+}
+
+map<int, int> UF_set::get_invert() {
+  map<int, int> res;
+  int count = 0;
+  for (int i=0; i<(int)parent.size(); i++) {
+    if (find(i)==i) res[i] = count++;
+  }
+
+  return res;
+}
+
 // UF_set_child
 
 set<int> UF_set_child::get_children(int which)

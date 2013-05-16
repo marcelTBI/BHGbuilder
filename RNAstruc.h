@@ -260,6 +260,16 @@ struct edge_comp {
   }
 };
 
+// comparator according to lowest energy (and length)
+struct edge_comp_rev {
+  bool operator ()(const edgeAdv &a, const edgeAdv &b) const {
+    if (a.max_height == b.max_height) {
+      if (a.length() == b.length()) return b < a;
+      else return a.length() > b.length();
+    } else return a.max_height > b.max_height;
+  }
+};
+
 // modes for rates generation
 enum mode_rates {VERTEX_CONTR, EDGE_CONTR};
 
@@ -283,7 +293,7 @@ struct Graph {
 
   // for EDGE_CONTRACTION:
   UF_set_child ufset;
-  priority_queue<edgeAdv, vector<edgeAdv>, edge_comp> lowest;
+  priority_queue<edgeAdv, vector<edgeAdv>, edge_comp_rev> lowest;
 
 
 public:

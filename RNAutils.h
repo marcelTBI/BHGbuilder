@@ -4,6 +4,7 @@
 #include <string>
 #include <vector>
 #include <set>
+#include <map>
 
 using namespace std;
 
@@ -46,6 +47,9 @@ public:
   void enlarge_parent(int count);
   int size();
   void clear();
+  // rarely used:
+  vector<int> get_parents();
+  map<int, int> get_invert();
 };
 
 class UF_set_child : public UF_set {

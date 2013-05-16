@@ -130,13 +130,20 @@ int Graph::RemoveLowestEdge() {
     // skip
     return 0;
   }
+
+  // fix:
+  int i = ufset.find(edge.i);
+  int j = ufset.find(edge.j);
+  edge.i = min(i,j);
+  edge.j = max(i,j);
+
   ufset.union_set(edge.i, edge.j);
 
   // remove that edge
   adjacency.erase(make_pair(edge.i, edge.j));
 
   // add edges from j to i
-  for (int i=0; i<number_lm; i++) {
+  for (int i=0; i<max_node; i++) {
     int point = edge.j;
     map<std::pair<int, int>, edgeAdv>::iterator it;
     if ((it = adjacency.find(make_pair(min(point, i), max(point,i))))!=adjacency.end()) {
@@ -149,11 +156,16 @@ int Graph::RemoveLowestEdge() {
       if ((it = adjacency.find(make_pair(ev.i, ev.j))) != adjacency.end()) {
         bool changed = AddEdges(it->second, ev, mode);
         if (changed) adjacency.insert(make_pair(make_pair(ev.i, ev.j), ev)); // insert it back modified
+      } else {
+        adjacency.insert(make_pair(make_pair(ev.i, ev.j), ev));
       }
       count++;
+
     }
   }
-   return count;
+  number_lm--;
+  if (count==0) return -1;
+  return count;
 }
 
 
@@ -247,14 +259,26 @@ void Graph::PrintDot(char *filename, bool dot_prog, bool print, char *file_print
       }
     } else if (mode == EDGE_CONTR) {
       // nodes LM:
-      for (int i=0; i<number_lm; i++) {
+      for (int i=0; i<max_node; i++) {
         if (ufset.count(i)>0) {
           set<int> childs = ufset.get_children(i);
 
+          fprintf(dot, "\"%d\" [label=\"%d", i+1, i+1);
+
+          set<int>::iterator it = childs.begin(); it++;
+          for (;it!=childs.end(); it++) {
+            fprintf(dot, " %d", (*it)+1);
+          }
+
+          switch (LM[i].type) {
+            case NORMAL:
+            case NORM_CF: fprintf(dot, "\"]\n"); break;
+            case EE_DSU: fprintf(dot, "\", color=\"%s\", fontcolor=\"%s\"]\n", rgb(0, 0, 255), rgb(0, 0, 255)); break;
+            case EE_COMP: fprintf(dot, "\", color=\"%s\", fontcolor=\"%s\"]\n", rgb(255, 0, 0), rgb(255, 0, 0)); break;
+          }
         }
       }
     }
-
 
     fprintf(dot, "\n");
 
@@ -310,9 +334,19 @@ void Graph::PrintRates(FILE *rates, double temp)
     }
   }*/
 
-  for (map<std::pair<int, int>, edgeAdv>::iterator it = adjacency.begin(); it!=adjacency.end(); it++) {
-    mat_rates[it->second.i][it->second.j] = 1.0*exp(-(it->second.max_height-LM[it->second.i].energy)/100.0/_kT);
-    mat_rates[it->second.j][it->second.i] = 1.0*exp(-(it->second.max_height-LM[it->second.j].energy)/100.0/_kT);
+  if (mode == VERTEX_CONTR) {
+    for (map<std::pair<int, int>, edgeAdv>::iterator it = adjacency.begin(); it!=adjacency.end(); it++) {
+      mat_rates[it->second.i][it->second.j] = 1.0*exp(-(it->second.max_height-LM[it->second.i].energy)/100.0/_kT);
+      mat_rates[it->second.j][it->second.i] = 1.0*exp(-(it->second.max_height-LM[it->second.j].energy)/100.0/_kT);
+    }
+  } else if (mode == EDGE_CONTR) {
+    map<int, int> inverted = ufset.get_invert();
+    for (map<std::pair<int, int>, edgeAdv>::iterator it = adjacency.begin(); it!=adjacency.end(); it++) {
+      int i = inverted[it->second.i];
+      int j = inverted[it->second.j];
+      mat_rates[i][j] = 1.0*exp(-(it->second.max_height-LM[it->second.i].energy)/100.0/_kT);
+      mat_rates[j][i] = 1.0*exp(-(it->second.max_height-LM[it->second.j].energy)/100.0/_kT);
+    }
   }
 
   // print rate matrix

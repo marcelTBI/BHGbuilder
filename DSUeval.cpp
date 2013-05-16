@@ -590,12 +590,16 @@ void DSU::PrintRates(char *filename, bool full, double temp, char mode)
     Graph graph(edges_l, LM, mod);
     fprintf(stderr, "graph created...\n");
     for(int i=LM.size()-1; i>=size; i--) {
-      /*char filename[20];
+      char filename[20];
       char filename_eps[20];
       sprintf(filename, "smth%d.dot", i);
       sprintf(filename_eps, "smth%d.eps", i);
-      graph.PrintDot(filename, true, true, filename_eps);*/
-      graph.RemoveLastPoint();
+      graph.PrintDot(filename, true, true, filename_eps);
+      if (mod == VERTEX_CONTR) {
+        graph.RemoveLastPoint();
+      } else if (mod == EDGE_CONTR) {
+        while (!graph.RemoveLowestEdge()) ;
+      }
       if (i%100 ==0) fprintf(stderr, "removed point %d\n", i);
     }
     graph.PrintDot("smth.dot", true, true, "reduced.eps");
