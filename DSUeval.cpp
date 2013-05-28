@@ -585,25 +585,27 @@ void DSU::PrintRates(char *filename, bool full, double temp, char mode)
     switch (mode) {
       case 'V': mod = VERTEX_CONTR; break;
       case 'E': mod = EDGE_CONTR; break;
+      case 'F': mod = NO_CONTR; break;
       default: mod = VERTEX_CONTR;
     }
     Graph graph(edges_l, LM, mod);
     fprintf(stderr, "graph created...\n");
-    for(int i=LM.size()-1; i>=size; i--) {
-      char filename[20];
-      char filename_eps[20];
-      sprintf(filename, "smth%d.dot", i);
-      sprintf(filename_eps, "smth%d.eps", i);
-      graph.PrintDot(filename, true, true, filename_eps);
-      if (mod == VERTEX_CONTR) {
-        graph.RemoveLastPoint();
-      } else if (mod == EDGE_CONTR) {
-        while (!graph.RemoveLowestEdge()) ;
+    if (mod!=NO_CONTR) {
+      for(int i=LM.size()-1; i>=size; i--) {
+        /*char filename[20];
+        char filename_eps[20];
+        sprintf(filename, "smth%d.dot", i);
+        sprintf(filename_eps, "smth%d.eps", i);
+        graph.PrintDot(filename, true, true, filename_eps);*/
+        if (mod == VERTEX_CONTR) {
+          graph.RemoveLastPoint();
+        } else if (mod == EDGE_CONTR) {
+          while (!graph.RemoveLowestEdge()) ;
+        }
+        if (i%100 ==0) fprintf(stderr, "removed point %d\n", i);
       }
-      if (i%100 ==0) fprintf(stderr, "removed point %d\n", i);
+      graph.PrintDot("smth.dot", true, true, "reduced.eps");
     }
-    graph.PrintDot("smth.dot", true, true, "reduced.eps");
-
     graph.PrintRates(energies, temp);
   }
   fclose(energies);
@@ -973,6 +975,7 @@ void DSU::PrintLinkCP(FILE *output, bool fix)
 void DSU::PrintLM(FILE *output, bool fix)
 {
   if (fix) SortFix();
+  fprintf(output, "      %s\n", seq);
 
   //printf("Local minima (%4d):\n", (int)LM.size());
   for (unsigned int i=0; i<LM.size(); i++) {

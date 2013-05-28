@@ -42,19 +42,19 @@ option "name-dot"						- "Filename for dot file(text)" string default="DSUeval.d
 option "name-graph"					- "Filename for landmap/landmark graph image" string default="DSUeval.eps" no
 option "barr-file"          - "Filename for barrier-like output (does not contain all information) -- does not print if not specified" string no
 
+option "visualise"          v "Visualise paths between 2 structures, can be specified multiple times, output goes to file pathL1_L2.eps" typestr="<l1>=<l2>" string multiple
+option "vis-dist"           - "Set distance as a bounding condition for visualisation (instead of energy)" flag off
+option "vis-length"         - "Set maximal length of paths in visualisation (increases computation time greatly) use only with vis-dist off" int default="15" no
+
+section "Matrices"
 option "print-energy"       - "Generate energy barrier matrix output" flag off
 option "print-full"         - "Print matrices for all found LM. (default is print only for input, this influences ALL matrices) (switches on --print-energy flag)" flag off
 option "energy-file"        - "Fileneme for energy barrier matrix (switches on --print-energy flag)" string default="DSUeval.en" no
-
 option "dist-file"          - "Filename for distance matrix (does not print by default)" string no
 option "gdist-file"         - "Filename for graph distance matrix (does not print by default)" string no
 option "rates-file"         - "File for rates for treekin (does not print by default)" string no
 option "rates-temp"         T "Temperature for rates (in Celsius)" float default="37.0" no
-option "rates-mode"         - "Mode for rates generation (V - vertex contraction; E - edge contraction)" string default="V" no
-
-option "visualise"          v "Visualise paths between 2 structures, can be specified multiple times, output goes to file pathL1_L2.eps" typestr="<l1>=<l2>" string multiple
-option "vis-dist"           - "Set distance as a bounding condition for visualisation (instead of energy)" flag off
-option "vis-length"         - "Set maximal length of paths in visualisation (increases computation time greatly) use only with vis-dist off" int default="15" no
+option "rates-mode"         - "Mode for rates generation (V - vertex contraction; E - edge contraction; F - full matrix for all LMs)" string default="V" no
 
 section "Evaluation"
 option "energy-heights"     - "output energies of saddles between every pair of structures (filename)" string no
