@@ -356,6 +356,26 @@ void Graph::PrintRates(FILE *rates, double temp)
     }
     fprintf(rates, "\n");
   }
+
+  // print map of contracted nodes if EDGE_CONTR was specified:
+  if (mode == EDGE_CONTR) {
+    FILE *contr = fopen("edge_contr.map", "w");
+    if (contr) {
+      int j=1;
+      for (int i=0; i<ufset.size(); i++) {
+        if (ufset.count(i)>0) {
+          set<int> edges = ufset.get_children(i);
+          fprintf(contr, "%4d   ", j);
+          j++;
+          for (set<int>::iterator it = edges.begin(); it!=edges.end(); it++) {
+            fprintf(contr, "%d ", *it);
+          }
+          fprintf(contr, "\n");
+        }
+      }
+      fclose(contr);
+    }
+  }
 }
 
 SimplePath::SimplePath()
