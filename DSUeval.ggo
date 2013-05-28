@@ -46,9 +46,8 @@ option "energy-file"        - "Fileneme for energy barrier matrix (does not prin
 option "dist-file"          - "Filename for distance matrix (does not print by default)" string no
 option "gdist-file"         - "Filename for graph distance matrix (does not print by default)" string no
 option "rates-file"         - "Filename for rates for treekin (does not print by default)" string no
-
 option "rates-temp"         T "Temperature for rates (in Celsius)" float default="37.0" no
-option "rates-mode"         - "Mode for rates generation (V - vertex contraction; E - edge contraction)" string default="V" no
+option "rates-mode"         - "Mode for rates generation (V - vertex contraction; E - edge contraction; F - full matrix for all LMs)" string default="V" no
 
 option "visualise"          v "Visualise paths between 2 structures, can be specified multiple times, output goes to file pathL1_L2.eps" typestr="<l1>=<l2>" string multiple
 option "vis-dist"           - "Set distance as a bounding condition for visualisation (instead of energy)" flag off

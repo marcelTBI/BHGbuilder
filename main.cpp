@@ -58,7 +58,7 @@ int main(int argc, char **argv)
 
       // connect comps
     if (args_info.components_flag) {
-      dsu.PrintComps();
+      //dsu.PrintComps(stdout);
       dsu.ConnectComps(args_info.depth_arg, args_info.debug_flag);
       //dsu.PrintDot(args_info.name_dot_arg, args_info.dot_flag, args_info.print_graph_flag, args_info.name_graph_arg, args_info.tree_visualise_flag);
       fprintf(stderr, "connnecting components took %.2f secs.\n", (clock()-time)/(double)CLOCKS_PER_SEC); time = clock();
@@ -73,6 +73,7 @@ int main(int argc, char **argv)
 
     // real output:
     dsu.PrintLM(stdout);
+    dsu.PrintSaddles(stdout);
 
     // barriers-like output
     if (args_info.barr_file_given) {

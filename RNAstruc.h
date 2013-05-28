@@ -271,7 +271,7 @@ struct edge_comp_rev {
 };
 
 // modes for rates generation
-enum mode_rates {VERTEX_CONTR, EDGE_CONTR};
+enum mode_rates {VERTEX_CONTR, EDGE_CONTR, NO_CONTR};
 
 struct Graph {
 

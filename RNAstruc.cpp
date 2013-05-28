@@ -334,7 +334,7 @@ void Graph::PrintRates(FILE *rates, double temp)
     }
   }*/
 
-  if (mode == VERTEX_CONTR) {
+  if (mode == VERTEX_CONTR || mode == NO_CONTR) {
     for (map<std::pair<int, int>, edgeAdv>::iterator it = adjacency.begin(); it!=adjacency.end(); it++) {
       mat_rates[it->second.i][it->second.j] = 1.0*exp(-(it->second.max_height-LM[it->second.i].energy)/100.0/_kT);
       mat_rates[it->second.j][it->second.i] = 1.0*exp(-(it->second.max_height-LM[it->second.j].energy)/100.0/_kT);
