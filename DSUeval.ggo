@@ -36,19 +36,17 @@ option "floodHeight"        - "Flood cap on height - what is the maximal energy 
 
 section "Output"
 option "dot"                - "Use dot instead of neato for graph plotting" flag on
-option "print-graph"				- "Generate graph with neato/dot" flag off
 option "tree-visualise"     t "Use tree visualisation (landmark)" flag off
-option "name-dot"						- "Filename for dot file(text)" string default="DSUeval.dot" no
-option "name-graph"					- "Filename for landmap/landmark graph image" string default="DSUeval.eps" no
-option "barr-file"          - "Filename for barrier-like output (does not contain all information) -- does not print if not specified" string no
-
-option "print-energy"       - "Generate energy barrier matrix output" flag off
 option "print-full"         - "Print matrices for all found LM. (default is print only for input, this influences ALL matrices) (switches on --print-energy flag)" flag off
-option "energy-file"        - "Fileneme for energy barrier matrix (switches on --print-energy flag)" string default="DSUeval.en" no
 
+option "dot-file"					  - "Filename for dot graph file" string default="DSUeval.dot" no
+option "graph-file"					- "Filename for landmap/landmark graph image (does not print by default)" string no
+option "barr-file"          - "Filename for barrier-like output - does not contain all information (does not print by default)" string no
+option "energy-file"        - "Fileneme for energy barrier matrix (does not print by default)" string no
 option "dist-file"          - "Filename for distance matrix (does not print by default)" string no
 option "gdist-file"         - "Filename for graph distance matrix (does not print by default)" string no
-option "rates-file"         - "File for rates for treekin (does not print by default)" string no
+option "rates-file"         - "Filename for rates for treekin (does not print by default)" string no
+
 option "rates-temp"         T "Temperature for rates (in Celsius)" float default="37.0" no
 option "rates-mode"         - "Mode for rates generation (V - vertex contraction; E - edge contraction)" string default="V" no
 
@@ -65,4 +63,4 @@ section "Clustering"
 option "cluster-off"        - "Switch off clustering" flag off
 option "cluster-Kmax"       K "Size of maximal cluster" int default="100" no
 option "cluster-repre"      - "Portion of LMs taken as representatives from each cluster" float default="0.05" no
-option "cluster-fsaddle"   - "Insert to representatives those LM, which have highest saddle point connecting them (instead of LM, which have highest barrier height between themselves)" flag off
+option "cluster-fsaddle"    - "Insert to representatives those LM, which have highest saddle point connecting them (instead of LM, which have highest barrier height between themselves)" flag off

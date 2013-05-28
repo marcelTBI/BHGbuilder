@@ -540,6 +540,8 @@ void DSU::VisPath(int src, int dest, bool en_barriers, int max_length, bool dot_
   //printf("%s returned %d", syst, res);
 }
 
+vector<vector<std::pair<int, int> > > matrix;
+bool generated = false;
 void DSU::PrintMatrix(char *filename, bool full, char type)
 {
   int size = (full?LM.size():number_lm);
@@ -547,17 +549,19 @@ void DSU::PrintMatrix(char *filename, bool full, char type)
   energies = fopen(filename, "w");
   if (energies) {
     // create matrix
-    vector<vector<std::pair<int, int> > > matrix;
-    for (int i=0; i<size; i++) {
-      matrix.push_back(HeightSearch(i, edgesV_l));
-      if ((int)matrix[i].size()!=size) {
-        matrix[i].resize(size);
+    if (type != 'D' && !generated) {
+      matrix.clear();
+      for (int i=0; i<size; i++) {
+        matrix.push_back(HeightSearch(i, edgesV_l));
+        if ((int)matrix[i].size()!=size) {
+          matrix[i].resize(size);
+        }
       }
-    }
-
-    // resolve i==i
-    for (unsigned int i=0; i<matrix.size(); i++) {
-      matrix[i][i] = make_pair(LM[i].energy, 0);
+      // resolve i==i
+      for (unsigned int i=0; i<matrix.size(); i++) {
+        matrix[i][i] = make_pair(LM[i].energy, 0);
+      }
+      generated = true;
     }
 
     // print
@@ -590,11 +594,11 @@ void DSU::PrintRates(char *filename, bool full, double temp, char mode)
     Graph graph(edges_l, LM, mod);
     fprintf(stderr, "graph created...\n");
     for(int i=LM.size()-1; i>=size; i--) {
-      char filename[20];
+      /*char filename[20];
       char filename_eps[20];
-      sprintf(filename, "smth%d.dot", i);
-      sprintf(filename_eps, "smth%d.eps", i);
-      graph.PrintDot(filename, true, true, filename_eps);
+      sprintf(filename, "smth%d%c.dot", i, mod==VERTEX_CONTR?'V':'E');
+      sprintf(filename_eps, "smth%d%c.eps", i, mod==VERTEX_CONTR?'V':'E');
+      graph.PrintDot(filename, true, true, filename_eps);*/
       if (mod == VERTEX_CONTR) {
         graph.RemoveLastPoint();
       } else if (mod == EDGE_CONTR) {
@@ -602,7 +606,11 @@ void DSU::PrintRates(char *filename, bool full, double temp, char mode)
       }
       if (i%100 ==0) fprintf(stderr, "removed point %d\n", i);
     }
-    graph.PrintDot("smth.dot", true, true, "reduced.eps");
+    char filename[20];
+    char filename_eps[20];
+    sprintf(filename, "reduced%c.dot", mod==VERTEX_CONTR?'V':'E');
+    sprintf(filename_eps, "reduced%c.eps", mod==VERTEX_CONTR?'V':'E');
+    graph.PrintDot(filename, true, true, filename_eps);
 
     graph.PrintRates(energies, temp);
   }

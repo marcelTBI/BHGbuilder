@@ -26,7 +26,6 @@ int main(int argc, char **argv)
   if (args_info.num_threshold_arg <= 0) args_info.num_threshold_arg = INT_MAX;
   if (args_info.cluster_repre_arg <= 0.0) args_info.cluster_repre_arg = 0.0;
   if (args_info.cluster_repre_arg > 1.0) args_info.cluster_repre_arg = 1.0;
-  if (args_info.print_full_flag || args_info.energy_file_given) args_info.print_energy_flag = 1;
 
   // code
     // DSUeval
@@ -54,7 +53,6 @@ int main(int argc, char **argv)
       fprintf(stderr, "computing saddle-edges took %.2f secs.\n", (clock()-time)/(double)CLOCKS_PER_SEC); time = clock();
     }
     dsu.SortFix();
-    dsu.PrintDot(args_info.name_dot_arg, args_info.dot_flag, args_info.print_graph_flag, args_info.name_graph_arg, args_info.tree_visualise_flag);
 
     fprintf(stderr, "printing dot took %.2f secs.\n", (clock()-time)/(double)CLOCKS_PER_SEC); time = clock();
 
@@ -63,9 +61,10 @@ int main(int argc, char **argv)
       dsu.PrintComps();
       dsu.ConnectComps(args_info.depth_arg, args_info.debug_flag);
       //dsu.PrintDot(args_info.name_dot_arg, args_info.dot_flag, args_info.print_graph_flag, args_info.name_graph_arg, args_info.tree_visualise_flag);
-      dsu.PrintDot(args_info.name_dot_arg, args_info.dot_flag, args_info.print_graph_flag, args_info.name_graph_arg, args_info.tree_visualise_flag);
       fprintf(stderr, "connnecting components took %.2f secs.\n", (clock()-time)/(double)CLOCKS_PER_SEC); time = clock();
     }
+    dsu.PrintDot(args_info.dot_file_arg, args_info.dot_flag, args_info.graph_file_given, args_info.graph_file_arg, args_info.tree_visualise_flag);
+
     /*// just debug
     dsu.PrintComps();
     dsu.PrintLinkCP(false);
@@ -88,7 +87,7 @@ int main(int argc, char **argv)
     //dsu.PrintComps(stderr, true);
 
     // print energy matrix
-    if (args_info.print_energy_flag) {
+    if (args_info.energy_file_given) {
       dsu.PrintMatrix(args_info.energy_file_arg, args_info.print_full_flag, 'E');
     }
 
