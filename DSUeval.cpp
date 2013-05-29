@@ -287,7 +287,7 @@ int DSU::LinkCPsaddle(Opt opt, bool debug) {       // construct vertex and edge 
   return 0;
 }
 
-void DSU::PrintDot(char *filename, bool dot_prog, bool print, char *file_print, bool visual)
+void DSU::PrintDot(char *filename, bool dot_prog, bool print, char *file_print, bool visual, bool print_energies)
 {
   // landmap not supported yet
   // start find_union stuff
@@ -301,11 +301,13 @@ void DSU::PrintDot(char *filename, bool dot_prog, bool print, char *file_print, 
     fprintf(dot, "Graph G {\n\tnode [width=0.1, height=0.1, shape=circle];\n");
     //nodes LM:
     for (unsigned int i=0; i<LM.size(); i++) {
+      char energy[20] = "";
+      if (print_energies) sprintf(energy, "\\n(%.2f)", LM[i].energy/100.0);
       switch (LM[i].type) {
         case NORMAL:
-        case NORM_CF: fprintf(dot, "\"%d\" [label=\"%d\"]\n", i+1, i+1); break;
-        case EE_DSU: fprintf(dot, "\"%d\" [label=\"%d\", color=\"%s\", fontcolor=\"%s\"]\n", i+1, i+1, rgb(0, 0, 255), rgb(0, 0, 255)); break;
-        case EE_COMP: fprintf(dot, "\"%d\" [label=\"%d\", color=\"%s\", fontcolor=\"%s\"]\n", i+1, i+1, rgb(255, 0, 0), rgb(255, 0, 0)); break;
+        case NORM_CF: fprintf(dot, "\"%d\" [label=\"%d%s\"]\n", i+1, i+1, energy); break;
+        case EE_DSU: fprintf(dot, "\"%d\" [label=\"%d%s\", color=\"%s\", fontcolor=\"%s\"]\n", i+1, i+1, energy, rgb(0, 0, 255), rgb(0, 0, 255)); break;
+        case EE_COMP: fprintf(dot, "\"%d\" [label=\"%d%s\", color=\"%s\", fontcolor=\"%s\"]\n", i+1, i+1, energy, rgb(255, 0, 0), rgb(255, 0, 0)); break;
       }
     }
     fprintf(dot, "\n");
@@ -327,16 +329,18 @@ void DSU::PrintDot(char *filename, bool dot_prog, bool print, char *file_print, 
 
       //nodes saddle:
       for (unsigned int i=0; i<saddles.size(); i++) {
+        char energy[20] = "";
+        if (print_energies) sprintf(energy, "\\n(%.2f)", saddles[i].energy/100.0);
         switch (saddles[i].type) {
           /*case DIRECT: fprintf(dot, "\"S%d\" [label=\"S%d (%d %d)\", color=\"%s\", fontcolor=\"%s\"]\n", i+1, i+1, saddles[i].lm1+1, saddles[i].lm2+1, rgb(color, color, color), rgb(color, color, color)); break;
           case LDIRECT: fprintf(dot, "\"S%d\" [label=\"S%d (%d %d)\", color=\"%s\", fontcolor=\"%s\"]\n", i+1, i+1, saddles[i].lm1+1, saddles[i].lm2+1, rgb(color+30, color+30, color+30), rgb(color+30, color+30, color+30)); break;
           case NOT_SURE: fprintf(dot, "\"S%d\" [label=\"S%d (%d %d)\", color=\"%s\", fontcolor=\"%s\"]\n", i+1, i+1, saddles[i].lm1+1, saddles[i].lm2+1, rgb(color-30, color-30, color-30), rgb(color-30, color-30, color-30)); break;
           case COMP: fprintf(dot, "\"S%d\" [label=\"S%d (%d %d)\", color=\"%s\", fontcolor=\"%s\"]\n", i+1, i+1, saddles[i].lm1+1, saddles[i].lm2+1, rgb(255, color, color), rgb(255, color, color)); break;*/
 
-          case DIRECT: fprintf(dot, "\"S%d\" [label=\"S%d\", color=\"%s\", fontcolor=\"%s\"]\n", i+1, i+1, rgb(color, color, color), rgb(color, color, color)); break;
-          case LDIRECT: fprintf(dot, "\"S%d\" [label=\"S%d\", color=\"%s\", fontcolor=\"%s\"]\n", i+1, i+1, rgb(color+30, color+30, color+30), rgb(color+30, color+30, color+30)); break;
-          case NOT_SURE: fprintf(dot, "\"S%d\" [label=\"S%d\", color=\"%s\", fontcolor=\"%s\"]\n", i+1, i+1, rgb(color-30, color-30, color-30), rgb(color-30, color-30, color-30)); break;
-          case COMP: fprintf(dot, "\"S%d\" [label=\"S%d\", color=\"%s\", fontcolor=\"%s\"]\n", i+1, i+1, rgb(255, color, color), rgb(255, color, color)); break;
+          case DIRECT: fprintf(dot, "\"S%d\" [label=\"S%d%s\", color=\"%s\", fontcolor=\"%s\"]\n", i+1, i+1, energy, rgb(color, color, color), rgb(color, color, color)); break;
+          case LDIRECT: fprintf(dot, "\"S%d\" [label=\"S%d%s\", color=\"%s\", fontcolor=\"%s\"]\n", i+1, i+1, energy, rgb(color+30, color+30, color+30), rgb(color+30, color+30, color+30)); break;
+          case NOT_SURE: fprintf(dot, "\"S%d\" [label=\"S%d%s\", color=\"%s\", fontcolor=\"%s\"]\n", i+1, i+1, energy, rgb(color-30, color-30, color-30), rgb(color-30, color-30, color-30)); break;
+          case COMP: fprintf(dot, "\"S%d\" [label=\"S%d%s\", color=\"%s\", fontcolor=\"%s\"]\n", i+1, i+1, energy, rgb(255, color, color), rgb(255, color, color)); break;
         }
       }
       fprintf(dot, "\n");
@@ -582,13 +586,14 @@ void DSU::PrintMatrix(char *filename, bool full, char type)
 void DSU::PrintRates(char *filename, bool full, double temp, char mode)
 {
   int size = (full?LM.size():number_lm);
-  FILE *energies;
-  energies = fopen(filename, "w");
-  if (energies) {
+  FILE *rates;
+  rates = fopen(filename, "w");
+  if (rates) {
     mode_rates mod;
     switch (mode) {
       case 'V': mod = VERTEX_CONTR; break;
-      case 'E': mod = EDGE_CONTR; break;
+      case 'E': mod = EDGE_CONTR_MIN; break;
+      case 'M': mod = EDGE_CONTR_MAX; break;
       case 'F': mod = NO_CONTR; break;
       default: mod = VERTEX_CONTR;
     }
@@ -605,20 +610,20 @@ void DSU::PrintRates(char *filename, bool full, double temp, char mode)
         // call eppropriate contraction
         if (mod == VERTEX_CONTR) {
           graph.RemoveLastPoint();
-        } else if (mod == EDGE_CONTR) {
+        } else if (mod == EDGE_CONTR_MAX || mod == EDGE_CONTR_MIN) {
           while (!graph.RemoveLowestEdge()) ;
         }
         if (i%100 ==0) fprintf(stderr, "removed point %d\n", i);
       }
       char filename[20];
 		  char filename_eps[20];
-		  sprintf(filename, "reduced%c.dot", mod==VERTEX_CONTR?'V':'E');
-		  sprintf(filename_eps, "reduced%c.eps", mod==VERTEX_CONTR?'V':'E');
+		  sprintf(filename, "reduced%c.dot", mode);
+		  sprintf(filename_eps, "reduced%c.eps", mode);
 		  graph.PrintDot(filename, true, true, filename_eps);
     }
-    graph.PrintRates(energies, temp);
+    graph.PrintRates(rates, temp);
   }
-  fclose(energies);
+  fclose(rates);
 }
 
 vector<SimplePath> DSU::ConstructAllPaths(int source, int dest, int max_length, int threshold)

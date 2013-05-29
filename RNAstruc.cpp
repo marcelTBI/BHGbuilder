@@ -47,7 +47,7 @@ void RNAstruc::recompute_str()
 }
 
 Graph::Graph(set<edgeLL> &edges, vector<RNAlocmin> &LM, mode_rates mode)
-  :LM(LM) //shallow copy
+  :LM(LM), lowest(edge_comp_adv(LM, mode==EDGE_CONTR_MAX)) //shallow copy
 {
   this->mode = mode;
   this->max_node = this->number_lm = LM.size();
@@ -58,11 +58,11 @@ Graph::Graph(set<edgeLL> &edges, vector<RNAlocmin> &LM, mode_rates mode)
     int j=max(it->i, it->j);
     //edgeAdv ea(i, j, it->en, it->saddle);
     edgeAdv &edge = (adjacency.insert(make_pair(make_pair(i,j), edgeAdv(i, j, it->en, it->saddle)))).first->second;
-    if (mode == EDGE_CONTR) lowest.push(edge);
+    if (mode == EDGE_CONTR_MAX || mode == EDGE_CONTR_MIN) lowest.push(edge);
   }
 
   // edge contraction works with nodes:
-  if (mode == EDGE_CONTR) {
+  if (mode == EDGE_CONTR_MAX || mode == EDGE_CONTR_MIN) {
     ufset.enlarge_parent(number_lm);
   }
 }
@@ -259,7 +259,7 @@ void Graph::PrintDot(char *filename, bool dot_prog, bool print, char *file_print
           case EE_COMP: fprintf(dot, "\"%d\" [label=\"%d\", color=\"%s\", fontcolor=\"%s\"]\n", i+1, i+1, rgb(255, 0, 0), rgb(255, 0, 0)); break;
         }
       }
-    } else if (mode == EDGE_CONTR) {
+    } else if (mode == EDGE_CONTR_MAX || mode == EDGE_CONTR_MIN) {
       // nodes LM:
       for (int i=0; i<max_node; i++) {
         if (ufset.count(i)>0) {
@@ -284,16 +284,7 @@ void Graph::PrintDot(char *filename, bool dot_prog, bool print, char *file_print
 
     fprintf(dot, "\n");
 
-  /*  // edges l-l
-    for (int i=0; i<number_lm; i++) {
-      for (set<edgeAdv>::iterator it=adjacency[i].begin(); it!=adjacency[i].end(); it++) {
-        char length[10]="";
-         bool component = (it->length()>1);
-         if (component) sprintf(length, "(%d)", it->length());
-         fprintf(dot, "\"%d\" -- \"%d\" [label=\"%.2f%s\", color=\"%s\", fontcolor=\"%s\"]\n", (it->i)+1, (it->j)+1, it->max_height/100.0, length, (component?rgb(255, 0, 0):rgb(0, 0, 0)), (component?rgb(255, 0, 0):rgb(0, 0, 0)));
-      }
-    }*/
-
+    // edges
     for (map<std::pair<int, int>, edgeAdv>::iterator it = adjacency.begin(); it!=adjacency.end(); it++) {
       char length[10]="";
      bool component = (it->second.length()>1);
@@ -341,7 +332,7 @@ void Graph::PrintRates(FILE *rates, double temp)
       mat_rates[it->second.i][it->second.j] = 1.0*exp(-(it->second.max_height-LM[it->second.i].energy)/100.0/_kT);
       mat_rates[it->second.j][it->second.i] = 1.0*exp(-(it->second.max_height-LM[it->second.j].energy)/100.0/_kT);
     }
-  } else if (mode == EDGE_CONTR) {
+  } else if (mode == EDGE_CONTR_MAX || mode == EDGE_CONTR_MIN) {
     map<int, int> inverted = ufset.get_invert();
     for (map<std::pair<int, int>, edgeAdv>::iterator it = adjacency.begin(); it!=adjacency.end(); it++) {
       int i = inverted[it->second.i];
@@ -360,7 +351,7 @@ void Graph::PrintRates(FILE *rates, double temp)
   }
 
   // print map of contracted nodes if EDGE_CONTR was specified:
-  if (mode == EDGE_CONTR) {
+  if (mode == EDGE_CONTR_MAX || mode == EDGE_CONTR_MIN) {
     FILE *contr = fopen("edge_contr.map", "w");
     if (contr) {
       int j=1;
@@ -370,7 +361,7 @@ void Graph::PrintRates(FILE *rates, double temp)
           fprintf(contr, "%4d   ", j);
           j++;
           for (set<int>::iterator it = edges.begin(); it!=edges.end(); it++) {
-            fprintf(contr, "%d ", *it);
+            fprintf(contr, "%d ", (*it)+1);
           }
           fprintf(contr, "\n");
         }

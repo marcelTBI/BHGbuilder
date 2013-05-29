@@ -265,20 +265,31 @@ struct edge_comp {
 };
 
 // comparator according to lowest energy (and length)
-struct edge_comp_rev {
+class edge_comp_adv
+{
+  vector<RNAlocmin> &LM;
+  bool maximum;
+public:
+  edge_comp_adv(vector<RNAlocmin> &LM, bool maximum)
+    :LM(LM)
+  {
+    this->LM = LM;
+    this->maximum = maximum;
+  }
   bool operator ()(const edgeAdv &a, const edgeAdv &b) const {
-    // compare somehow the barrier heights, not energies!!!
-    ***
+    // compare the barrier heights, not energies!!!
+    int a_barr = maximum?max(a.max_height-LM[a.i].energy, a.max_height-LM[a.j].energy):min(a.max_height-LM[a.i].energy, a.max_height-LM[a.j].energy);
+    int b_barr = maximum?max(b.max_height-LM[b.i].energy, b.max_height-LM[b.j].energy):min(b.max_height-LM[b.i].energy, b.max_height-LM[b.j].energy);
 
-    if (a.max_height == b.max_height) {
+    if (a_barr == b_barr) {
       if (a.length() == b.length()) return b < a;
       else return a.length() > b.length();
-    } else return a.max_height > b.max_height;
+    } else return a_barr > b_barr;
   }
 };
 
 // modes for rates generation
-enum mode_rates {VERTEX_CONTR, EDGE_CONTR, NO_CONTR};
+enum mode_rates {VERTEX_CONTR, EDGE_CONTR_MIN, EDGE_CONTR_MAX, NO_CONTR};
 
 struct Graph {
 
@@ -300,7 +311,7 @@ struct Graph {
 
   // for EDGE_CONTRACTION:
   UF_set_child ufset;
-  priority_queue<edgeAdv, vector<edgeAdv>, edge_comp_rev> lowest;
+  priority_queue<edgeAdv, vector<edgeAdv>, edge_comp_adv> lowest;
 
 
 public:

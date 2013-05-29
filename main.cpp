@@ -63,7 +63,7 @@ int main(int argc, char **argv)
       //dsu.PrintDot(args_info.name_dot_arg, args_info.dot_flag, args_info.print_graph_flag, args_info.name_graph_arg, args_info.tree_visualise_flag);
       fprintf(stderr, "connnecting components took %.2f secs.\n", (clock()-time)/(double)CLOCKS_PER_SEC); time = clock();
     }
-    dsu.PrintDot(args_info.dot_file_arg, args_info.dot_flag, args_info.graph_file_given, args_info.graph_file_arg, args_info.tree_visualise_flag);
+    dsu.PrintDot(args_info.dot_file_arg, args_info.dot_flag, args_info.graph_file_given, args_info.graph_file_arg, args_info.tree_visualise_flag, args_info.dot_energies_flag);
 
     /*// just debug
     dsu.PrintComps();

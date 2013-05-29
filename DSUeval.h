@@ -144,7 +144,7 @@ public:
   void VisPath(int src, int dest, bool en_barriers, int max_length, bool dot_prog, bool debug);
   vector<SimplePath> ConstructAllPaths(int source, int dest, int max_length, int threshold);
   void ConstructPath(vector<SimplePath> &paths, SimplePath &path, int dest, int max_length, int threshold);
-  void PrintDot(char *filename, bool dot_prog, bool print, char *file_print, bool visual); // print dot file to filename, dot_prog - use dot or neato?; print - print dot output to file_print, visual - use tree for visualisation
+  void PrintDot(char *filename, bool dot_prog, bool print, char *file_print, bool visual, bool print_energies); // print dot file to filename, dot_prog - use dot or neato?; print - print dot output to file_print, visual - use tree for visualisation
 
   // print text
   void PrintLinkCP(FILE *output = stdout, bool fix = true);
