@@ -601,6 +601,8 @@ void DSU::PrintRates(char *filename, bool full, double temp, char mode)
         sprintf(filename, "smth%d.dot", i);
         sprintf(filename_eps, "smth%d.eps", i);
         graph.PrintDot(filename, true, true, filename_eps);*/
+
+        // call eppropriate contraction
         if (mod == VERTEX_CONTR) {
           graph.RemoveLastPoint();
         } else if (mod == EDGE_CONTR) {

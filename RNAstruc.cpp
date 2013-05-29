@@ -99,9 +99,11 @@ int Graph::Join(const edgeAdv &src, const edgeAdv &dst, int joining_node, edgeAd
   res.energies.insert(res.energies.end(), dst.energies.begin(), dst.energies.end());
 
   // max_height
+  res.max_height = max(res.max_height, dst.max_height);
+  /*
   for(unsigned int i=0; i<dst.energies.size(); i++) {
     res.max_height = max(res.max_height, dst.energies[i]);
-  }
+  }*/
 
   return 0;
 }
@@ -181,15 +183,15 @@ int Graph::RemoveLastPoint() {
   for (int i=0; i<number_lm; i++) {
     map<std::pair<int, int>, edgeAdv>::iterator it;
     if ((it = adjacency.find(make_pair(min(point, i), max(point,i))))!=adjacency.end()) {
-      adjacency.erase(it);
       candidates.push_back(it->second);
+      adjacency.erase(it);
     }
 
   }
 
   for (int i=0; i<(int)candidates.size(); i++) {
-    for (int j=i; j<(int)candidates.size(); j++) {
-      edgeAdv res(candidates[i]);
+    for (int j=i+1; j<(int)candidates.size(); j++) {
+      edgeAdv res = candidates[i];
       int status = Join(candidates[i], candidates[j], point, res);
       if (status==0) {
         // if we have not found already some edge:

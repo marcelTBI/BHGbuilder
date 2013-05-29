@@ -233,6 +233,10 @@ public:
   // highest saddle height
   int max_height;
 
+  // energies of left and right:
+  int en_i;
+  int en_j;
+
   // saddle numbers and their energies of the best path
   vector<int> saddles;
   vector<int> energies;
@@ -263,6 +267,9 @@ struct edge_comp {
 // comparator according to lowest energy (and length)
 struct edge_comp_rev {
   bool operator ()(const edgeAdv &a, const edgeAdv &b) const {
+    // compare somehow the barrier heights, not energies!!!
+    ***
+
     if (a.max_height == b.max_height) {
       if (a.length() == b.length()) return b < a;
       else return a.length() > b.length();
