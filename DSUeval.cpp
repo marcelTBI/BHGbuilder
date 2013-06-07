@@ -302,7 +302,7 @@ void DSU::PrintDot(char *filename, bool dot_prog, bool print, char *file_print, 
     //nodes LM:
     for (unsigned int i=0; i<LM.size(); i++) {
       char energy[20] = "";
-      if (print_energies) sprintf(energy, "\\n(%.2f)", LM[i].energy/100.0);
+      if (print_energies) sprintf(energy, "\\n%.2f", LM[i].energy/100.0);
       switch (LM[i].type) {
         case NORMAL:
         case NORM_CF: fprintf(dot, "\"%d\" [label=\"%d%s\"]\n", i+1, i+1, energy); break;
@@ -330,7 +330,7 @@ void DSU::PrintDot(char *filename, bool dot_prog, bool print, char *file_print, 
       //nodes saddle:
       for (unsigned int i=0; i<saddles.size(); i++) {
         char energy[20] = "";
-        if (print_energies) sprintf(energy, "\\n(%.2f)", saddles[i].energy/100.0);
+        if (print_energies) sprintf(energy, "\\n%.2f", saddles[i].energy/100.0);
         switch (saddles[i].type) {
           /*case DIRECT: fprintf(dot, "\"S%d\" [label=\"S%d (%d %d)\", color=\"%s\", fontcolor=\"%s\"]\n", i+1, i+1, saddles[i].lm1+1, saddles[i].lm2+1, rgb(color, color, color), rgb(color, color, color)); break;
           case LDIRECT: fprintf(dot, "\"S%d\" [label=\"S%d (%d %d)\", color=\"%s\", fontcolor=\"%s\"]\n", i+1, i+1, saddles[i].lm1+1, saddles[i].lm2+1, rgb(color+30, color+30, color+30), rgb(color+30, color+30, color+30)); break;
