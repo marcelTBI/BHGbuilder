@@ -352,7 +352,7 @@ void Graph::PrintRates(FILE *rates, double temp)
 
   // print map of contracted nodes if EDGE_CONTR was specified:
   if (mode == EDGE_CONTR_MAX || mode == EDGE_CONTR_MIN) {
-    FILE *contr = fopen("edge_contr.map", "w");
+    FILE *contr = fopen(mode == EDGE_CONTR_MAX?"edge_contr.mapM":"edge_contr.mapE", "w");
     if (contr) {
       int j=1;
       for (int i=0; i<ufset.size(); i++) {

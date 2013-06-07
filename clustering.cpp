@@ -337,8 +337,15 @@ void DSU::ComputeTBD(TBD &pqueue, int maxkeep, int num_threshold, bool outer, bo
     int last_en;
     int last_num = -1;
 
-    // how long this path is:
+    // how long this path is (currently):
     int path_length = 1;
+
+    /*// get the length of path for speed up
+    int length = 0;
+    for (tmp = path; tmp; tmp++) {
+      length ++;
+    }
+    tmp = path;*/
 
     // loop through whole path
     while (tmp && tmp->s) {

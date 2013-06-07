@@ -598,7 +598,7 @@ void DSU::PrintRates(char *filename, bool full, double temp, char mode)
       default: mod = VERTEX_CONTR;
     }
     Graph graph(edges_l, LM, mod);
-    fprintf(stderr, "graph created...\n");
+    fprintf(stderr, "graph created...%d LM\n", (int)LM.size());
     if (mod!=NO_CONTR) {
       for(int i=LM.size()-1; i>=size; i--) {
         /*char filename[20];
@@ -615,11 +615,11 @@ void DSU::PrintRates(char *filename, bool full, double temp, char mode)
         }
         if (i%100 ==0) fprintf(stderr, "removed point %d\n", i);
       }
-      char filename[20];
+      /*char filename[20];
 		  char filename_eps[20];
 		  sprintf(filename, "reduced%c.dot", mode);
 		  sprintf(filename_eps, "reduced%c.eps", mode);
-		  graph.PrintDot(filename, true, true, filename_eps);
+		  graph.PrintDot(filename, true, true, filename_eps);*/
     }
     graph.PrintRates(rates, temp);
   }

@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <time.h>
+#include <string.h>
 
 #include "DSUeval.h"
 
@@ -106,8 +107,15 @@ int main(int argc, char **argv)
 
     // print rates matrix
     if (args_info.rates_file_given) {
-      dsu.PrintRates(args_info.rates_file_arg, args_info.print_full_flag, args_info.rates_temp_arg, args_info.rates_mode_arg[0]);
-      fprintf(stderr, "printing rates took %.2f secs.\n", (clock()-time)/(double)CLOCKS_PER_SEC); time = clock();
+      for (int i=0; i<max(1, (int)args_info.rates_mode_given); i++) {
+        char filename[strlen(args_info.rates_file_arg)+2];
+        strcpy(filename, args_info.rates_file_arg);
+        filename[strlen(args_info.rates_file_arg)]=args_info.rates_mode_arg[i][0];
+        filename[strlen(args_info.rates_file_arg)+1]='\0';
+        //fprintf(stderr, filename);
+        dsu.PrintRates(filename, args_info.print_full_flag, args_info.rates_temp_arg, args_info.rates_mode_arg[i][0]);
+      }
+      fprintf(stderr, "printing rates(%d) took %.2f secs.\n", max(1, (int)args_info.rates_mode_given), (clock()-time)/(double)CLOCKS_PER_SEC); time = clock();
     }
 
     // visualisation
