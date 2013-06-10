@@ -75,6 +75,32 @@ void TBD::join(TBD &second) {   // can be more efficient
   }
 }
 
+//debug:
+int debug_c = 0;
+int debug_c2 = 0;
+
+
+int DSU::FindNum(int en_par, short *str_par)
+{
+  debug_c2++;
+  RNAstruc tmp;
+  tmp.structure = str_par;
+  tmp.energy = en_par;
+  map<RNAstruc, int>::iterator it;
+  if ((it = vertex_l.find(tmp))!=vertex_l.end()) {
+    return it->second;
+  }
+  return -1;
+
+  //fprintf(stderr, "%d %s\n", en_par, pt_to_str(str_par).c_str());
+  /*for (unsigned int i=0; i<LM.size(); i++) {
+    if (LM[i].energy == en_par && str_eq(str_par, LM[i].structure)) return i;
+  }
+  return -1;  // old version*/
+}
+
+vector<vector<int> > histo(100, vector<int>(100, 0));
+
 int DSU::Cluster(Opt &opt, int kmax, bool cluster_off)
 {
   // pqueue for pairs of LM
@@ -177,6 +203,21 @@ int DSU::Cluster(Opt &opt, int kmax, bool cluster_off)
   for (int i=0; i<saddles.size(); i++) {
     fprintf(stderr, "%d %d %.2f\n", saddles[i].lm1, saddles[i].lm2, saddles[i].energy/100.0);
   }*/
+
+  // debug
+  if (opt.debug) {
+    fprintf(stderr, "found %d, not found %d\n", debug_c, debug_c2);
+    for (int i=0; i<(int)histo.size(); i++) {
+      if (histo[i][0]) {
+        fprintf(stderr, "%5d(%5d) |", i, histo[i][0]);
+        for (int j=1; j<min(50, (int)histo[i].size()); j++) {
+          fprintf(stderr, "%5d", histo[i][j]);
+        }
+        fprintf(stderr, "\n");
+      }
+    }
+  }
+
 
   return 0;
 }
@@ -289,68 +330,90 @@ void DSU::GetRepre(TBD &output, set<int> &represents, set<int> &children, Opt &o
   output.join(cluster);
 }
 
-int DSU::FindNumbers(int begin, int end, path_t *path, vector<int> &lm_numbers, bool shifts, bool noLP, bool debug)
+void DSU::FindNumbers(int begin, int end, path_t *path, vector<int> &lm_numbers, bool shifts, bool noLP, bool debug)
 {
   // first resolve small case:
   if (end-begin<4) {
-    int max_en = -1e6;
+    bool begins = true;
     for (int i=begin+1; i<end; i++) {
+
+      // get the minimum
       short *tmp_str = make_pair_table(path[i].s);
       int tmp_en = move_deepest(seq, tmp_str, s0, s1, 0, shifts, noLP);
-      // first check if we are not in the last.
-      if (!str_eq(LM[lm_numbers[i-1]].structure, tmp_str)) {
-        lm_numbers[i] = FindNum(tmp_en, tmp_str);
+      // speedup
+      if (begins && tmp_en == LM[lm_numbers[begin]].energy && str_eq(LM[lm_numbers[begin]].structure, tmp_str)) {
+        lm_numbers[i] = lm_numbers[begin];
       } else {
-        lm_numbers[i] = lm_numbers[i-1];
-      }
-      max_en = max(max_en, tmp_en);
-
-      // update UBlist
-      if (lm_numbers[i]==-1) {
-        if (gl_maxen <= tmp_en) {
-          //fprintf(stderr, "exceeds en.: %s %6.2f\n", pt_to_str(tmp_str).c_str(), tmp_en/100.0);
-          lm_numbers[i] = AddLMtoTBD(tmp_str, tmp_en, EE_DSU, debug);
-
-        } else {
-          fprintf(stderr, "cannot find: %s %6.2f\n", pt_to_str(tmp_str).c_str(), tmp_en/100.0);
-          // add to list of minima and count with them later...
-          lm_numbers[i] = AddLMtoTBD(tmp_str, tmp_en, NORM_CF, debug);
+        begins = false;
+        if (tmp_en == LM[lm_numbers[end]].energy && str_eq(LM[lm_numbers[end]].structure, tmp_str)) {
+          lm_numbers[i] = lm_numbers[end];
         }
       }
+
+      if (lm_numbers[i]==-1) {
+        lm_numbers[i] = FindNum(tmp_en, tmp_str);
+
+        // update UBlist
+        if (lm_numbers[i]==-1) {
+          if (gl_maxen <= tmp_en) {
+            //fprintf(stderr, "exceeds en.: %s %6.2f\n", pt_to_str(tmp_str).c_str(), tmp_en/100.0);
+            lm_numbers[i] = AddLMtoTBD(tmp_str, tmp_en, EE_DSU, debug);
+
+          } else {
+            fprintf(stderr, "cannot find: %s %6.2f\n", pt_to_str(tmp_str).c_str(), tmp_en/100.0);
+            // add to list of minima and count with them later...
+            lm_numbers[i] = AddLMtoTBD(tmp_str, tmp_en, NORM_CF, debug);
+          }
+        }
+      } else debug_c++;
+
       free(tmp_str);
     }
-    return max_en;
+    return ;
   }
 
   // da middle one
   int pivot = (end+begin)/2;
+
   short *tmp_str = make_pair_table(path[pivot].s);
   int tmp_en = move_deepest(seq, tmp_str, s0, s1, 0, shifts, noLP);
-  lm_numbers[pivot] = FindNum(tmp_en, tmp_str);
 
-  // update UBlist
-  if (lm_numbers[pivot]==-1) {
-    if (gl_maxen <= tmp_en) {
-      //fprintf(stderr, "exceeds en.: %s %6.2f\n", pt_to_str(tmp_str).c_str(), tmp_en/100.0);
-      lm_numbers[pivot] = AddLMtoTBD(tmp_str, tmp_en, EE_DSU, debug);
 
-    } else {
-      fprintf(stderr, "cannot find: %s %6.2f\n", pt_to_str(tmp_str).c_str(), tmp_en/100.0);
-      // add to list of minima and count with them later...
-      lm_numbers[pivot] = AddLMtoTBD(tmp_str, tmp_en, NORM_CF, debug);
+  // speed up:
+  if (tmp_en == LM[lm_numbers[begin]].energy && str_eq(LM[lm_numbers[begin]].structure, tmp_str)) {
+    lm_numbers[pivot] = lm_numbers[begin];
+  } else {
+    if (tmp_en == LM[lm_numbers[end]].energy && str_eq(LM[lm_numbers[end]].structure, tmp_str)) {
+      lm_numbers[pivot] = lm_numbers[end];
     }
   }
+
+  // normal behaviour
+  if (lm_numbers[pivot]==-1) {
+    lm_numbers[pivot] = FindNum(tmp_en, tmp_str);
+
+    // update UBlist
+    if (lm_numbers[pivot]==-1) {
+      if (gl_maxen <= tmp_en) {
+        //fprintf(stderr, "exceeds en.: %s %6.2f\n", pt_to_str(tmp_str).c_str(), tmp_en/100.0);
+        lm_numbers[pivot] = AddLMtoTBD(tmp_str, tmp_en, EE_DSU, debug);
+
+      } else {
+        fprintf(stderr, "cannot find: %s %6.2f\n", pt_to_str(tmp_str).c_str(), tmp_en/100.0);
+        // add to list of minima and count with them later...
+        lm_numbers[pivot] = AddLMtoTBD(tmp_str, tmp_en, NORM_CF, debug);
+      }
+    }
+  } else debug_c++;
 
   free(tmp_str);
 
   // continue recursion:
-  int left_en = tmp_en;
-  int right_en = tmp_en;
-  if (lm_numbers[pivot]!=lm_numbers[begin] && pivot-begin>1) left_en = FindNumbers(begin, pivot, path, lm_numbers, shifts, noLP, debug);
-  if (lm_numbers[pivot]!=lm_numbers[end] && end-pivot>1) right_en = FindNumbers(pivot, end, path, lm_numbers, shifts, noLP, debug);
+  if (lm_numbers[pivot]!=lm_numbers[begin] && pivot-begin>1) FindNumbers(begin, pivot, path, lm_numbers, shifts, noLP, debug);
+  if (lm_numbers[pivot]!=lm_numbers[end] && end-pivot>1) FindNumbers(pivot, end, path, lm_numbers, shifts, noLP, debug);
 
   // return maximal energy
-  return max(max(left_en, right_en), tmp_en);
+  return ;
 }
 
 void DSU::ComputeTBD(TBD &pqueue, int maxkeep, int num_threshold, bool outer, bool noLP, bool shifts, bool debug, vector<RNAsaddle> *output_saddles)
@@ -408,11 +471,22 @@ void DSU::ComputeTBD(TBD &pqueue, int maxkeep, int num_threshold, bool outer, bo
     lm_numbers[length-1] = tbd.j;
 
     // bisect the path and find new LMs:
-    int energy = FindNumbers(0, length-1, path, lm_numbers, shifts, noLP, debug);
+    FindNumbers(0, length-1, path, lm_numbers, shifts, noLP, debug);
+
+
+    // debug
     if (debug) {
+      int diff = 1;
+      int last_num = lm_numbers[0];
       for (int i=0; i<length; i++) {
-        fprintf(stderr, "path[%3d]= %4d\n", i, lm_numbers[i]);
+        //fprintf(stderr, "path[%3d]= %4d\n", i, lm_numbers[i]);
+        if (lm_numbers[i]!=last_num && lm_numbers[i]!=-1) {
+          diff++;
+          last_num=lm_numbers[i];
+        }
       }
+      histo[length][diff]++;
+      histo[length][0]++;
     }
 
     // now process the array of found numbers:
@@ -437,6 +511,7 @@ void DSU::ComputeTBD(TBD &pqueue, int maxkeep, int num_threshold, bool outer, bo
         if (lm_numbers[i]!=lm_numbers[length-1] || lm_numbers[last_idx]!=lm_numbers[0]) {
           pqueue.insert(lm_numbers[last_idx], lm_numbers[i], NEW_FOUND, true);
         }
+        last_num = lm_numbers[i];
       }
     }
 

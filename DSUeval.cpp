@@ -135,24 +135,6 @@ DSU::~DSU() {
   }
 }
 
-int DSU::FindNum(int en_par, short *str_par)
-{
-  RNAstruc tmp;
-  tmp.structure = str_par;
-  tmp.energy = en_par;
-  map<RNAstruc, int>::iterator it;
-  if ((it = vertex_l.find(tmp))!=vertex_l.end()) {
-    return it->second;
-  }
-  return -1;
-
-  //fprintf(stderr, "%d %s\n", en_par, pt_to_str(str_par).c_str());
-  /*for (unsigned int i=0; i<LM.size(); i++) {
-    if (LM[i].energy == en_par && str_eq(str_par, LM[i].structure)) return i;
-  }
-  return -1;  // old version*/
-}
-
 bool DSU::InsertUB(RNAsaddle saddle, bool debug)
 {
   set<RNAsaddle, RNAsaddle_comp>::iterator it = UBlist.find(saddle);
@@ -471,22 +453,23 @@ void DSU::VisPath(int src, int dest, bool en_barriers, int max_length, bool dot_
       vector<SimplePath> paths = ConstructAllPaths(src, dest, max_length, LM_tmp[dest]);
 
       int en_barr;
-      if (paths.size()>0) en_barr = paths[0].max_energy;
-      else fprintf(stderr, "WARNING: Cannot reach %d from %d!\n", src+1, dest+1);
+      if (paths.size()>0) {
+        en_barr = paths[0].max_energy;
 
-      for (unsigned int i=0; i<paths.size(); i++) {
-        // stopping condition:
-        if (paths[i].max_energy != en_barr) break;
+        for (unsigned int i=0; i<paths.size(); i++) {
+          // stopping condition:
+          if (paths[i].max_energy != en_barr) break;
 
-        // print them?
-        if (debug) paths[i].Print(true);
+          // print them?
+          if (debug) paths[i].Print(true);
 
-        // output them
-        for (unsigned int j=0; j<paths[i].points.size(); j++) {
-          LM_out.insert(paths[i].points[j]);
-          if (j>0) {
-            edgeLL e(paths[i].points[j-1], paths[i].points[j], paths[i].energies[j-1], -1);
-            edge_out.insert(e);
+          // output them
+          for (unsigned int j=0; j<paths[i].points.size(); j++) {
+            LM_out.insert(paths[i].points[j]);
+            if (j>0) {
+              edgeLL e(paths[i].points[j-1], paths[i].points[j], paths[i].energies[j-1], -1);
+              edge_out.insert(e);
+            }
           }
         }
       }
@@ -834,7 +817,7 @@ void DSU::ConnectComps(int maxkeep, bool debug)
     path_t *tmp = path;
     path_t *last = NULL;
     short *last_str = NULL;
-    int last_en;
+    int last_en = tmp->en;
     int last_num = -1;
 
     // loop through whole path
