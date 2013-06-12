@@ -26,7 +26,6 @@ enum type1 {INTER_CLUSTER, REPRESENT, CRIT_EDGE, NEW_FOUND};
 const char type1_str[][14] = {"INTER_CLUSTER", "REPRESENT", "CRIT_EDGE", "NEW_FOUND"};
 const int type1_len = 4;
 
-
 struct TBDentry {
   int i, j; // two LM indexes
   type1 type_clust;
@@ -139,7 +138,7 @@ public:
 
   // helpers
   int FindNum(int energy, short *str);           // find number of structure
-  int FindNumbers(int begin, int end, path_t *path, vector<int> &lm_numbers, bool shifts, bool noLP, bool debug); // find all numbers of LM on path by bisection
+  void FindNumbers(int begin, int end, path_t *path, vector<int> &lm_numbers, bool shifts, bool noLP, bool debug); // find all numbers of LM on path by bisection
   bool InsertUB(RNAsaddle saddle, bool debug); // insert into UBlist
     // link cp
   int FloodUp(RNAlocmin &i, RNAlocmin &j, RNAsaddle &saddle, Opt &opt, bool debug); // flood up from i and j to find direct saddle
