@@ -11,6 +11,10 @@
 #include <map>
 #include <set>
 
+extern "C" {
+  #include "DSUeval_cmdline.h"
+}
+
 #include "RNAutils.h"
 
 using namespace std;
@@ -112,6 +116,8 @@ struct Opt {
   int flood_num;
   int flood_height;
 
+  bool no_conn;
+
   // for clustering
   bool debug;
   int maxkeep;
@@ -120,7 +126,7 @@ struct Opt {
   float repre_portion;
   bool fbarrier;
 
-  Opt(bool noLP, bool shifts, bool saddle, int num, int height, bool debug, int maxkeep, int num_threshold, bool outer, float repre_portion, bool fbarrier);
+  Opt(gengetopt_args_info &args_info);
 };
 
 // just for reverse ordering

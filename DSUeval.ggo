@@ -30,6 +30,7 @@ section "Graph creation"
 option "components"         c "Also link components with DSU-algorithm" flag on
 option "noSaddle"           - "Do not flood-link sadddles (saves some computation time, usually saddles are not connected anyway)" flag off
 option "just-ub"  					- "Do not find connections - just do first part of program" hidden flag off
+option "no-conn"            - "Do not connect what is already connected (saves some computation time, decreases accuracy?)" flag off
 
 option "floodMax"           - "Flood cap on number - how many structures to flood" int default="1000" no
 option "floodHeight"        - "Flood cap on height - what is the maximal energy height we will flood in 10cal/mol (0 = unlimited)" int default="0" no

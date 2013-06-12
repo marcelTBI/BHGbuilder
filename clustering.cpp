@@ -456,14 +456,12 @@ void DSU::ComputeTBD(TBD &pqueue, int maxkeep, int num_threshold, bool outer, bo
     path_t *max_path = path;
 
     // variables for inner loops and insertions
-    path_t *tmp = path;
 
     // get the length of path for speed up
     int length = 0;
-    for (tmp = path; tmp && tmp->s; tmp++) {
+    for (path_t *tmp = path; tmp && tmp->s; tmp++) {
       length ++;
     }
-    tmp = path;
 
     // create vector of known LM numbers on path (where 0 and length-1 are known)
     vector<int> lm_numbers(length, -1);
