@@ -110,7 +110,7 @@ void DSU::ERank(FILE *rank, bool barr, bool out_conns)
 
   struct energy_pair {
     int i,j;
-    float barrier;
+    int barrier;
     bool operator<(const energy_pair &scnd) const {
       return  barrier>scnd.barrier;
     }
@@ -125,9 +125,9 @@ void DSU::ERank(FILE *rank, bool barr, bool out_conns)
       //if (nodes[j].father!=-1) continue;
       if (res[i][j].first<1e8) {
         energy_pair ep;
-        ep.barrier = res[i][j].first/100.0;
+        ep.barrier = res[i][j].first;
         if (barr) {
-          ep.barrier -= max(LM[i].energy, LM[j].energy)/100.0;
+          ep.barrier -= max(LM[i].energy, LM[j].energy);
         }
         ep.i=i;
         ep.j=j;
@@ -136,8 +136,9 @@ void DSU::ERank(FILE *rank, bool barr, bool out_conns)
     }
   }
 
+  // variables
   int count = 1;
-
+  int total_en = 0.0;
 
   // build a tree.
   UF_set ufset;
@@ -156,7 +157,8 @@ void DSU::ERank(FILE *rank, bool barr, bool out_conns)
       int father = min(i, j);
       int child = max(i, j);
 
-      fprintf(rank, "%4d %8.2f", count++, ep.barrier);
+      fprintf(rank, "%4d %8.2f", count++, ep.barrier/100.0);
+      total_en += ep.barrier;
       if (out_conns) {
         fprintf(rank, " %4d %4d", ep.i+1, ep.j+1);
       }
@@ -166,5 +168,6 @@ void DSU::ERank(FILE *rank, bool barr, bool out_conns)
       ufset.union_set(father, child);
     }
   }
+  fprintf(stderr, "average energy = %6.2f/%4d = %11.8f\n", total_en/100.0, (count-1), total_en/100.0/(double)(count-1));
 }
 

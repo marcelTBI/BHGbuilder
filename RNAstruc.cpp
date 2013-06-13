@@ -32,6 +32,7 @@ Opt::Opt(gengetopt_args_info &args_info)
   this->outer = args_info.outer_flag;
   this->repre_portion = args_info.cluster_repre_arg;
   this->fbarrier = !args_info.cluster_fsaddle_flag;
+  this->no_conn = args_info.no_conn_flag;
 }
 
 void RNAstruc::freeMEM() {

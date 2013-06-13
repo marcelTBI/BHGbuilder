@@ -106,6 +106,9 @@ int DSU::Cluster(Opt &opt, int kmax, bool cluster_off)
   // pqueue for pairs of LM
   TBD output;
 
+  // if no-conn flag:
+  if (opt.no_conn) conectivity.enlarge_parent(LM.size());
+
   if (!cluster_off) {
     // create data structures
     vector<lm_pair> to_cluster;
@@ -446,6 +449,9 @@ void DSU::ComputeTBD(TBD &pqueue, int maxkeep, int num_threshold, bool outer, bo
     TBDentry tbd = pqueue.get_first();
     if (tbd.i==-1) break;
 
+    // check no-conn
+    if (conectivity.size() > 0 && !tbd.fiber && conectivity.joint(tbd.i, tbd.j)) continue;
+
 
     // get path
     if (debug) fprintf(stderr, "path between (%3d, %3d) type=%s fiber=%d:\n", tbd.i, tbd.j, type1_str[tbd.type_clust], tbd.fiber);
@@ -507,6 +513,8 @@ void DSU::ComputeTBD(TBD &pqueue, int maxkeep, int num_threshold, bool outer, bo
 
         // try to insert new things into TBD:
         if (lm_numbers[i]!=lm_numbers[length-1] || lm_numbers[last_idx]!=lm_numbers[0]) {
+          // check no-conn
+          if (conectivity.size() > 0) conectivity.union_set(tbd.i, tbd.j);
           pqueue.insert(lm_numbers[last_idx], lm_numbers[i], NEW_FOUND, true);
         }
         last_num = lm_numbers[i];

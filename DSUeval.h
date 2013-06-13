@@ -115,6 +115,8 @@ private:
     map<int, int> saddle_to_comp;
   // -- Height-first Search
 
+  // UFset for no-conn in ComputeTBD
+  UF_set conectivity;
 
 private:
   DSU() {};

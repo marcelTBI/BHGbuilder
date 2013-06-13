@@ -30,7 +30,7 @@ section "Graph creation"
 option "components"         c "Also link components with DSU-algorithm" flag on
 option "noSaddle"           - "Do not flood-link sadddles (saves some computation time, usually saddles are not connected anyway)" flag off
 option "just-ub"  					- "Do not find connections - just do first part of program" hidden flag off
-option "no-conn"            - "Do not connect what is already connected (saves some computation time, decreases accuracy?)" flag off
+option "no-conn"            - "Do not connect what is already connected (saves computation time greatly, decreases accuracy greatly)" flag off hidden
 
 option "floodMax"           - "Flood cap on number - how many structures to flood" int default="1000" no
 option "floodHeight"        - "Flood cap on height - what is the maximal energy height we will flood in 10cal/mol (0 = unlimited)" int default="0" no
@@ -57,8 +57,8 @@ option "vis-length"         - "Set maximal length of paths in visualisation (inc
 
 section "Evaluation"
 option "energy-heights"     - "output energies of saddles between every pair of structures (filename)" string no
-option "energy-rank"        - "output sorted energies of saddles between fibers (pairs of directly connected minima) (filename)" string no
-option "energy-barrier"			- "output sorted barrier heights between fibers (pairs of directly connected minima) (filename)" string no
+option "energy-rank"        - "output sorted energies of saddles between minima (filename)" string no
+option "energy-barrier"			- "output sorted barrier heights between minima (filename)" string no
 
 section "Clustering"
 option "cluster-off"        - "Switch off clustering" flag off

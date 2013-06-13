@@ -154,8 +154,11 @@ UF_set::UF_set() {
   num_unions = 0;
 }
 
-int UF_set::find(int x) {
-  if (x >= (int) parent.size()) return -1;
+int UF_set::find(int x, bool fix) {
+  if (x >= (int) parent.size()) {
+    if (!fix) return -1;
+    else enlarge_parent(x+1);
+  }
   if (x != parent[x] && parent[x] != parent[parent[x]])
     parent[x] = find(parent[x]);
   return parent[x];
@@ -163,9 +166,9 @@ int UF_set::find(int x) {
 
 void UF_set::union_set(int x, int y) {
   int u, v;
-  u = find(x);
-  v = find(y);
-  if (u != v && u>=0 && v>=0) {
+  u = find(x, true);
+  v = find(y, true);
+  if (u != v) {
     parent[u] = v;
     num_unions++;
   }
@@ -184,7 +187,7 @@ void UF_set::enlarge_parent() {
 }
 
 void UF_set::enlarge_parent(int cnt) {
-  for (int i=0; i<cnt; i++) enlarge_parent();
+  while (size()<cnt) enlarge_parent();
 }
 
 int UF_set::size() {
