@@ -39,7 +39,7 @@ private:
 public:
   // and union-find set functions
   UF_set();
-  int find(int x);
+  int find(int x, bool fix = false);
   void union_set(int x, int y);
   bool connected_all() ;
   bool joint(int x, int y);

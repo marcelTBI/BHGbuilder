@@ -19,19 +19,20 @@ extern "C" {
 
 using namespace std;
 
-Opt::Opt(bool noLP, bool shifts, bool saddle, int num, int height, bool debug, int maxkeep, int num_threshold, bool outer, float repre_portion, bool fbarrier)
+Opt::Opt(gengetopt_args_info &args_info)
 {
-  this->noLP = noLP;
-  this->shifts = shifts;
-  this->saddle_conn = saddle;
-  this->flood_num = num;
-  this->flood_height = height;
-  this->debug = debug;
-  this->maxkeep = maxkeep;
-  this->num_threshold = num_threshold;
-  this->outer = outer;
-  this->repre_portion = repre_portion;
-  this->fbarrier = fbarrier;
+  this->noLP = args_info.noLP_flag;
+  this->shifts = args_info.shift_flag;
+  this->saddle_conn = !args_info.noSaddle_flag;
+  this->flood_num = args_info.floodMax_arg;
+  this->flood_height = args_info.floodHeight_arg;
+  this->debug = args_info.debug_flag;
+  this->maxkeep = args_info.depth_arg;
+  this->num_threshold = args_info.num_threshold_arg;
+  this->outer = args_info.outer_flag;
+  this->repre_portion = args_info.cluster_repre_arg;
+  this->fbarrier = !args_info.cluster_fsaddle_flag;
+  this->no_conn = args_info.no_conn_flag;
 }
 
 void RNAstruc::freeMEM() {
