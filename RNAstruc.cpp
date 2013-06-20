@@ -71,8 +71,8 @@ void edgeAdv::FillRate(mode_rates mode, double _kT, vector<RNAlocmin> &LM)
   case VERTEX_CONTR:
   case NO_CONTR:
   default:
-    rate_toj = 1.0*exp(-(max_height-LM[i].energy)/100.0/_kT);
-    rate_toi = 1.0*exp(-(max_height-LM[j].energy)/100.0/_kT);
+    rate_toj = rate(LM[i].energy, max_height, _kT);
+    rate_toi = rate(LM[j].energy, max_height, _kT);
     break;
   }
 }

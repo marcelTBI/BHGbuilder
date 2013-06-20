@@ -591,19 +591,19 @@ void DSU::PrintRates(char *filename, bool full, double temp, char mode)
         sprintf(filename_eps, "smth%d.eps", i);
         graph.PrintDot(filename, true, true, filename_eps);*/
 
-        // call eppropriate contraction
-        if (mod == VERTEX_CONTR) {
+        // call appropriate contraction
+        if (mod == VERTEX_CONTR || mod == VERTEX_CONTR_SUM) {
           graph.RemoveLastPoint();
         } else if (mod == EDGE_CONTR_MAX || mod == EDGE_CONTR_MIN) {
           while (!graph.RemoveLowestEdge()) ;
         }
         if (i%100 ==0) fprintf(stderr, "removed point %d\n", i);
       }
-      /*char filename[20];
+      char filename[20];
 		  char filename_eps[20];
 		  sprintf(filename, "reduced%c.dot", mode);
 		  sprintf(filename_eps, "reduced%c.eps", mode);
-		  graph.PrintDot(filename, true, true, filename_eps);*/
+		  graph.PrintDot(filename, true, true, filename_eps);
     }
     graph.PrintRates(rates, temp);
   }
