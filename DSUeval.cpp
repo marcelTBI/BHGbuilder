@@ -578,6 +578,7 @@ void DSU::PrintRates(char *filename, bool full, double temp, char mode)
       case 'E': mod = EDGE_CONTR_MIN; break;
       case 'M': mod = EDGE_CONTR_MAX; break;
       case 'F': mod = NO_CONTR; break;
+      case 'S': mod = VERTEX_CONTR_SUM; break;
       default: mod = VERTEX_CONTR;
     }
     Graph graph(edges_l, LM, mod);

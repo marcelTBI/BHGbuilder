@@ -47,6 +47,36 @@ void RNAstruc::recompute_str()
   else str_ch = pt_to_char(structure);
 }
 
+inline double rate(int en_from, int en_to, double _kT) {
+  return 1.0*exp(-(en_to-en_from)/100.0/_kT);
+}
+
+void edgeAdv::FillRate(mode_rates mode, double _kT, vector<RNAlocmin> &LM)
+{
+  switch (mode) {
+  case VERTEX_CONTR_SUM: {
+    double cum_rate_toi = 0.0;
+    double cum_rate_toj = 0.0;
+    //  cum_rate = 1/rat + 1/rat + ...
+    for (int k=0; k<(int)saddles.size(); k++) {
+      int lms_from = (k==0?i:lms[k-1]);
+      int lms_to = (k==(int)saddles.size()-1?j:lms[k-1]);
+      cum_rate_toj += 1/rate(LM[lms_from].energy, energies[k], _kT);
+      cum_rate_toi += 1/rate(LM[lms_to].energy, energies[k], _kT);
+    }
+    rate_toi = 1/cum_rate_toi;
+    rate_toj = 1/cum_rate_toj;
+    break;
+    }
+  case VERTEX_CONTR:
+  case NO_CONTR:
+  default:
+    rate_toj = 1.0*exp(-(max_height-LM[i].energy)/100.0/_kT);
+    rate_toi = 1.0*exp(-(max_height-LM[j].energy)/100.0/_kT);
+    break;
+  }
+}
+
 Graph::Graph(set<edgeLL> &edges, vector<RNAlocmin> &LM, mode_rates mode)
   :LM(LM), lowest(edge_comp_adv(LM, mode==EDGE_CONTR_MAX)) //shallow copy
 {
@@ -98,6 +128,8 @@ int Graph::Join(const edgeAdv &src, const edgeAdv &dst, int joining_node, edgeAd
   // energies & saddles
   res.saddles.insert(res.saddles.end(), dst.saddles.begin(), dst.saddles.end());
   res.energies.insert(res.energies.end(), dst.energies.begin(), dst.energies.end());
+  res.lms.push_back(joining_node);
+  res.lms.insert(end(res.lms), begin(dst.lms), end(dst.lms));
 
   // max_height
   res.max_height = max(res.max_height, dst.max_height);
@@ -187,7 +219,6 @@ int Graph::RemoveLastPoint() {
       candidates.push_back(it->second);
       adjacency.erase(it);
     }
-
   }
 
   for (int i=0; i<(int)candidates.size(); i++) {
@@ -328,10 +359,11 @@ void Graph::PrintRates(FILE *rates, double temp)
     }
   }*/
 
-  if (mode == VERTEX_CONTR || mode == NO_CONTR) {
+  if (mode == VERTEX_CONTR || mode == NO_CONTR || mode == VERTEX_CONTR_SUM) {
     for (map<std::pair<int, int>, edgeAdv>::iterator it = adjacency.begin(); it!=adjacency.end(); it++) {
-      mat_rates[it->second.i][it->second.j] = 1.0*exp(-(it->second.max_height-LM[it->second.i].energy)/100.0/_kT);
-      mat_rates[it->second.j][it->second.i] = 1.0*exp(-(it->second.max_height-LM[it->second.j].energy)/100.0/_kT);
+      it->second.FillRate(mode, _kT, LM);
+      mat_rates[it->second.i][it->second.j] = it->second.rate_toj;
+      mat_rates[it->second.j][it->second.i] = it->second.rate_toi;
     }
   } else if (mode == EDGE_CONTR_MAX || mode == EDGE_CONTR_MIN) {
     map<int, int> inverted = ufset.get_invert();

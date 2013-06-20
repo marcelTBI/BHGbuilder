@@ -21,6 +21,9 @@ using namespace std;
 
 enum LMtype { NORMAL, NORM_CF, EE_DSU, EE_COMP }; // normal type, normal which was not in first list, exceeds energy in DSUeval, exceeds energy in connect components
 enum SDtype { DIRECT, LDIRECT, NOT_SURE, COMP };   // direct saddle - but not sure if lowest, for sure lowest direct saddle, not sure -- only with outer option, saddle from component join (direct, but maybe not lowest, principially same as DIRECT)
+// modes for rates generation
+enum mode_rates {VERTEX_CONTR, VERTEX_CONTR_SUM, EDGE_CONTR_MIN, EDGE_CONTR_MAX, NO_CONTR};
+
 
 struct RNAstruc {
   int energy;
@@ -246,9 +249,11 @@ public:
   // saddle numbers and their energies of the best path
   vector<int> saddles;
   vector<int> energies;
+  vector<int> lms; // here are numbers of all lms except i,j
 
   // rate - should not always correspond to the best path...
-  double rate; // now unused
+  double rate_toi;
+  double rate_toj;
 
   edgeAdv(int ii, int jj, int energy, int saddle):edge(ii,jj) {
     if (i > j) swap(i,j);
@@ -258,6 +263,8 @@ public:
   }
 
   int length() const { return saddles.size(); }
+
+  void FillRate(mode_rates mode, double _kT, vector<RNAlocmin> &LM);
 };
 
 // comparator according to lowest energy (and length)
@@ -293,9 +300,6 @@ public:
     } else return a_barr > b_barr;
   }
 };
-
-// modes for rates generation
-enum mode_rates {VERTEX_CONTR, EDGE_CONTR_MIN, EDGE_CONTR_MAX, NO_CONTR};
 
 struct Graph {
 
