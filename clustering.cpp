@@ -483,7 +483,7 @@ void DSU::ComputeTBD(TBD &pqueue, int maxkeep, int num_threshold, bool outer, bo
       int diff = 1;
       int last_num = lm_numbers[0];
       for (int i=0; i<length; i++) {
-        //fprintf(stderr, "path[%3d]= %4d\n", i, lm_numbers[i]);
+        fprintf(stderr, "path[%3d]= %4d (%s %6.2f)\n", i, lm_numbers[i], path[i].s, path[i].en);
         if (lm_numbers[i]!=last_num && lm_numbers[i]!=-1) {
           diff++;
           last_num=lm_numbers[i];
@@ -495,15 +495,14 @@ void DSU::ComputeTBD(TBD &pqueue, int maxkeep, int num_threshold, bool outer, bo
 
     // now process the array of found numbers:
     int last_num = lm_numbers[0];
-    int last_idx = 0;
     for (int i=1; i<length; i++) {
       if (lm_numbers[i]!=-1 && lm_numbers[i]!=last_num) {
 
         // save saddle
         RNAsaddle saddle(last_num, lm_numbers[i], DIRECT);
-        saddle.energy = en_fltoi(max(path[last_idx].en, path[i].en));
+        saddle.energy = en_fltoi(max(path[i-1].en, path[i].en));
         saddle.str_ch = NULL;
-        saddle.structure = (path[last_idx].en > path[i].en ? make_pair_table(path[last_idx].s) : make_pair_table(path[i].s));
+        saddle.structure = (path[i-1].en > path[i].en ? make_pair_table(path[i-1].s) : make_pair_table(path[i].s));
         bool inserted = InsertUB(saddle, debug);
 
         // ???
@@ -512,10 +511,10 @@ void DSU::ComputeTBD(TBD &pqueue, int maxkeep, int num_threshold, bool outer, bo
         }
 
         // try to insert new things into TBD:
-        if (lm_numbers[i]!=lm_numbers[length-1] || lm_numbers[last_idx]!=lm_numbers[0]) {
+        if (lm_numbers[i]!=lm_numbers[length-1] || lm_numbers[i-1]!=lm_numbers[0]) {
           // check no-conn
           if (conectivity.size() > 0) conectivity.union_set(tbd.i, tbd.j);
-          pqueue.insert(lm_numbers[last_idx], lm_numbers[i], NEW_FOUND, true);
+          pqueue.insert(lm_numbers[i-1], lm_numbers[i], NEW_FOUND, true);
         }
         last_num = lm_numbers[i];
       }
