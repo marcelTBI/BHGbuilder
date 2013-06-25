@@ -35,15 +35,17 @@ int funct(struct_en *moved, struct_en *current) {
     if ((it = flood_hash.find(tmp))!=flood_hash.end()) {
       // found DS!
       if (it->second != currNum) {
-        foundDS = true;
-        copy_arr(current->structure, moved->structure);
-        current->energy = moved->energy;
+        if (!foundDS || current->energy > moved->energy) {
+          foundDS = true;
+          copy_arr(current->structure, moved->structure);
+          current->energy = moved->energy;
+        }
 
         if (gl_debug) {
           fprintf(stderr, "FOUND saddle: %s %6.2f\n", pt_to_str(current->structure).c_str(), current->energy/100.0);
         }
 
-        return 1;
+        return 0;
       } // else nothing
     } else {
       // insert strucure we havent see yet (and it is in range)
@@ -71,7 +73,7 @@ int DSU::FloodUp(RNAlocmin &i, RNAlocmin &j, RNAsaddle &saddle, Opt &opt, bool d
   gl_debug = debug;
 
   // debug output
-  if (debug) {
+  if (gl_debug) {
     fprintf(stderr, "\nbegin1      : %s %6.2f\n", pt_to_str(i.structure).c_str(), i.energy/100.0);
     fprintf(stderr, "begin2      : %s %6.2f\n", pt_to_str(j.structure).c_str(), j.energy/100.0);
     fprintf(stderr, "saddle      : %s %6.2f\n", pt_to_str(saddle.structure).c_str(), saddle.energy/100.0);
@@ -126,6 +128,8 @@ int DSU::FloodUp(RNAlocmin &i, RNAlocmin &j, RNAsaddle &saddle, Opt &opt, bool d
       res = 2;
     }
   }
+
+  int size = flood_hash.size();
 
   // we did end sucesfully
   if (foundDS) {
