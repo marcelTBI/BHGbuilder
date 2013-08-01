@@ -43,7 +43,12 @@ DSU::DSU(FILE *input, bool noLP, bool shifts, int time_max, int max_lm) {
   char *seq2 = strtok(line, " ");
   if (!isSeq(seq2)) {
     free(line);
-    return ;
+    line = my_getline(input);
+    seq2 = strtok(line, " ");
+    if (!isSeq(seq2)) {
+      free(line);
+      return ;
+    }
   }
   seq = (char*) malloc((strlen(seq2)+1)*sizeof(char));
   strcpy(seq, seq2);
@@ -117,6 +122,7 @@ DSU::DSU(FILE *input, bool noLP, bool shifts, int time_max, int max_lm) {
   // sort them!
   SortFix();
 	number_lm = (int)LM.size();
+	//printf("------------------------------------------------------------%d\n", number_lm);
 }
 
 DSU::~DSU() {
