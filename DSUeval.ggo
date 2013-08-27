@@ -14,12 +14,24 @@ version "0.1"   # don't use version if you're using automake
 args "--file-name=DSUeval_cmdline --include-getopt --default-optional --unamed-opts"
 
 # Options
-option "debug"        			d "Print debug" flag off
+option "debug"        			- "Print debug" flag off
 option "depth"              - "Depth of findpath search (higher value increases running time)" int default="10" no
 option "noLP"								- "Process structures without lonely pairs (helices of length 1)." flag off
 option "shift"							- "Assume also shift moves (in addition to insertion and deletions)." flag off
 option "time-max"           - "Quit after computing for specified time (in seconds)" int default="0" no
+option "just-read"          - "Do not computate, just read a .dsu file and do postprocessing" flag off
 option "number-lm"          n "Maximum number of LM (default=everything in input file)" int default="0" no
+option "paramFile"          P "Read energy parameters from paramfile, instead of using the default parameter set." string no
+option "dangles"            d "How to treat \"dangling end\" energies for bases adjacent to helices in free ends and multi-loops\n"
+details="\nWith -d1 only unpaired bases can participate in at most one dangling end, this is the\
+ default for mfe folding but unsupported for the partition function folding.\n\nWith -d2 this check is ignored,\
+ dangling energies will be added for the bases adjacent to a helix on both sides in any case; this is the\
+ default for partition function folding (-p).\nThe option -d0 ignores dangling ends altogether (mostly for\
+ debugging).\nWith -d3 mfe folding will allow coaxial stacking of adjacent helices in multi-loops. At the\
+ moment the implementation will not allow coaxial stacking of the two interior pairs in a loop of degree 3\
+ and works only for mfe folding.\n\nNote that by default (as well as with -d1 and -d3) pf and mfe folding\
+ treat dangling ends differently. Use -d2 in addition to -p to ensure that both algorithms use the same\
+ energy model.\n\n" int default="2" optional
 
 section "UBlist"
 option "hd-threshold"       - "Do not try to process pairs with Hamming distance more than this. (0 means no threshold)" int default="0" no

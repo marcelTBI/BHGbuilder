@@ -30,39 +30,43 @@ int main(int argc, char **argv)
 
   // code
     // DSUeval
-  DSU dsu(stdin, args_info.noLP_flag, args_info.shift_flag, args_info.time_max_arg, args_info.number_lm_arg);
   Opt opt(args_info);
+  DSU dsu(stdin, args_info.noLP_flag, args_info.shift_flag, args_info.time_max_arg, args_info.number_lm_arg, args_info.just_read_flag);
 
   // adjust args_info:
   if (args_info.cluster_Kmax_arg>=dsu.Size()) {
     args_info.cluster_off_flag = 1;
   }
 
-  dsu.Cluster(opt, args_info.cluster_Kmax_arg, args_info.cluster_off_flag);
-  fprintf(stderr, "computation of saddles took %.2f secs.\n", (clock()-time)/(double)CLOCKS_PER_SEC);
+  if (!args_info.just_read_flag) {
+    dsu.Cluster(opt, args_info.cluster_Kmax_arg, args_info.cluster_off_flag);
+    fprintf(stderr, "computation of saddles took %.2f secs.\n", (clock()-time)/(double)CLOCKS_PER_SEC);
+  }
 
   if (args_info.just_ub_flag) {
     printf("%.2f %d\n", (clock()-time)/(double)CLOCKS_PER_SEC, dsu.Size()); time = clock();
 
   } else {
-    time = clock();
-      // LinkCP
-    dsu.LinkCPLM(opt, args_info.debug_flag);
-    fprintf(stderr, "computing LM-edges took %.2f secs.\n", (clock()-time)/(double)CLOCKS_PER_SEC); time = clock();
-    if (!args_info.noSaddle_flag) {
-      dsu.LinkCPsaddle(opt, args_info.debug_flag);
-      fprintf(stderr, "computing saddle-edges took %.2f secs.\n", (clock()-time)/(double)CLOCKS_PER_SEC); time = clock();
-    }
-    dsu.SortFix();
+    if (!args_info.just_read_flag) {
+      time = clock();
+        // LinkCP
+      dsu.LinkCPLM(opt, args_info.debug_flag);
+      fprintf(stderr, "computing LM-edges took %.2f secs.\n", (clock()-time)/(double)CLOCKS_PER_SEC); time = clock();
+      if (!args_info.noSaddle_flag) {
+        dsu.LinkCPsaddle(opt, args_info.debug_flag);
+        fprintf(stderr, "computing saddle-edges took %.2f secs.\n", (clock()-time)/(double)CLOCKS_PER_SEC); time = clock();
+      }
+      dsu.SortFix();
 
-    fprintf(stderr, "printing dot took %.2f secs.\n", (clock()-time)/(double)CLOCKS_PER_SEC); time = clock();
+      fprintf(stderr, "printing dot took %.2f secs.\n", (clock()-time)/(double)CLOCKS_PER_SEC); time = clock();
 
-      // connect comps
-    if (args_info.components_flag) {
-      //dsu.PrintComps(stdout);
-      dsu.ConnectComps(args_info.depth_arg, args_info.debug_flag);
-      //dsu.PrintDot(args_info.name_dot_arg, args_info.dot_flag, args_info.print_graph_flag, args_info.name_graph_arg, args_info.tree_visualise_flag);
-      fprintf(stderr, "connnecting components took %.2f secs.\n", (clock()-time)/(double)CLOCKS_PER_SEC); time = clock();
+        // connect comps
+      if (args_info.components_flag) {
+        //dsu.PrintComps(stdout);
+        dsu.ConnectComps(args_info.depth_arg, args_info.debug_flag);
+        //dsu.PrintDot(args_info.name_dot_arg, args_info.dot_flag, args_info.print_graph_flag, args_info.name_graph_arg, args_info.tree_visualise_flag);
+        fprintf(stderr, "connnecting components took %.2f secs.\n", (clock()-time)/(double)CLOCKS_PER_SEC); time = clock();
+      }
     }
     dsu.PrintDot(args_info.dot_file_arg, args_info.dot_flag, args_info.graph_file_given, args_info.graph_file_arg, args_info.tree_visualise_flag, args_info.dot_energies_flag);
 

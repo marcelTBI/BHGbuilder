@@ -19,7 +19,7 @@ extern "C" {
 
 using namespace std;
 
-DSU::DSU(FILE *input, bool noLP, bool shifts, int time_max, int max_lm) {
+DSU::DSU(FILE *input, bool noLP, bool shifts, int time_max, int max_lm, bool just_read) {
 
   // NULL::
   seq = NULL;
@@ -59,64 +59,192 @@ DSU::DSU(FILE *input, bool noLP, bool shifts, int time_max, int max_lm) {
   s0 = encode_sequence(seq, 0);
   s1 = encode_sequence(seq, 1);
 
-  //read structs
-  line = my_getline(input);
-  while (line) {
-    short *tmp = NULL;
-    float energy_tmp;
-    bool has_energy = false;
+  if (just_read) {
+        //read structs
+    line = my_getline(input);
+    bool saddle_reading = false;
+    while (line) {
+      bool empty_line = false;
+      short *tmp = NULL;
+      float energy_tmp;
+      int type;
 
-    char *p;
-    p = strtok(line, " ");
-    while (p !=NULL && (!has_energy || !tmp)) {
-      // is struct?
-      if (isStruct(p)) {
-        if (tmp) free(tmp); // only one struct per line!
-        tmp = make_pair_table(p);
-        has_energy = false;
-      } else {
-        // is energy?
-        if (sscanf(p, "%f", &energy_tmp)==1) {
-          has_energy = true;
+      char *p;
+      for (int i=0; i<4; i++) {
+        p = strtok(i==0?line:NULL, " ");
+        switch (i) {
+        case 1:
+          if (!p) {empty_line = true; break;}
+          if (isStruct(p)) {
+            if (tmp) free(tmp); // only one struct per line!
+            tmp = make_pair_table(p);
+            break;
+          }
+        case 2:
+          sscanf(p, "%f", &energy_tmp);
+          break;
+        case 3:
+          for (int i=0; i<4; i++) {
+            if (!saddle_reading) {
+              if (strcmp(p, LMtype_string[i])==0) {
+                type = i;
+                break;
+              }
+            } else {
+              if (strcmp(p, SDtype_string[i])==0) {
+                type = i;
+                break;
+              }
+            }
+          }
+          break;
+        }
+        if (empty_line) break;
+      }
+
+      if (empty_line) {
+        saddle_reading = true;
+        free(line);
+        line = my_getline(input);
+
+        edgesV_l.resize(LM.size());
+        continue;
+      }
+
+      vector<int> LM_c;
+      vector<int> saddle_c;
+      int number;
+      if (saddle_reading) {
+        while ((p=strtok(NULL, " "))) {
+          if (p[strlen(p)-1]=='S') {
+            sscanf(p, "%dS", &number);
+            saddle_c.push_back(number);
+          } else {
+            sscanf(p, "%d", &number);
+            LM_c.push_back(number);
+          }
         }
       }
-      p = strtok(NULL, " ");
-    }
 
-    // add info:
-    if (tmp) {
-      // check if its true local minima
-      int en = move_deepest(seq, tmp, s0, s1, 0, noLP, shifts);
+      if (saddle_reading && LM_c.size()<2) {
+        fprintf(stderr, "File reading error -- too few LM connected by saddle %d\n", (int)saddles.size()+1);
+        exit(EXIT_FAILURE);
+      }
 
-      // if we don't have it yet, add it:
-      if (FindNum(en, tmp)==-1) {
+      // add info:
+      if (tmp) {
 
-        RNAlocmin struc;
-        struc.structure = tmp;
-        struc.str_ch = pt_to_char(struc.structure);
-        struc.energy = en;
-        //int en = (has_energy?en_fltoi(energy_tmp):energy_of_structure_pt(seq, tmp, s0, s1, 0));
+        if (!saddle_reading) {
+          RNAlocmin struc;
+          struc.structure = tmp;
+          struc.str_ch = pt_to_char(struc.structure);
+          struc.energy = en_fltoi(energy_tmp);
+          struc.type = (LMtype)type;
 
-        // insert new LM
-        vertex_l[struc] = LM.size();
-        LM.push_back(struc);
+          // insert new LM
+          vertex_l[struc] = LM.size();
+          LM.push_back(struc);
 
-        gl_maxen = max(gl_maxen, en);
-        if (max_lm>0 && max_lm==(int)LM.size()) {
-          free(line);
-          break;
+          gl_maxen = max(gl_maxen, struc.energy);
+        } else {
+          RNAsaddle struc(LM_c[0], LM_c[1], (SDtype)type);
+          struc.structure = tmp;
+          struc.str_ch = pt_to_char(struc.structure);
+          struc.energy = en_fltoi(energy_tmp);
+          // insert new sadle
+          saddles.push_back(struc);
+
+          // edge l-l
+          for (int i=0; i<(int)LM_c.size(); i++) {
+            for (int j=i+1; j<(int)LM_c.size(); j++) {
+              edgeLL e(LM_c[i], LM_c[j], struc.energy, saddles.size()-1);
+              edges_l.insert(e);
+              edgesV_l[LM_c[i]-1].insert(e);
+              edgesV_l[LM_c[j]-1].insert(e);
+            }
+          }
+          // edge l-s
+          for (int i=0; i<(int)LM_c.size(); i++) {
+            edgeLS e2(LM_c[i], saddles.size()-1);
+            edges_ls.insert(e2);
+          }
+
+          // edges s-s
+          for (int i=0; i<(int)saddle_c.size(); i++) {
+            edgeSS e(saddle_c[i]-1, saddles.size()-1);
+            edges_s.insert(e);
+          }
+
         }
       } else {
         free(tmp);
       }
-    } else {
-      // line without struct???
-      fprintf(stderr, "WARNING: line %d without struct: %s\n", num, line);
-    }
-    free(line);
-    line = my_getline(input);
-    num++;
 
+      free(line);
+      line = my_getline(input);
+      num++;
+    }
+
+  } else {
+    //read structs
+    line = my_getline(input);
+    while (line) {
+      short *tmp = NULL;
+      float energy_tmp;
+      bool has_energy = false;
+
+      char *p;
+      p = strtok(line, " ");
+      while (p !=NULL && (!has_energy || !tmp)) {
+        // is struct?
+        if (isStruct(p)) {
+          if (tmp) free(tmp); // only one struct per line!
+          tmp = make_pair_table(p);
+          has_energy = false;
+        } else {
+          // is energy?
+          if (sscanf(p, "%f", &energy_tmp)==1) {
+            has_energy = true;
+          }
+        }
+        p = strtok(NULL, " ");
+      }
+
+      // add info:
+      if (tmp) {
+        // check if its true local minima
+        int en = move_deepest(seq, tmp, s0, s1, 0, shifts, noLP);
+
+        // if we don't have it yet, add it:
+        if (FindNum(en, tmp)==-1) {
+
+          RNAlocmin struc;
+          struc.structure = tmp;
+          struc.str_ch = pt_to_char(struc.structure);
+          struc.energy = en;
+          //int en = (has_energy?en_fltoi(energy_tmp):energy_of_structure_pt(seq, tmp, s0, s1, 0));
+
+          // insert new LM
+          vertex_l[struc] = LM.size();
+          LM.push_back(struc);
+
+          gl_maxen = max(gl_maxen, en);
+          if (max_lm>0 && max_lm==(int)LM.size()) {
+            free(line);
+            break;
+          }
+        } else {
+          free(tmp);
+        }
+      } else {
+        // line without struct???
+        fprintf(stderr, "WARNING: line %d without struct: %s\n", num, line);
+      }
+      free(line);
+      line = my_getline(input);
+      num++;
+
+    }
   }
 
   // sort them!
@@ -1014,8 +1142,7 @@ void DSU::PrintLM(FILE *output, bool fix)
 
   //printf("Local minima (%4d):\n", (int)LM.size());
   for (unsigned int i=0; i<LM.size(); i++) {
-    char type[][10] = { "NORMAL", "NORM_CF", "EE_DSU", "EE_COMP"};
-    fprintf(output, "%4d  %s %7.2f %8s\n", i+1, LM[i].str_ch, LM[i].energy/100.0, type[LM[i].type]);
+    fprintf(output, "%4d  %s %7.2f %8s\n", i+1, LM[i].str_ch, LM[i].energy/100.0, LMtype_string[LM[i].type]);
   }
 }
 
@@ -1071,8 +1198,7 @@ void DSU::PrintSaddles(FILE *output, bool fix)
     saddle_connSadd[it->i].insert(it->j);
   }
   for (unsigned int i=0; i<saddles.size(); i++) {
-    char type[][10] = { "DIRECT", "LDIRECT", "NOT_SURE", "COMP" };
-    fprintf(output, "%4dS %s %7.2f %8s", i+1, saddles[i].str_ch, saddles[i].energy/100.0, type[saddles[i].type]);
+    fprintf(output, "%4dS %s %7.2f %8s", i+1, saddles[i].str_ch, saddles[i].energy/100.0, SDtype_string[saddles[i].type]);
     for (set<int>::iterator it=saddle_connLM[i].begin(); it!=saddle_connLM[i].end(); it++) fprintf(output, " %4d", (*it)+1);
     for (set<int>::iterator it=saddle_connSadd[i].begin(); it!=saddle_connSadd[i].end(); it++) fprintf(output, " %3dS", (*it)+1);
     fprintf(output, "\n");

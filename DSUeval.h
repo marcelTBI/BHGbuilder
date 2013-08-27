@@ -122,7 +122,7 @@ private:
   DSU() {};
 
 public:
-  DSU(FILE *input, bool noLP, bool shifts, int time_max, int max_lm); // read seq + structs from input (barriers/RNAlocmin output)
+  DSU(FILE *input, bool noLP, bool shifts, int time_max, int max_lm, bool just_read); // read seq + structs from input (barriers/RNAlocmin output)
   ~DSU();
 
 public:

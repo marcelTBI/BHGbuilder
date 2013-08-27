@@ -10,6 +10,7 @@ extern "C" {
   #include "fold.h"
   #include "findpath.h"
   #include "move_set.h"
+  #include "read_epars.h"
 }
 
 #include "DSUeval.h"
@@ -21,6 +22,16 @@ using namespace std;
 
 Opt::Opt(gengetopt_args_info &args_info)
 {
+  // read parameter file
+  if (args_info.paramFile_given) {
+    read_parameter_file(args_info.paramFile_arg);
+  }
+
+  // dangle setup
+  if (args_info.dangles_given) {
+    dangles = args_info.dangles_arg;
+  }
+
   this->noLP = args_info.noLP_flag;
   this->shifts = args_info.shift_flag;
   this->saddle_conn = !args_info.noSaddle_flag;

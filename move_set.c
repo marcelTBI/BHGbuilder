@@ -790,6 +790,7 @@ int move_deepest( char *string,
 
   struct_en str;
   str.structure = allocopy(ptable);
+  str.energy = 0;
 
   /*fprintf(stderr, "%s\n", string);
   print_struct(stderr, str.structure);
