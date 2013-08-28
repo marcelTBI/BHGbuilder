@@ -182,6 +182,10 @@ public:
   // -- Height-first Search  -- returns energy barriers to get i-th minima from start minima + distances in graph
   vector<std::pair<int, int> > HeightSearch(int start, vector< set<edgeLL> > &edgesV_l);
 
+  // prints optimal path between start and stop to filename.
+  void GetPath(int start, int stop,  vector< set<edgeLL> > &edgesV_l, char *filename);
+  void GetPath(int start, int stop);
+
   // evaluation
   void EHeights(FILE *heights, bool full);
   void ERank(FILE *rank, bool barrier, bool out_conns = false);

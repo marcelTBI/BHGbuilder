@@ -92,6 +92,24 @@ int main(int argc, char **argv)
     //dsu.PrintSaddles(stderr);
     //dsu.PrintComps(stderr, true);
 
+    //print optimal path
+    for (int i=0; i<args_info.get_path_given; i++) {
+      int a, b;
+      if (sscanf(args_info.get_path_arg[i], "%d=%d", &a, &b)!=2) {
+        fprintf(stderr, "WARNING: wrong use of --get-path option (%s)\n", args_info.get_path_arg[i]);
+      } else {
+        if (a<=0 || b<=0) {
+          fprintf(stderr, "WARNING: non-positive number in --get-path (%s)\n", args_info.get_path_arg[i]);
+        } else {
+          a--;
+          b--;
+          if (a>=dsu.Size() || b>=dsu.Size()) {
+            fprintf(stderr, "WARNING: visualisation number(s) exceeds number of minima (%d) (%s)\n", dsu.Size(), args_info.get_path_arg[i]);
+          } else dsu.GetPath(a, b);
+        }
+      }
+    }
+
     // print energy matrix
     if (args_info.energy_file_given) {
       dsu.PrintMatrix(args_info.energy_file_arg, args_info.print_full_flag, 'E');

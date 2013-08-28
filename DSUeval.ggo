@@ -53,6 +53,8 @@ option "dot-energies"       - "Print energies along with the LM number in graph"
 option "tree-visualise"     t "Use tree visualisation (landmark)" flag off
 option "print-full"         - "Print matrices for all found LM. (default is print only for input, this influences ALL matrices) (switches on --print-energy flag)" flag off
 
+option "get-path"           - "Get path between 2 local minima and print it into file pathL1_L2.path" typestr="<l1>=<l2>" string multiple
+
 option "dot-file"					  - "Filename for dot graph file" string default="DSUeval.dot" no
 option "graph-file"					- "Filename for landmap/landmark graph image (does not print by default)" string no
 option "barr-file"          - "Filename for barrier-like output - does not contain all information (does not print by default)" string no
