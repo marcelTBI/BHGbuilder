@@ -5,6 +5,7 @@ struct pq_height {
   int distance;
   int number;
   int from;
+  int saddle_num;
 
   bool operator<(const pq_height &right) const {
     if (height == right.height) {
@@ -13,11 +14,12 @@ struct pq_height {
     } else return height > right.height;
   }
 
-  pq_height(int h, int d, int n, int f) {
+  pq_height(int h, int d, int n, int f, int s) {
     height = h;
     distance = d;
     number = n;
     from = f;
+    saddle_num = s;
   }
 };
 
@@ -26,7 +28,6 @@ vector<std::pair<int, int> > DSU::HeightSearch(int start, vector< set<edgeLL> > 
   // define + init
   vector<int> heights(LM.size(), INT_MAX);
   vector<int> distance(LM.size(), INT_MAX);
-  vector<int> previous(LM.size(), -1);
   vector<bool> done(LM.size(), false);
 
   priority_queue<pq_height> que;
@@ -36,7 +37,73 @@ vector<std::pair<int, int> > DSU::HeightSearch(int start, vector< set<edgeLL> > 
   distance[start] = 0;
   heights[start] = LM[start].energy;
   for (set<edgeLL>::iterator it=edgesV_l[start].begin(); it!=edgesV_l[start].end(); it++) {
-    que.push(pq_height(it->en, 1, it->goesTo(start), start));
+    que.push(pq_height(it->en, 1, it->goesTo(start), start, it->saddle));
+  }
+
+  // main loop -- dijkstra-like (take one with lowest energy, proceed it)
+  while (!que.empty()) {
+    // get next one to do
+    pq_height pq = que.top(); que.pop();
+    if (done[pq.number]) continue;
+
+    //fprintf(stderr, "from %d to %d, en %d dist %d\n", pq.from+1, pq.number+1, pq.height, pq.distance);
+
+    // write him:
+    done[pq.number] = true;
+    distance[pq.number] = pq.distance;
+    heights[pq.number] = pq.height;
+
+    // push next ones:
+    for (set<edgeLL>::iterator it=edgesV_l[pq.number].begin(); it!=edgesV_l[pq.number].end(); it++) {
+      int to = it->goesTo(pq.number);
+      // if we already had him
+      if (done[to]) {
+        if (max(it->en, pq.height) < heights[to]) fprintf(stderr, "WRONG from: %d to: %d enLM %d enHeight %d\n", pq.number+1, to+1, pq.height, heights[to]);
+        continue;
+      }
+      // push next ones
+      //fprintf(stderr, "adding(%d): from %d to %d, en %d dist %d\n", (int)!done[to], pq.number+1, to+1, max(it->en, pq.height), pq.distance+1);
+      if (!done[to]) {
+        que.push(pq_height(max(it->en, pq.height), pq.distance+1, to, pq.number, it->saddle));
+      }
+    }
+  }
+
+
+
+  vector<std::pair<int, int> > res(LM.size());
+  for (unsigned int i=0; i<heights.size(); i++) {
+    //fprintf(stderr, "%d en: %d dist: %d prev: %d\n", i+1, heights[i], distance[i], previous[i]+1);
+    res[i] = make_pair(heights[i], distance[i]);
+  }
+
+  return res;
+}
+
+void DSU::GetPath(int start, int stop)
+{
+  char filename[100];
+  sprintf(filename, "path%d_%d.path", start+1, stop+1);
+  GetPath(start, stop, edgesV_l, filename);
+}
+
+void DSU::GetPath(int start, int stop,  vector< set<edgeLL> > &edgesV_l, char *filename)
+{
+  // define + init
+  vector<int> heights(LM.size(), INT_MAX);
+  vector<int> distance(LM.size(), INT_MAX);
+  vector<int> previous(LM.size(), -1);
+  vector<int> saddle_num(LM.size(), -1);
+  vector<bool> done(LM.size(), false);
+
+  priority_queue<pq_height> que;
+
+  // starting point -- all points from start
+  done[start] = true;
+  distance[start] = 0;
+  heights[start] = LM[start].energy;
+  for (set<edgeLL>::iterator it=edgesV_l[start].begin(); it!=edgesV_l[start].end(); it++) {
+    que.push(pq_height(it->en, 1, it->goesTo(start), start, it->saddle));
   }
 
   // main loop -- dijkstra-like (take one with lowest energy, proceed it)
@@ -52,6 +119,10 @@ vector<std::pair<int, int> > DSU::HeightSearch(int start, vector< set<edgeLL> > 
     distance[pq.number] = pq.distance;
     previous[pq.number] = pq.from;
     heights[pq.number] = pq.height;
+    saddle_num[pq.number] = pq.saddle_num;
+
+    // end when we have reached destination
+     if (pq.number==stop) break;
 
     // push next ones:
     for (set<edgeLL>::iterator it=edgesV_l[pq.number].begin(); it!=edgesV_l[pq.number].end(); it++) {
@@ -64,18 +135,38 @@ vector<std::pair<int, int> > DSU::HeightSearch(int start, vector< set<edgeLL> > 
       // push next ones
       //fprintf(stderr, "adding(%d): from %d to %d, en %d dist %d\n", (int)!done[to], pq.number+1, to+1, max(it->en, pq.height), pq.distance+1);
       if (!done[to]) {
-        que.push(pq_height(max(it->en, pq.height), pq.distance+1, to, pq.number));
+        que.push(pq_height(max(it->en, pq.height), pq.distance+1, to, pq.number, it->saddle));
       }
     }
   }
 
-  vector<std::pair<int, int> > res(LM.size());
-  for (unsigned int i=0; i<heights.size(); i++) {
-    //fprintf(stderr, "%d en: %d dist: %d prev: %d\n", i+1, heights[i], distance[i], previous[i]+1);
-    res[i] = make_pair(heights[i], distance[i]);
+  // retreive path:
+  vector<int> lms;
+  vector<int> sdd;
+  int number = stop;
+  while (number!=start) {
+    lms.push_back(number);
+    sdd.push_back(saddle_num[number]);
+    number = previous[number];
   }
+  lms.push_back(number);
 
-  return res;
+
+  // write it down:
+  FILE *fil;
+  fil = fopen(filename, "w");
+  if (fil) {
+    fprintf(fil,"        %s\n", seq);
+    for (int i=(int)lms.size()-1; i>0; i--) {
+      fprintf(fil, "%6d  %s %7.2f\n", lms[i]+1, LM[lms[i]].str_ch, LM[lms[i]].energy/100.0);
+      fprintf(fil, "%6dS %s %7.2f\n", sdd[i-1]+1, saddles[sdd[i-1]].str_ch, saddles[sdd[i-1]].energy/100.0);
+    }
+    fprintf(fil, "%6d  %s %7.2f\n", lms[0]+1, LM[lms[0]].str_ch, LM[lms[0]].energy/100.0);
+    fprintf(fil, "Path from %6d to %6d: %4d local minima, %6.2f kcal/mol highest point.\n", start+1, stop+1, (int)lms.size(), heights[stop]/100.0);
+    fclose(fil);
+  } else {
+    fprintf(stderr, "Unable to open file %s!\n", filename);
+  }
 }
 
 void DSU::EHeights(FILE *heights, bool full)
