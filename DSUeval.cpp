@@ -693,9 +693,23 @@ void DSU::VisPath(int src, int dest, bool en_barriers, int max_length, bool dot_
 
 vector<vector<std::pair<int, int> > > matrix;
 bool generated = false;
+
 void DSU::PrintMatrix(char *filename, bool full, char type)
 {
-  int size = (full?LM.size():number_lm);
+  if (!full && mapping.size() == 0) {
+    mapping_rev.resize(LM.size(), 0);
+    fprintf(stderr, "Mapping: \n");
+    for (int i=0; i<(int)LM.size(); i++) {
+      if (LM[i].type==NORMAL) {
+        mapping.push_back(i);
+        mapping_rev[i] = mapping.size()-1;
+        fprintf(stderr, "%4d[%4d] ", i+1, (int)mapping.size());
+      }
+    }
+    fprintf(stderr, "(%d mapped to %d) \n", (int)LM.size(), (int)mapping.size());
+  }
+
+  int size = (full?LM.size():mapping.size());
   FILE *energies;
   energies = fopen(filename, "w");
   if (energies) {
@@ -703,7 +717,14 @@ void DSU::PrintMatrix(char *filename, bool full, char type)
     if (type != 'D' && !generated) {
       matrix.clear();
       for (int i=0; i<size; i++) {
-        matrix.push_back(HeightSearch(i, edgesV_l));
+        int to_search = full?i:mapping[i];
+        matrix.push_back(HeightSearch(to_search, edgesV_l));
+        // discard those we dont want
+        if (!full) {
+          for (int j=0; j<(int)mapping.size(); j++) {
+            matrix[i][j] = matrix[i][mapping[j]];
+          }
+        }
         if ((int)matrix[i].size()!=size) {
           matrix[i].resize(size);
         }
@@ -717,6 +738,7 @@ void DSU::PrintMatrix(char *filename, bool full, char type)
 
     // print
     for (unsigned int i=0; i<matrix.size(); i++) {
+      fprintf(energies, "%6d %s ", mapping[i]+1, LM[mapping[i]].str_ch);
       for (unsigned int j=0; j<matrix[i].size(); j++) {
         switch (type) {
         case 'E': fprintf(energies, "%6.2f ", matrix[i][j].first/100.0); break;

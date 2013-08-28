@@ -358,12 +358,12 @@ void DSU::FindNumbers(int begin, int end, path_t *path, vector<int> &lm_numbers,
 
         // update UBlist
         if (lm_numbers[i]==-1) {
-          if (gl_maxen <= tmp_en) {
+          if (gl_maxen < tmp_en) {
             //fprintf(stderr, "exceeds en.: %s %6.2f\n", pt_to_str(tmp_str).c_str(), tmp_en/100.0);
             lm_numbers[i] = AddLMtoTBD(tmp_str, tmp_en, EE_DSU, debug);
 
           } else {
-            fprintf(stderr, "cannot find: %s %6.2f\n", pt_to_str(tmp_str).c_str(), tmp_en/100.0);
+            if (debug) fprintf(stderr, "cannot find: %s %6.2f\n", pt_to_str(tmp_str).c_str(), tmp_en/100.0);
             // add to list of minima and count with them later...
             lm_numbers[i] = AddLMtoTBD(tmp_str, tmp_en, NORM_CF, debug);
           }
@@ -397,12 +397,12 @@ void DSU::FindNumbers(int begin, int end, path_t *path, vector<int> &lm_numbers,
 
     // update UBlist
     if (lm_numbers[pivot]==-1) {
-      if (gl_maxen <= tmp_en) {
+      if (gl_maxen < tmp_en) {
         //fprintf(stderr, "exceeds en.: %s %6.2f\n", pt_to_str(tmp_str).c_str(), tmp_en/100.0);
         lm_numbers[pivot] = AddLMtoTBD(tmp_str, tmp_en, EE_DSU, debug);
 
       } else {
-        fprintf(stderr, "cannot find: %s %6.2f\n", pt_to_str(tmp_str).c_str(), tmp_en/100.0);
+        if (debug) fprintf(stderr, "cannot find: %s %6.2f\n", pt_to_str(tmp_str).c_str(), tmp_en/100.0);
         // add to list of minima and count with them later...
         lm_numbers[pivot] = AddLMtoTBD(tmp_str, tmp_en, NORM_CF, debug);
       }

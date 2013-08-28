@@ -28,6 +28,15 @@ int main(int argc, char **argv)
   if (args_info.cluster_repre_arg <= 0.0) args_info.cluster_repre_arg = 0.0;
   if (args_info.cluster_repre_arg > 1.0) args_info.cluster_repre_arg = 1.0;
 
+  // print-all
+  if (args_info.print_all_flag) {
+    args_info.barr_file_given = 1; free(args_info.barr_file_arg); args_info.barr_file_arg = (char*) malloc(50*sizeof(char));  strcpy(args_info.barr_file_arg, "barrier.lm");
+    args_info.energy_file_given = 1; free(args_info.energy_file_arg); args_info.energy_file_arg = (char*) malloc(50*sizeof(char));  strcpy(args_info.energy_file_arg, "enbarr.eb");
+    args_info.dist_file_given = 1; free(args_info.dist_file_arg); args_info.dist_file_arg = (char*) malloc(50*sizeof(char));  strcpy(args_info.dist_file_arg, "bpdistances.dist");
+    args_info.gdist_file_given = 1; free(args_info.gdist_file_arg); args_info.gdist_file_arg = (char*) malloc(50*sizeof(char));  strcpy(args_info.gdist_file_arg, "graphdistances.gdist");
+    args_info.rates_file_given = 1; free(args_info.rates_file_arg); args_info.rates_file_arg = (char*) malloc(50*sizeof(char));  strcpy(args_info.rates_file_arg, "rates.rat");
+  }
+
   // code
     // DSUeval
   Opt opt(args_info);
@@ -91,6 +100,8 @@ int main(int argc, char **argv)
 
     //dsu.PrintSaddles(stderr);
     //dsu.PrintComps(stderr, true);
+
+
 
     // print energy matrix
     if (args_info.energy_file_given) {

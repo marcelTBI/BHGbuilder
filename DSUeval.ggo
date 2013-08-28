@@ -60,6 +60,7 @@ option "energy-file"        - "Fileneme for energy barrier matrix (does not prin
 option "dist-file"          - "Filename for distance matrix (does not print by default)" string no
 option "gdist-file"         - "Filename for graph distance matrix (does not print by default)" string no
 option "rates-file"         - "Filename for rates for treekin (does not print by default, appends mode_rates on end of filename)" string no
+option "print-all"          - "generate all output (switches on all text '*-file' to default)" flag off
 option "rates-temp"         T "Temperature for rates (in Celsius)" float default="37.0" no
 option "rates-mode"         - "Mode for rates generation (V - vertex contraction, taking into acount only max_height; S - vertex contraction, taking into acount path; E - edge contraction (minimal barrier); M - edge contraction (maximal barrier); F - full matrix for all LMs)" string default="F" multiple no
 

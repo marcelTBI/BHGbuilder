@@ -118,6 +118,10 @@ private:
   // UFset for no-conn in ComputeTBD
   UF_set conectivity;
 
+  // mapping for not full matrices
+  vector<int> mapping;
+  vector<int> mapping_rev;
+
 private:
   DSU() {};
 
