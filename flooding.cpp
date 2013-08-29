@@ -129,7 +129,7 @@ int DSU::FloodUp(RNAlocmin &i, RNAlocmin &j, RNAsaddle &saddle, Opt &opt, bool d
     }
   }
 
-  int size = flood_hash.size();
+  //int size = flood_hash.size();
 
   // we did end sucesfully
   if (foundDS) {

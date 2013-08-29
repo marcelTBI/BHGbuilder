@@ -118,10 +118,10 @@ DSU::DSU(FILE *input, bool noLP, bool shifts, int time_max, int max_lm, bool jus
         while ((p=strtok(NULL, " "))) {
           if (p[strlen(p)-1]=='S') {
             sscanf(p, "%dS", &number);
-            saddle_c.push_back(number);
+            saddle_c.push_back(number-1);
           } else {
             sscanf(p, "%d", &number);
-            LM_c.push_back(number);
+            LM_c.push_back(number-1);
           }
         }
       }
@@ -157,21 +157,21 @@ DSU::DSU(FILE *input, bool noLP, bool shifts, int time_max, int max_lm, bool jus
           // edge l-l
           for (int i=0; i<(int)LM_c.size(); i++) {
             for (int j=i+1; j<(int)LM_c.size(); j++) {
-              edgeLL e(LM_c[i]-1, LM_c[j]-1, struc.energy, saddles.size()-1);
+              edgeLL e(LM_c[i], LM_c[j], struc.energy, saddles.size()-1);
               edges_l.insert(e);
-              edgesV_l[LM_c[i]-1].insert(e);
-              edgesV_l[LM_c[j]-1].insert(e);
+              edgesV_l[LM_c[i]].insert(e);
+              edgesV_l[LM_c[j]].insert(e);
             }
           }
           // edge l-s
           for (int i=0; i<(int)LM_c.size(); i++) {
-            edgeLS e2(LM_c[i]-1, saddles.size()-1);
+            edgeLS e2(LM_c[i], saddles.size()-1);
             edges_ls.insert(e2);
           }
 
           // edges s-s
           for (int i=0; i<(int)saddle_c.size(); i++) {
-            edgeSS e(saddle_c[i]-1, saddles.size()-1);
+            edgeSS e(saddle_c[i], saddles.size()-1);
             edges_s.insert(e);
           }
 

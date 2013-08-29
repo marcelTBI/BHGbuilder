@@ -103,7 +103,7 @@ int main(int argc, char **argv)
 
 
     //print optimal path
-    for (int i=0; i<args_info.get_path_given; i++) {
+    for (int i=0; i<(int)args_info.get_path_given; i++) {
       int a, b;
       if (sscanf(args_info.get_path_arg[i], "%d=%d", &a, &b)!=2) {
         fprintf(stderr, "WARNING: wrong use of --get-path option (%s)\n", args_info.get_path_arg[i]);
