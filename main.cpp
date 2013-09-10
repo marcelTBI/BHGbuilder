@@ -115,7 +115,7 @@ int main(int argc, char **argv)
           b--;
           if (a>=dsu.Size() || b>=dsu.Size()) {
             fprintf(stderr, "WARNING: visualisation number(s) exceeds number of minima (%d) (%s)\n", dsu.Size(), args_info.get_path_arg[i]);
-          } else dsu.GetPath(a, b);
+          } else dsu.GetPath(a, b, args_info.depth_arg);
         }
       }
     }

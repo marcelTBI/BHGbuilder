@@ -59,6 +59,7 @@ DSU::DSU(FILE *input, bool noLP, bool shifts, int time_max, int max_lm, bool jus
   s0 = encode_sequence(seq, 0);
   s1 = encode_sequence(seq, 1);
 
+  // if we read .dsu file
   if (just_read) {
         //read structs
     line = my_getline(input);
@@ -1242,7 +1243,7 @@ bool DSU::SortFix()
     for (unsigned int i=0; i<temp.size(); i++) {
       LM[i]=temp[i].first;
       mappingLM[temp[i].second]=i;
-      vertex_l[temp[i].first]=temp[i].second;
+      vertex_l[temp[i].first]=i;
     }
   }
   {

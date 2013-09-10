@@ -187,8 +187,8 @@ public:
   vector<std::pair<int, int> > HeightSearch(int start, vector< set<edgeLL> > &edgesV_l);
 
   // prints optimal path between start and stop to filename.
-  void GetPath(int start, int stop,  vector< set<edgeLL> > &edgesV_l, char *filename);
-  void GetPath(int start, int stop);
+  void GetPath(int start, int stop,  vector< set<edgeLL> > &edgesV_l, char *filename, int maxkeep);
+  void GetPath(int start, int stop, int maxkeep = 0);
 
   // evaluation
   void EHeights(FILE *heights, bool full);

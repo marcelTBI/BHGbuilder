@@ -80,14 +80,14 @@ vector<std::pair<int, int> > DSU::HeightSearch(int start, vector< set<edgeLL> > 
   return res;
 }
 
-void DSU::GetPath(int start, int stop)
+void DSU::GetPath(int start, int stop, int maxkeep)
 {
   char filename[100];
   sprintf(filename, "path%d_%d.path", start+1, stop+1);
-  GetPath(start, stop, edgesV_l, filename);
+  GetPath(start, stop, edgesV_l, filename, maxkeep);
 }
 
-void DSU::GetPath(int start, int stop,  vector< set<edgeLL> > &edgesV_l, char *filename)
+void DSU::GetPath(int start, int stop,  vector< set<edgeLL> > &edgesV_l, char *filename, int maxkeep)
 {
   // define + init
   vector<int> heights(LM.size(), INT_MAX);
@@ -155,14 +155,36 @@ void DSU::GetPath(int start, int stop,  vector< set<edgeLL> > &edgesV_l, char *f
   // write it down:
   FILE *fil;
   fil = fopen(filename, "w");
+  int count = 0;
   if (fil) {
     fprintf(fil,"        %s\n", seq);
     for (int i=(int)lms.size()-1; i>0; i--) {
       fprintf(fil, "%6d  %s %7.2f %3d\n", lms[i]+1, LM[lms[i]].str_ch, LM[lms[i]].energy/100.0, HammingDist(LM[lms[i]].structure, saddles[sdd[i-1]].structure));
+      if (maxkeep) {
+        path_t *tmp = get_path(seq, LM[lms[i]].str_ch, saddles[sdd[i-1]].str_ch, maxkeep);
+        path_t *path = tmp+1;
+        while (path && path->s && (path+1) && (path+1)->s) {
+          fprintf(fil, "        %s %7.2f\n", path->s, path->en);
+          path++;
+          count++;
+        }
+        free_path(tmp);
+      }
       fprintf(fil, "%6dS %s %7.2f %3d\n", sdd[i-1]+1, saddles[sdd[i-1]].str_ch, saddles[sdd[i-1]].energy/100.0, HammingDist(LM[lms[i-1]].structure, saddles[sdd[i-1]].structure));
+      if (maxkeep) {
+        path_t *tmp = get_path(seq, saddles[sdd[i-1]].str_ch, LM[lms[i-1]].str_ch, maxkeep);
+        path_t *path = tmp+1;
+        while (path && path->s && (path+1) && (path+1)->s) {
+          fprintf(fil, "        %s %7.2f\n", path->s, path->en);
+          path++;
+          count++;
+        }
+        free_path(tmp);
+      }
     }
     fprintf(fil, "%6d  %s %7.2f\n", lms[0]+1, LM[lms[0]].str_ch, LM[lms[0]].energy/100.0);
-    fprintf(fil, "Path from %6d to %6d: %4d local minima, %6.2f kcal/mol highest point.\n", start+1, stop+1, (int)lms.size(), heights[stop]/100.0);
+    if (maxkeep)  fprintf(fil, "Path from %6d to %6d: %4d local minima, %d structures, %6.2f kcal/mol highest point.\n", start+1, stop+1, (int)lms.size(), count + (int)lms.size() + (int)sdd.size(), heights[stop]/100.0);
+    else          fprintf(fil, "Path from %6d to %6d: %4d local minima, %6.2f kcal/mol highest point.\n", start+1, stop+1, (int)lms.size(), heights[stop]/100.0);
     fclose(fil);
   } else {
     fprintf(stderr, "Unable to open file %s!\n", filename);

@@ -379,8 +379,10 @@ void DSU::FindNumbers(int begin, int end, path_t *path, vector<int> &lm_numbers,
   int pivot = (end+begin)/2;
 
   short *tmp_str = make_pair_table(path[pivot].s);
+  fprintf(stderr, "%s\n", pt_to_str(tmp_str).c_str());
   int tmp_en = move_deepest(seq, tmp_str, s0, s1, 0, shifts, noLP);
 
+  fprintf(stderr, "%s\n", pt_to_str(tmp_str).c_str());
 
   // speed up:
   if (tmp_en == LM[lm_numbers[begin]].energy && str_eq(LM[lm_numbers[begin]].structure, tmp_str)) {
