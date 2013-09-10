@@ -158,8 +158,8 @@ void DSU::GetPath(int start, int stop,  vector< set<edgeLL> > &edgesV_l, char *f
   if (fil) {
     fprintf(fil,"        %s\n", seq);
     for (int i=(int)lms.size()-1; i>0; i--) {
-      fprintf(fil, "%6d  %s %7.2f\n", lms[i]+1, LM[lms[i]].str_ch, LM[lms[i]].energy/100.0);
-      fprintf(fil, "%6dS %s %7.2f\n", sdd[i-1]+1, saddles[sdd[i-1]].str_ch, saddles[sdd[i-1]].energy/100.0);
+      fprintf(fil, "%6d  %s %7.2f %3d\n", lms[i]+1, LM[lms[i]].str_ch, LM[lms[i]].energy/100.0, HammingDist(LM[lms[i]].structure, saddles[sdd[i-1]].structure));
+      fprintf(fil, "%6dS %s %7.2f %3d\n", sdd[i-1]+1, saddles[sdd[i-1]].str_ch, saddles[sdd[i-1]].energy/100.0, HammingDist(LM[lms[i-1]].structure, saddles[sdd[i-1]].structure));
     }
     fprintf(fil, "%6d  %s %7.2f\n", lms[0]+1, LM[lms[0]].str_ch, LM[lms[0]].energy/100.0);
     fprintf(fil, "Path from %6d to %6d: %4d local minima, %6.2f kcal/mol highest point.\n", start+1, stop+1, (int)lms.size(), heights[stop]/100.0);

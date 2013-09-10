@@ -455,6 +455,7 @@ void DSU::ComputeTBD(TBD &pqueue, int maxkeep, int num_threshold, bool outer, bo
 
     // get path
     if (debug) fprintf(stderr, "path between (%3d, %3d) type=%s fiber=%d:\n", tbd.i, tbd.j, type1_str[tbd.type_clust], tbd.fiber);
+    //2fprintf(stderr, "depth: %d\n%s\n%s\n%s\n", maxkeep, seq, LM[tbd.i].str_ch, LM[tbd.j].str_ch);
     path_t *path = get_path(seq, LM[tbd.i].str_ch, LM[tbd.j].str_ch, maxkeep);
 
     // variables for outer insertion
