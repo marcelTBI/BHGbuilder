@@ -20,6 +20,8 @@ bool str_eq(const short *lhs, const short *rhs);
 // convert energy from float to int
 int en_fltoi(float en);
 // hamming distance beetween 2 structs
+int HammingDist(char* struct1, const short* struct2);
+int HammingDist(char* struct1, char* struct2);
 int HammingDist(const short* struct1, const short* struct2);
 // is string an RNA structure?
 bool isStruct(const char *p);
