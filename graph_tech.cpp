@@ -159,30 +159,30 @@ void DSU::GetPath(int start, int stop,  vector< set<edgeLL> > &edgesV_l, char *f
   if (fil) {
     fprintf(fil,"        %s\n", seq);
     for (int i=(int)lms.size()-1; i>0; i--) {
-      fprintf(fil, "%6d  %s %7.2f %3d\n", lms[i]+1, LM[lms[i]].str_ch, LM[lms[i]].energy/100.0, HammingDist(LM[lms[i]].structure, saddles[sdd[i-1]].structure));
+      fprintf(fil, "%6d  %s %7.2f %3d %3d\n", lms[i]+1, LM[lms[i]].str_ch, LM[lms[i]].energy/100.0, HammingDist(LM[lms[i]].structure, LM[lms[0]].structure), HammingDist(LM[lms[i]].structure, saddles[sdd[i-1]].structure));
       if (maxkeep) {
         path_t *tmp = get_path(seq, LM[lms[i]].str_ch, saddles[sdd[i-1]].str_ch, maxkeep);
         path_t *path = tmp+1;
         while (path && path->s && (path+1) && (path+1)->s) {
-          fprintf(fil, "        %s %7.2f\n", path->s, path->en);
+          fprintf(fil, " inter  %s %7.2f %3d\n", path->s, path->en, HammingDist(path->s, LM[lms[0]].structure));
           path++;
           count++;
         }
         free_path(tmp);
       }
-      fprintf(fil, "%6dS %s %7.2f %3d\n", sdd[i-1]+1, saddles[sdd[i-1]].str_ch, saddles[sdd[i-1]].energy/100.0, HammingDist(LM[lms[i-1]].structure, saddles[sdd[i-1]].structure));
+      fprintf(fil, "%6dS %s %7.2f %3d %3d\n", sdd[i-1]+1, saddles[sdd[i-1]].str_ch, saddles[sdd[i-1]].energy/100.0, HammingDist(saddles[sdd[i-1]].structure, LM[lms[0]].structure), HammingDist(LM[lms[i-1]].structure, saddles[sdd[i-1]].structure));
       if (maxkeep) {
         path_t *tmp = get_path(seq, saddles[sdd[i-1]].str_ch, LM[lms[i-1]].str_ch, maxkeep);
         path_t *path = tmp+1;
         while (path && path->s && (path+1) && (path+1)->s) {
-          fprintf(fil, "        %s %7.2f\n", path->s, path->en);
+          fprintf(fil, " inter  %s %7.2f %3d\n", path->s, path->en, HammingDist(path->s, LM[lms[0]].structure));
           path++;
           count++;
         }
         free_path(tmp);
       }
     }
-    fprintf(fil, "%6d  %s %7.2f\n", lms[0]+1, LM[lms[0]].str_ch, LM[lms[0]].energy/100.0);
+    fprintf(fil, "%6d  %s %7.2f   0   0\n", lms[0]+1, LM[lms[0]].str_ch, LM[lms[0]].energy/100.0);
     if (maxkeep)  fprintf(fil, "Path from %6d to %6d: %4d local minima, %d structures, %6.2f kcal/mol highest point.\n", start+1, stop+1, (int)lms.size(), count + (int)lms.size() + (int)sdd.size(), heights[stop]/100.0);
     else          fprintf(fil, "Path from %6d to %6d: %4d local minima, %6.2f kcal/mol highest point.\n", start+1, stop+1, (int)lms.size(), heights[stop]/100.0);
     fclose(fil);
