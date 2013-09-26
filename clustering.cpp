@@ -101,7 +101,7 @@ int DSU::FindNum(int en_par, short *str_par)
 
 vector<vector<int> > histo(100, vector<int>(100, 0));
 
-int DSU::Cluster(Opt &opt, int kmax, bool cluster_off)
+int DSU::Cluster(Opt &opt, int kmax)
 {
   // pqueue for pairs of LM
   TBD output;
@@ -109,7 +109,7 @@ int DSU::Cluster(Opt &opt, int kmax, bool cluster_off)
   // if no-conn flag:
   if (opt.no_conn) conectivity.enlarge_parent(LM.size());
 
-  if (!cluster_off) {
+  if (kmax>0) {
     // create data structures
     vector<lm_pair> to_cluster;
     to_cluster.reserve(LM.size());
@@ -379,10 +379,10 @@ void DSU::FindNumbers(int begin, int end, path_t *path, vector<int> &lm_numbers,
   int pivot = (end+begin)/2;
 
   short *tmp_str = make_pair_table(path[pivot].s);
-  fprintf(stderr, "%s\n", pt_to_str(tmp_str).c_str());
+  //fprintf(stderr, "%s\n", pt_to_str(tmp_str).c_str());
   int tmp_en = move_deepest(seq, tmp_str, s0, s1, 0, shifts, noLP);
 
-  fprintf(stderr, "%s\n", pt_to_str(tmp_str).c_str());
+  //fprintf(stderr, "%s\n", pt_to_str(tmp_str).c_str());
 
   // speed up:
   if (tmp_en == LM[lm_numbers[begin]].energy && str_eq(LM[lm_numbers[begin]].structure, tmp_str)) {
@@ -435,7 +435,7 @@ void DSU::ComputeTBD(TBD &pqueue, int maxkeep, int num_threshold, bool outer, bo
     }
 
     // just visualisation
-    if (!output_saddles && cnt%10000==0) {
+    if (!output_saddles && cnt%1000==0) {
       fprintf(stderr, "Finding path: %7d/%7d\n", cnt, pqueue.size()+cnt);
     }
 

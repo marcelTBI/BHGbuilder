@@ -336,10 +336,12 @@ int DSU::LinkCPLM(Opt opt, bool debug)
     RNAsaddle stru = saddles[i];
 
     // flood them up!
-    int res = FloodUp(LM[stru.lm1], LM[stru.lm2], stru, opt, debug);
-    if (res == 1 || res == 2) {  // we have found better saddle (1) or reached threshold (2) so better saddle is not possible
-      stru.type = LDIRECT; // so our saddle is for sure lowest direct saddle
-      trueds ++;
+    if (opt.flood_num>0) {
+      int res = FloodUp(LM[stru.lm1], LM[stru.lm2], stru, opt, debug);
+      if (res == 1 || res == 2) {  // we have found better saddle (1) or reached threshold (2) so better saddle is not possible
+        stru.type = LDIRECT; // so our saddle is for sure lowest direct saddle
+        trueds ++;
+      }
     }
 
     // update vertex/edge sets

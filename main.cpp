@@ -42,13 +42,8 @@ int main(int argc, char **argv)
   Opt opt(args_info);
   DSU dsu(stdin, args_info.noLP_flag, args_info.shift_flag, args_info.time_max_arg, args_info.number_lm_arg, args_info.just_read_flag);
 
-  // adjust args_info:
-  if (args_info.cluster_Kmax_arg>=dsu.Size()) {
-    args_info.cluster_off_flag = 1;
-  }
-
   if (!args_info.just_read_flag) {
-    dsu.Cluster(opt, args_info.cluster_Kmax_arg, args_info.cluster_off_flag);
+    dsu.Cluster(opt, args_info.cluster_Kmax_arg);
     fprintf(stderr, "computation of saddles took %.2f secs.\n", (clock()-time)/(double)CLOCKS_PER_SEC);
   }
 
@@ -61,7 +56,7 @@ int main(int argc, char **argv)
         // LinkCP
       dsu.LinkCPLM(opt, args_info.debug_flag);
       fprintf(stderr, "computing LM-edges took %.2f secs.\n", (clock()-time)/(double)CLOCKS_PER_SEC); time = clock();
-      if (!args_info.noSaddle_flag) {
+      if (!args_info.noSaddle_flag && args_info.floodMax_arg>0) {
         dsu.LinkCPsaddle(opt, args_info.debug_flag);
         fprintf(stderr, "computing saddle-edges took %.2f secs.\n", (clock()-time)/(double)CLOCKS_PER_SEC); time = clock();
       }

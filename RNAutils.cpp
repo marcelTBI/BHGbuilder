@@ -1,6 +1,10 @@
 #include <stdio.h>
 #include <string.h>
 
+extern "C" {
+  #include "pair_mat.h"
+}
+
 #include "RNAutils.h"
 
 /* reads a line no matter how long*/
@@ -66,6 +70,28 @@ bool isStruct(const char *p)
   if (strlen(p)<2) return false;
   if ((p[0]=='.' || p[0]=='(' || p[0]==')') && (p[1]=='.' || p[1]=='(' || p[1]==')')) return true;
   else return false;
+}
+
+int HammingDist(char* struct1, const short* struct2) {
+  short* s1 = make_pair_table(struct1);
+
+  int bpdist = HammingDist(s1, struct2);
+
+  free(s1);
+
+  return bpdist;
+}
+
+int HammingDist(char* struct1, char* struct2) {
+  short* s1 = make_pair_table(struct1);
+  short* s2 = make_pair_table(struct2);
+
+  int bpdist = HammingDist(s1, s2);
+
+  free(s1);
+  free(s2);
+
+  return bpdist;
 }
 
 int HammingDist(const short* struct1, const short* struct2)

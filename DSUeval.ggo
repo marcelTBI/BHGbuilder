@@ -44,7 +44,7 @@ option "noSaddle"           - "Do not flood-link sadddles (saves some computatio
 option "just-ub"  					- "Do not find connections - just do first part of program" hidden flag off
 option "no-conn"            - "Do not connect what is already connected (saves computation time greatly, decreases accuracy greatly)" flag off hidden
 
-option "floodMax"           - "Flood cap on number - how many structures to flood" int default="1000" no
+option "floodMax"           - "Flood cap on number - how many structures to flood (flooding is disabled by default)" int default="0" no
 option "floodHeight"        - "Flood cap on height - what is the maximal energy height we will flood in 10cal/mol (0 = unlimited)" int default="0" no
 
 section "Output"
@@ -76,7 +76,6 @@ option "energy-rank"        - "output sorted energies of saddles between minima 
 option "energy-barrier"			- "output sorted barrier heights between minima (filename)" string no
 
 section "Clustering"
-option "cluster-off"        - "Switch off clustering" flag off
-option "cluster-Kmax"       K "Size of maximal cluster" int default="100" no
+option "cluster-Kmax"       K "Size of maximal cluster (clustering is off by default)" int default="0" no
 option "cluster-repre"      - "Portion of LMs taken as representatives from each cluster" float default="0.05" no
 option "cluster-fsaddle"    - "Insert to representatives those LM, which have highest saddle point connecting them (instead of LM, which have highest barrier height between themselves)" flag off

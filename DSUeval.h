@@ -136,7 +136,7 @@ public:
   int LinkCPsaddle(Opt opt, bool debug);       // construct vertex and edge set from saddles (saddle to saddle)
 
   // clustering
-  int Cluster(Opt &opt, int kmax, bool cluster_off);
+  int Cluster(Opt &opt, int kmax);
   void ComputeTBD(TBD &pqueue, int maxkeep, int num_threshold, bool outer, bool noLP, bool shifts, bool debug, vector<RNAsaddle> *output_saddles = NULL);
   int AddLMtoTBD(short *tmp_str, int tmp_en, LMtype type, bool debug);
   int JoinClusters(Opt &opt, UF_set_child &ufset, set<int> &represents, TBD &output, int i, int j);
