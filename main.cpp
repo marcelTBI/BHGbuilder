@@ -3,11 +3,11 @@
 #include <time.h>
 #include <string.h>
 
-#include "DSUeval.h"
+#include "BHGbuilder.h"
 
 
 extern "C" {
-  #include "DSUeval_cmdline.h"
+  #include "BHGbuilder_cmdline.h"
 }
 
 using namespace std;
@@ -38,7 +38,7 @@ int main(int argc, char **argv)
   }
 
   // code
-    // DSUeval
+    // BHGbuilder
   Opt opt(args_info);
   DSU dsu(stdin, args_info.noLP_flag, args_info.shift_flag, args_info.time_max_arg, args_info.number_lm_arg, args_info.just_read_flag);
 
@@ -189,7 +189,7 @@ int main(int argc, char **argv)
     }
   }
 
-  fprintf(stderr, "DSUeval exitting succesfully!\n");
+  fprintf(stderr, "BHGbuilder exitting succesfully!\n");
 
   cmdline_parser_free(&args_info);
   fprintf(stderr, "rest took %.2f secs.\n", (clock()-time)/(double)CLOCKS_PER_SEC); time = clock();

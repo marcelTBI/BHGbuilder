@@ -12,14 +12,14 @@
 #include <set>
 
 extern "C" {
-  #include "DSUeval_cmdline.h"
+  #include "BHGbuilder_cmdline.h"
 }
 
 #include "RNAutils.h"
 
 using namespace std;
 
-enum LMtype { NORMAL, NORM_CF, EE_DSU, EE_COMP }; // normal type, normal which was not in first list, exceeds energy in DSUeval, exceeds energy in connect components
+enum LMtype { NORMAL, NORM_CF, EE_DSU, EE_COMP }; // normal type, normal which was not in first list, exceeds energy in BHGbuilder, exceeds energy in connect components
 static char LMtype_string[][10] = { "NORMAL", "NORM_CF", "EE_DSU", "EE_COMP"};
 enum SDtype { DIRECT, LDIRECT, NOT_SURE, COMP };   // direct saddle - but not sure if lowest, for sure lowest direct saddle, not sure -- only with outer option, saddle from component join (direct, but maybe not lowest, principially same as DIRECT)
 static char SDtype_string[][10] = { "DIRECT", "LDIRECT", "NOT_SURE", "COMP" };

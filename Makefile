@@ -1,11 +1,8 @@
 #ViennaRNA package location
 ViennaRNA=~/software/include/ViennaRNA
 ViennaLIB=~/software/lib/libRNA.a
-#ViennaRNA=~/software/ViennaRNA-2.0.7/H
-#ViennaLIB=~/software/ViennaRNA-2.0.7/lib/libRNA.a
 
-
-NAME=DSUeval
+NAME=BHGbuilder
 
 OBJ = $(NAME)_cmdline.o\
 			main.o\

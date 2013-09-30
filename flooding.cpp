@@ -8,7 +8,7 @@ extern "C" {
   #include "move_set.h"
 }
 
-#include "DSUeval.h"
+#include "BHGbuilder.h"
 #include "RNAutils.h"
 #include "hash_util.h"
 

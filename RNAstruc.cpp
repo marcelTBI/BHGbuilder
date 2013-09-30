@@ -13,7 +13,7 @@ extern "C" {
   #include "read_epars.h"
 }
 
-#include "DSUeval.h"
+#include "BHGbuilder.h"
 #include "hash_util.h"
 
 #include <algorithm>

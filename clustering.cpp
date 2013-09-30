@@ -12,7 +12,7 @@ extern "C" {
   #include "move_set.h"
 }
 
-#include "DSUeval.h"
+#include "BHGbuilder.h"
 
 TBD::TBD()
 {

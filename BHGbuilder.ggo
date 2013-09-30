@@ -1,17 +1,16 @@
 # Name of your program
-package "DSUeval"
+package "BHGbuilder"
 purpose "Landscape analysis: using near minima connections, tries to recompute local minima landmap of the landscape\n\
   input: (stdin) local minima (output from barriers/RNAlocmin program)\n\
   output: (stdout) saddles and which minima they connect\n\
-          (stdout) component information about graph after LinkCP function\n\
           .dot file with landmap graph in DOT language\n\
           additional: see options under \"Output\" an \"Evaluation\" section"
 
 # Version of your program
-version "0.1"   # don't use version if you're using automake
+version "1.0"   # don't use version if you're using automake
 
 # command line options passed to gengetopt
-args "--file-name=DSUeval_cmdline --include-getopt --default-optional --unamed-opts"
+args "--file-name=BHGbuilder_cmdline --include-getopt --default-optional --unamed-opts"
 
 # Options
 option "debug"        			- "Print debug" flag off
