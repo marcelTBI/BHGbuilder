@@ -73,6 +73,7 @@ section "Evaluation"
 option "energy-heights"     - "output energies of saddles between every pair of structures (filename)" string no
 option "energy-rank"        - "output sorted energies of saddles between minima (filename)" string no
 option "energy-barrier"			- "output sorted barrier heights between minima (filename)" string no
+option "analyze-graph"			- "Analyze graph - histogram of connectivity, ..." flag off
 
 section "Clustering"
 option "cluster-Kmax"       K "Size of maximal cluster (clustering is off by default)" int default="0" no
