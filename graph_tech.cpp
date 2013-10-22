@@ -284,3 +284,39 @@ void DSU::ERank(FILE *rank, bool barr, bool out_conns)
   fprintf(stderr, "average energy = %6.2f/%4d = %11.8f\n", total_en/100.0, (count-1), total_en/100.0/(double)(count-1));
 }
 
+void DSU::Histo(FILE *histo)
+{
+  vector<int> histogram(LM.size(), 0);
+  vector<int> histogramf(LM.size(), 0);
+
+  int filter = -5920;
+
+  // build
+  for (int i=0; i<saddles.size(); i++) {
+    if (LM[saddles[i].lm1].energy<=filter) histogramf[saddles[i].lm1]++;
+    if (LM[saddles[i].lm2].energy<=filter) histogramf[saddles[i].lm2]++;
+    histogram[saddles[i].lm1]++;
+    histogram[saddles[i].lm2]++;
+  }
+
+  // and count them
+  map<int, int> hst_map;
+  map<int, int> hst_mapf;
+  for (int i=0; i<histogram.size(); i++) {
+    hst_map[histogram[i]]++;
+  }
+  for (int i=0; i<histogramf.size(); i++) {
+    hst_mapf[histogramf[i]]++;
+  }
+
+  // print:
+  int count = 0;
+  int countf = 0;
+  for (map<int, int>::iterator it=hst_map.begin(); it!=hst_map.end(); it++) {
+    count += it->second;
+    countf += hst_mapf[it->first];
+    fprintf(histo, "%6d %6d %6d %6d %6d %6d %6d %6d\n", it->first, it->second, hst_mapf[it->first], count, countf, (int)LM.size()-count, (int)LM.size()-countf, count-countf);
+  }
+
+}
+

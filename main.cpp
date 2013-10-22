@@ -187,6 +187,14 @@ int main(int argc, char **argv)
       dsu.ERank(file_h, true);
       fclose(file_h);
     }
+
+    // gaph analyze:
+    if (args_info.analyze_graph_flag) {
+      FILE *histo;
+      histo = fopen("histogram.txt", "w");
+      dsu.Histo(histo);
+      fclose(histo);
+    }
   }
 
   fprintf(stderr, "BHGbuilder exitting succesfully!\n");

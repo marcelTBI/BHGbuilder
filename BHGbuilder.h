@@ -193,5 +193,7 @@ public:
   // evaluation
   void EHeights(FILE *heights, bool full);
   void ERank(FILE *rank, bool barrier, bool out_conns = false);
+
+  void Histo(FILE *histo);
 };
 #endif
