@@ -1112,7 +1112,7 @@ bool Structure::Delete(int left)
         // erase the pknot and fix bpair_pknot
         pknots.erase(pknots.begin()+i);
         for (map<int, int>::iterator it=bpair_pknot.begin(); it!=bpair_pknot.end(); it++) {
-          if (it->second >= (int)i) it->second++;
+          if (it->second >= (int)i) it->second--;
         }
       }
       break;

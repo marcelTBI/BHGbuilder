@@ -318,36 +318,6 @@ bool DSU::InsertUB(RNAsaddle saddle, bool debug)
 
 int DSU::LinkCPLM(Opt opt, bool debug)
 {
-  /*RNAsaddle stru(0,1,DIRECT);
-  stru.energy = 4570;
-  stru.structure = make_pair_table("(((...)((...)((...)...(...).))).)");
-  opt.flood_num = 10000000;
-  int res = FloodUp(LM[0], LM[5], stru, opt, debug);
-  fprintf(stderr, "%4d\t%4d\t%s\t%6.2f\n", 0, 5, res == 1?pt_to_str(stru.structure).c_str():"NO", res == 1 ? stru.energy/100.0:res);
-  free(stru.structure);
-*/
-
-/* for computing the direct saddle table::
-
-  FILE *dirsaddles = fopen("dirsad.txt", "w");
-  for (int i=0; i<LM.size(); i++) {
-    for (int j=i+1; j<LM.size(); j++) {
-      RNAsaddle stru(0,1,DIRECT);
-      stru.energy = 4570;
-      stru.structure = make_pair_table("(((...)((...)((...)...(...).))).)");
-      opt.flood_num = 100000;
-      int res = FloodUp(LM[i], LM[j], stru, opt, debug);
-      fprintf(dirsaddles, "%4d\t%4d\t%s\t%6.2f\n", i+1, j+1, res == 1?pt_to_str(stru.structure).c_str():"NO", res == 1 ? stru.energy/100.0:res);
-      free(stru.structure);
-    }
-    fprintf(stderr, "done %d \n", i+1);
-  }
-  fclose(dirsaddles);
-
-*/
-
-
-
   //edgesV_ls.resize(LM.size());
   edgesV_l.resize(LM.size());
 

@@ -394,7 +394,7 @@ int Findpath::ComputeSaddle(short *str1, short *str2)
         if (verbose_lvl > 1) {
           short *st = allocopy(inter.structure);
           if (MoveStr(st, it->left, it->right)) {
-            fprintf(stderr, "TRY: %s %6.2f %6.2f %d\n", pt_to_str_pk(st).c_str(), inter.Sen/100.0, inter.energy/100.0, inter.dist);
+            fprintf(stderr, "TRY: %s\n", pt_to_str_pk(st).c_str());
           }
           free(st);
         }
