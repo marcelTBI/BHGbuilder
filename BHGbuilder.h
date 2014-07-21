@@ -16,6 +16,7 @@
 extern "C" {
   #include "findpath.h"
 }
+#include "findpath_pk.h"
 
 #include "RNAutils.h"
 #include "RNAstruc.h"
@@ -86,6 +87,9 @@ private:
   // temperature
   double _kT;
 
+  // computing with pseudoknots?
+  bool pknots;
+
   // structures
   vector<RNAlocmin> LM;  // contains memory (after split - should be in both programs)
   int number_lm;  // number of lm in the beginning
@@ -126,7 +130,7 @@ private:
   DSU() {};
 
 public:
-  DSU(FILE *input, bool noLP, bool shifts, int time_max, int max_lm, bool just_read); // read seq + structs from input (barriers/RNAlocmin output)
+  DSU(FILE *input, bool noLP, bool shifts, bool pknots, int time_max, int max_lm, bool just_read, bool debug); // read seq + structs from input (barriers/RNAlocmin output)
   ~DSU();
 
 public:
@@ -145,6 +149,7 @@ public:
   // helpers
   int FindNum(int energy, short *str);           // find number of structure
   void FindNumbers(int begin, int end, path_t *path, vector<int> &lm_numbers, bool shifts, bool noLP, bool debug); // find all numbers of LM on path by bisection
+  void FindNumbers(int begin, int end, path_pk *path, vector<int> &lm_numbers, bool shifts, bool noLP, bool debug); // and the PK version
   bool InsertUB(RNAsaddle saddle, bool debug); // insert into UBlist
     // link cp
   int FloodUp(RNAlocmin &i, RNAlocmin &j, RNAsaddle &saddle, Opt &opt, bool debug); // flood up from i and j to find direct saddle

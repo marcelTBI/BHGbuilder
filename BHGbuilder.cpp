@@ -8,24 +8,30 @@ extern "C" {
   #include "pair_mat.h"
 
   #include "fold.h"
-  #include "findpath.h"
-  #include "move_set.h"
+  //#include "findpath.h"
 }
+
+#include "move_set_pk.h"
 
 #include "BHGbuilder.h"
 #include "hash_util.h"
+
+#include "move_set_pk.h"
 
 #include <algorithm>
 
 using namespace std;
 
-DSU::DSU(FILE *input, bool noLP, bool shifts, int time_max, int max_lm, bool just_read) {
+DSU::DSU(FILE *input, bool noLP, bool shifts, bool pknots, int time_max, int max_lm, bool just_read, bool debug) {
 
   // NULL::
   seq = NULL;
   s0 = NULL;
   s1 = NULL;
   gl_maxen = INT_MIN;
+
+  // pseudoknots?
+  this->pknots = pknots;
 
   // time:
   if (time_max) {
@@ -78,7 +84,7 @@ DSU::DSU(FILE *input, bool noLP, bool shifts, int time_max, int max_lm, bool jus
           if (!p) {empty_line = true; break;}
           if (isStruct(p)) {
             if (tmp) free(tmp); // only one struct per line!
-            tmp = make_pair_table(p);
+            tmp = pknots?make_pair_table_PK(p):make_pair_table(p);
             break;
           }
         case 2:
@@ -138,7 +144,7 @@ DSU::DSU(FILE *input, bool noLP, bool shifts, int time_max, int max_lm, bool jus
         if (!saddle_reading) {
           RNAlocmin struc;
           struc.structure = tmp;
-          struc.str_ch = pt_to_char(struc.structure);
+          struc.str_ch = pt_to_chars_pk(struc.structure);
           struc.energy = en_fltoi(energy_tmp);
           struc.type = (LMtype)type;
 
@@ -150,7 +156,7 @@ DSU::DSU(FILE *input, bool noLP, bool shifts, int time_max, int max_lm, bool jus
         } else {
           RNAsaddle struc(LM_c[0], LM_c[1], (SDtype)type);
           struc.structure = tmp;
-          struc.str_ch = pt_to_char(struc.structure);
+          struc.str_ch = pt_to_chars_pk(struc.structure);
           struc.energy = en_fltoi(energy_tmp);
           // insert new sadle
           saddles.push_back(struc);
@@ -189,10 +195,14 @@ DSU::DSU(FILE *input, bool noLP, bool shifts, int time_max, int max_lm, bool jus
   } else {
     //read structs
     line = my_getline(input);
+
     while (line) {
       short *tmp = NULL;
       float energy_tmp;
       bool has_energy = false;
+
+      //if (debug) fprintf(stderr, "%s\n", line);
+
 
       char *p;
       p = strtok(line, " ");
@@ -200,7 +210,9 @@ DSU::DSU(FILE *input, bool noLP, bool shifts, int time_max, int max_lm, bool jus
         // is struct?
         if (isStruct(p)) {
           if (tmp) free(tmp); // only one struct per line!
-          tmp = make_pair_table(p);
+          tmp = pknots?make_pair_table_PK(p):make_pair_table(p);
+          //if (debug) fprintf(stderr, "%s\n", pt_to_str_pk(tmp).c_str());
+
           has_energy = false;
         } else {
           // is energy?
@@ -214,14 +226,21 @@ DSU::DSU(FILE *input, bool noLP, bool shifts, int time_max, int max_lm, bool jus
       // add info:
       if (tmp) {
         // check if its true local minima
-        int en = move_deepest(seq, tmp, s0, s1, 0, shifts, noLP);
+        int en;
+        if (pknots) {
+          Structure str(seq, tmp, s0, s1);
+          en = move_gradient_pk(seq, &str, s0, s1, 0);
+          copy_arr(tmp, str.str);
+        } else {
+          en = move_gradient(seq, tmp, s0, s1, 0, shifts, noLP);
+        }
 
         // if we don't have it yet, add it:
         if (FindNum(en, tmp)==-1) {
 
           RNAlocmin struc;
           struc.structure = tmp;
-          struc.str_ch = pt_to_char(struc.structure);
+          struc.str_ch = pt_to_chars_pk(struc.structure);
           struc.energy = en;
           //int en = (has_energy?en_fltoi(energy_tmp):energy_of_structure_pt(seq, tmp, s0, s1, 0));
 
@@ -248,6 +267,8 @@ DSU::DSU(FILE *input, bool noLP, bool shifts, int time_max, int max_lm, bool jus
     }
   }
 
+  if (debug) PrintLM(stderr, false);
+
   // sort them!
   SortFix();
 	number_lm = (int)LM.size();
@@ -263,6 +284,8 @@ DSU::~DSU() {
   if (s0) free(s0);
   if (s1) free(s1);
   LM.clear();
+
+  if (pknots) freeP();
 
   for (unsigned int i=0; i<saddles.size(); i++) {
     if (saddles[i].structure) free(saddles[i].structure);
@@ -997,86 +1020,176 @@ void DSU::ConnectComps(int maxkeep, bool debug)
 
     // get path
     if (debug) fprintf(stderr, "path between (LM: %d, %d) (comp: %d, %d) (hd: %d):\n", top.i, top.j, top.ci, top.cj, top.hd);
-    path_t *path = get_path(seq, top.str_ch1, top.str_ch2, maxkeep);
+    if (pknots) {
+      path_pk *path = get_path_pk(seq, top.str_ch1, top.str_ch2, maxkeep);
 
-    /*// variables for outer insertion
-    double max_energy= -1e8;
-    path_t *max_path = path;*/
+      /*// variables for outer insertion
+      double max_energy= -1e8;
+      path_t *max_path = path;*/
 
-    // variables for inner loops and insertions
-    path_t *tmp = path;
-    path_t *last = NULL;
-    short *last_str = NULL;
-    int last_en = tmp->en;
-    int last_num = -1;
+      // variables for inner loops and insertions
+      path_pk *tmp = path;
+      path_pk *last = NULL;
+      short *last_str = NULL;
+      int last_en = tmp->en;
+      int last_num = -1;
 
-    // loop through whole path
-    while (tmp && tmp->s) {
-      dbg_count++;
-      // debug??
-      if (debug) fprintf(stderr, "%s %6.2f ", tmp->s, tmp->en);
+      // loop through whole path
+      while (tmp && tmp->s) {
+        dbg_count++;
+        // debug??
+        if (debug) fprintf(stderr, "%s %6.2f ", tmp->s, tmp->en);
 
-      /*// update max_energy
-      if (max_energy < tmp->en) {
-        max_energy = tmp->en;
-        max_path = tmp;
-      }*/
-      // find adaptive walk
-      short *tmp_str = make_pair_table(tmp->s);
-      //int tmp_en = move_rand(seq, tmp_str, s0, s1, 0);
-      int tmp_en = move_deepest(seq, tmp_str, s0, s1, 0, 0, 0);
+        /*// update max_energy
+        if (max_energy < tmp->en) {
+          max_energy = tmp->en;
+          max_path = tmp;
+        }*/
+        // find adaptive walk
+        short *tmp_str = allocopy(tmp->structure);
+        //int tmp_en = move_rand(seq, tmp_str, s0, s1, 0);
 
-      if (debug) fprintf(stderr, "%s %6.2f (LM: %4d) (comp: %4d)\n", pt_to_str(tmp_str).c_str(), tmp_en/100.0, FindNum(tmp_en, tmp_str)+1, LM_to_comp[FindNum(tmp_en, tmp_str)]);
+        int tmp_en;
+        if (pknots) {
+          Structure str(seq, tmp_str, s0, s1);
+          tmp_en = move_gradient_pk(seq, &str, s0, s1, 0);
+          copy_arr(tmp_str, str.str);
+        } else {
+          tmp_en = move_gradient(seq, tmp_str, s0, s1, 0, 0, 0);
+        }
+        if (debug) fprintf(stderr, "%s %6.2f (LM: %4d) (comp: %4d)\n", pt_to_str(tmp_str).c_str(), tmp_en/100.0, FindNum(tmp_en, tmp_str)+1, LM_to_comp[FindNum(tmp_en, tmp_str)]);
 
-      // do the stuff if we have 2 structs and they are not equal
-      if (last && !str_eq(last_str, tmp_str)) {
-        // not equal LM - we can update something in UBlist
-          // find LM num:
-        int num1 = (last_num!=-1?last_num:FindNum(last_en, last_str));
-        int num2 = FindNum(tmp_en, tmp_str);
+        // do the stuff if we have 2 structs and they are not equal
+        if (last && !str_eq(last_str, tmp_str)) {
+          // not equal LM - we can update something in UBlist
+            // find LM num:
+          int num1 = (last_num!=-1?last_num:FindNum(last_en, last_str));
+          int num2 = FindNum(tmp_en, tmp_str);
 
-        // check if ok
-        if (num1==-1 || num2==-1) {
-          if (num2==-1) {
-            if (gl_maxen < tmp_en) {
-              fprintf(stderr, "exceeds en.: %s %6.2f\n", pt_to_str(tmp_str).c_str(), tmp_en/100.0);
-              num2 = AddLMtoComp(tmp_str, tmp_en, debug, connected, connections);
-            } else {
-              fprintf(stderr, "WARNING! cannot find: %s %6.2f\n", pt_to_str(tmp_str).c_str(), tmp_en/100.0);
+          // check if ok
+          if (num1==-1 || num2==-1) {
+            if (num2==-1) {
+              if (gl_maxen < tmp_en) {
+                fprintf(stderr, "exceeds en.: %s %6.2f\n", pt_to_str(tmp_str).c_str(), tmp_en/100.0);
+                num2 = AddLMtoComp(tmp_str, tmp_en, debug, connected, connections);
+              } else {
+                fprintf(stderr, "WARNING! cannot find: %s %6.2f\n", pt_to_str(tmp_str).c_str(), tmp_en/100.0);
+              }
             }
           }
-        }
-        // again check
-        if (num1!=-1 && num2!=-1) {
-          // find component
-          if (LM_to_comp.count(num1)==0 || LM_to_comp.count(num2)==0) {
-            fprintf(stderr, "Not found component of LM num %d or %d (HUGE ERROR!)\n", num1, num2);
-          } else {
-            // add connection
-            short *saddle = (last->en > tmp->en ? make_pair_table(last->s) : make_pair_table(tmp->s));
-            AddConnection(num1, num2, en_fltoi(max(last->en, tmp->en)), saddle, connected, connections);
+          // again check
+          if (num1!=-1 && num2!=-1) {
+            // find component
+            if (LM_to_comp.count(num1)==0 || LM_to_comp.count(num2)==0) {
+              fprintf(stderr, "Not found component of LM num %d or %d (HUGE ERROR!)\n", num1, num2);
+            } else {
+              // add connection
+              short *saddle = (last->en > tmp->en ? allocopy(last->structure) : allocopy(tmp->structure));
+              AddConnection(num1, num2, en_fltoi(max(last->en, tmp->en)), saddle, connected, connections);
+            }
           }
+
+          // update last_num
+          last_num = num2;
         }
 
-        // update last_num
-        last_num = num2;
-      }
+        // move one next
+        if (last_str) free(last_str);
+        last_en = tmp_en;
+        last_str = tmp_str;
+        last = tmp;
+        tmp++;
+      } // crawling path
 
-      // move one next
+      // insert saddle between outer structures
+      //short *saddle = make_pair_table(max_path->s);
+      //AddConnection(?, ?, en_fltoi(max_energy), saddle, connected, connections);
+
+      // free stuff
       if (last_str) free(last_str);
-      last_en = tmp_en;
-      last_str = tmp_str;
-      last = tmp;
-      tmp++;
-    } // crawling path
+      free_path_pk(path);
+    } else {
+      path_t *path = get_path(seq, top.str_ch1, top.str_ch2, maxkeep);
 
-    // insert saddle between outer structures
-    //short *saddle = make_pair_table(max_path->s);
-    //AddConnection(?, ?, en_fltoi(max_energy), saddle, connected, connections);
+      /*// variables for outer insertion
+      double max_energy= -1e8;
+      path_t *max_path = path;*/
 
-    // free stuff
-    if (last_str) free(last_str);
-    free_path(path);
+      // variables for inner loops and insertions
+      path_t *tmp = path;
+      path_t *last = NULL;
+      short *last_str = NULL;
+      int last_en = tmp->en;
+      int last_num = -1;
+
+      // loop through whole path
+      while (tmp && tmp->s) {
+        dbg_count++;
+        // debug??
+        if (debug) fprintf(stderr, "%s %6.2f ", tmp->s, tmp->en);
+
+        /*// update max_energy
+        if (max_energy < tmp->en) {
+          max_energy = tmp->en;
+          max_path = tmp;
+        }*/
+        // find adaptive walk
+        short *tmp_str = make_pair_table(tmp->s);
+        //int tmp_en = move_rand(seq, tmp_str, s0, s1, 0);
+        int tmp_en = move_gradient(seq, tmp_str, s0, s1, 0, 0, 0);
+
+        if (debug) fprintf(stderr, "%s %6.2f (LM: %4d) (comp: %4d)\n", pt_to_str(tmp_str).c_str(), tmp_en/100.0, FindNum(tmp_en, tmp_str)+1, LM_to_comp[FindNum(tmp_en, tmp_str)]);
+
+        // do the stuff if we have 2 structs and they are not equal
+        if (last && !str_eq(last_str, tmp_str)) {
+          // not equal LM - we can update something in UBlist
+            // find LM num:
+          int num1 = (last_num!=-1?last_num:FindNum(last_en, last_str));
+          int num2 = FindNum(tmp_en, tmp_str);
+
+          // check if ok
+          if (num1==-1 || num2==-1) {
+            if (num2==-1) {
+              if (gl_maxen < tmp_en) {
+                fprintf(stderr, "exceeds en.: %s %6.2f\n", pt_to_str(tmp_str).c_str(), tmp_en/100.0);
+                num2 = AddLMtoComp(tmp_str, tmp_en, debug, connected, connections);
+              } else {
+                fprintf(stderr, "WARNING! cannot find: %s %6.2f\n", pt_to_str(tmp_str).c_str(), tmp_en/100.0);
+              }
+            }
+          }
+          // again check
+          if (num1!=-1 && num2!=-1) {
+            // find component
+            if (LM_to_comp.count(num1)==0 || LM_to_comp.count(num2)==0) {
+              fprintf(stderr, "Not found component of LM num %d or %d (HUGE ERROR!)\n", num1, num2);
+            } else {
+              // add connection
+              short *saddle = (last->en > tmp->en ? make_pair_table(last->s) : make_pair_table(tmp->s));
+              AddConnection(num1, num2, en_fltoi(max(last->en, tmp->en)), saddle, connected, connections);
+            }
+          }
+
+          // update last_num
+          last_num = num2;
+        }
+
+        // move one next
+        if (last_str) free(last_str);
+        last_en = tmp_en;
+        last_str = tmp_str;
+        last = tmp;
+        tmp++;
+      } // crawling path
+
+      // insert saddle between outer structures
+      //short *saddle = make_pair_table(max_path->s);
+      //AddConnection(?, ?, en_fltoi(max_energy), saddle, connected, connections);
+
+      // free stuff
+      if (last_str) free(last_str);
+      free_path(path);
+    }
   }
   // write connections to graph:
   edgesV_l.resize(LM.size());
@@ -1088,7 +1201,7 @@ void DSU::ConnectComps(int maxkeep, bool debug)
       RNAsaddle* saddle = connections[i][j];
       saddle->type = COMP;
       //vertex_s.insert(make_pair(*saddle, saddles.size()));
-      saddle->str_ch = pt_to_char(saddle->structure);
+      saddle->str_ch = pt_to_chars_pk(saddle->structure);
       saddles.push_back(*saddle);
 
       // edge l-l

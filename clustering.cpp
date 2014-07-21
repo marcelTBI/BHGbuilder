@@ -8,10 +8,12 @@ extern "C" {
   #include "pair_mat.h"
 
   #include "fold.h"
-  #include "findpath.h"
+  //#include "findpath.h"
   #include "move_set.h"
 }
 
+#include "move_set_pk.h"
+#include "pknots.h"
 #include "BHGbuilder.h"
 
 TBD::TBD()
@@ -197,7 +199,8 @@ int DSU::Cluster(Opt &opt, int kmax)
   for (set<RNAsaddle, RNAsaddle_comp>::iterator it=UBlist.begin(); it!=UBlist.end(); it++) {
     RNAsaddle saddle = *it;
     if (it->str_ch) free(it->str_ch);
-    saddle.str_ch = pt_to_char(it->structure);
+    saddle.str_ch = pt_to_chars_pk(it->structure);
+    //if (pknots) pt_to_str_pk(it->structure, saddle.str_ch);
     saddles.push_back(saddle);
   }
   sort(saddles.begin(), saddles.end());
@@ -342,7 +345,14 @@ void DSU::FindNumbers(int begin, int end, path_t *path, vector<int> &lm_numbers,
 
       // get the minimum
       short *tmp_str = make_pair_table(path[i].s);
-      int tmp_en = move_deepest(seq, tmp_str, s0, s1, 0, shifts, noLP);
+      int tmp_en;
+      if (pknots) {
+        Structure str(seq, tmp_str, s0, s1);
+        tmp_en = move_gradient_pk(seq, &str, s0, s1, 0);
+        copy_arr(tmp_str, str.str);
+      } else {
+        tmp_en = move_gradient(seq, tmp_str, s0, s1, 0, shifts, noLP);
+      }
       // speedup
       if (begins && tmp_en == LM[lm_numbers[begin]].energy && str_eq(LM[lm_numbers[begin]].structure, tmp_str)) {
         lm_numbers[i] = lm_numbers[begin];
@@ -380,7 +390,7 @@ void DSU::FindNumbers(int begin, int end, path_t *path, vector<int> &lm_numbers,
 
   short *tmp_str = make_pair_table(path[pivot].s);
   //fprintf(stderr, "%s\n", pt_to_str(tmp_str).c_str());
-  int tmp_en = move_deepest(seq, tmp_str, s0, s1, 0, shifts, noLP);
+  int tmp_en = move_gradient(seq, tmp_str, s0, s1, 0, shifts, noLP);
 
   //fprintf(stderr, "%s\n", pt_to_str(tmp_str).c_str());
 
@@ -421,6 +431,107 @@ void DSU::FindNumbers(int begin, int end, path_t *path, vector<int> &lm_numbers,
   return ;
 }
 
+void DSU::FindNumbers(int begin, int end, path_pk *path, vector<int> &lm_numbers, bool shifts, bool noLP, bool debug)
+{
+  // first resolve small case:
+  if (end-begin<4) {
+    bool begins = true;
+    for (int i=begin+1; i<end; i++) {
+
+      // get the minimum
+      short *tmp_str = allocopy(path[i].structure);
+      int tmp_en;
+      if (pknots) {
+        Structure str(seq, tmp_str, s0, s1);
+        tmp_en = move_gradient_pk(seq, &str, s0, s1, 0);
+        copy_arr(tmp_str, str.str);
+      } else {
+        tmp_en = move_gradient(seq, tmp_str, s0, s1, 0, shifts, noLP);
+      }
+      // speedup
+      if (begins && tmp_en == LM[lm_numbers[begin]].energy && str_eq(LM[lm_numbers[begin]].structure, tmp_str)) {
+        lm_numbers[i] = lm_numbers[begin];
+      } else {
+        begins = false;
+        if (tmp_en == LM[lm_numbers[end]].energy && str_eq(LM[lm_numbers[end]].structure, tmp_str)) {
+          lm_numbers[i] = lm_numbers[end];
+        }
+      }
+
+      if (lm_numbers[i]==-1) {
+        lm_numbers[i] = FindNum(tmp_en, tmp_str);
+
+        // update UBlist
+        if (lm_numbers[i]==-1) {
+          if (gl_maxen < tmp_en) {
+            //fprintf(stderr, "exceeds en.: %s %6.2f\n", pt_to_str(tmp_str).c_str(), tmp_en/100.0);
+            lm_numbers[i] = AddLMtoTBD(tmp_str, tmp_en, EE_DSU, debug);
+
+          } else {
+            if (debug) fprintf(stderr, "cannot find: %s %6.2f\n", pt_to_str_pk(tmp_str).c_str(), tmp_en/100.0);
+            // add to list of minima and count with them later...
+            lm_numbers[i] = AddLMtoTBD(tmp_str, tmp_en, NORM_CF, debug);
+          }
+        }
+      } else debug_c++;
+
+      free(tmp_str);
+    }
+    return ;
+  }
+
+  // da middle one
+  int pivot = (end+begin)/2;
+
+  short *tmp_str = allocopy(path[pivot].structure);
+  //fprintf(stderr, "%s\n", pt_to_str(tmp_str).c_str());
+  int tmp_en;
+  if (pknots) {
+    Structure str(seq, tmp_str, s0, s1);
+    tmp_en = move_gradient_pk(seq, &str, s0, s1, 0);
+    copy_arr(tmp_str, str.str);
+  } else {
+    tmp_en = move_gradient(seq, tmp_str, s0, s1, 0, shifts, noLP);
+  }
+  //fprintf(stderr, "%s\n", pt_to_str(tmp_str).c_str());
+
+  // speed up:
+  if (tmp_en == LM[lm_numbers[begin]].energy && str_eq(LM[lm_numbers[begin]].structure, tmp_str)) {
+    lm_numbers[pivot] = lm_numbers[begin];
+  } else {
+    if (tmp_en == LM[lm_numbers[end]].energy && str_eq(LM[lm_numbers[end]].structure, tmp_str)) {
+      lm_numbers[pivot] = lm_numbers[end];
+    }
+  }
+
+  // normal behaviour
+  if (lm_numbers[pivot]==-1) {
+    lm_numbers[pivot] = FindNum(tmp_en, tmp_str);
+
+    // update UBlist
+    if (lm_numbers[pivot]==-1) {
+      if (gl_maxen < tmp_en) {
+        //fprintf(stderr, "exceeds en.: %s %6.2f\n", pt_to_str(tmp_str).c_str(), tmp_en/100.0);
+        lm_numbers[pivot] = AddLMtoTBD(tmp_str, tmp_en, EE_DSU, debug);
+
+      } else {
+        if (debug) fprintf(stderr, "cannot find: %s %6.2f\n", pt_to_str_pk(tmp_str).c_str(), tmp_en/100.0);
+        // add to list of minima and count with them later...
+        lm_numbers[pivot] = AddLMtoTBD(tmp_str, tmp_en, NORM_CF, debug);
+      }
+    }
+  } else debug_c++;
+
+  free(tmp_str);
+
+  // continue recursion:
+  if (lm_numbers[pivot]!=lm_numbers[begin] && pivot-begin>1) FindNumbers(begin, pivot, path, lm_numbers, shifts, noLP, debug);
+  if (lm_numbers[pivot]!=lm_numbers[end] && end-pivot>1) FindNumbers(pivot, end, path, lm_numbers, shifts, noLP, debug);
+
+  // return maximal energy
+  return ;
+}
+
 void DSU::ComputeTBD(TBD &pqueue, int maxkeep, int num_threshold, bool outer, bool noLP, bool shifts, bool debug, vector<RNAsaddle> *output_saddles)
 {
   int cnt = 0;
@@ -435,7 +546,7 @@ void DSU::ComputeTBD(TBD &pqueue, int maxkeep, int num_threshold, bool outer, bo
     }
 
     // just visualisation
-    if (!output_saddles && cnt%1000==0) {
+    if (!output_saddles && cnt%100==0) {
       fprintf(stderr, "Finding path: %7d/%7d\n", cnt, pqueue.size()+cnt);
     }
 
@@ -458,170 +569,180 @@ void DSU::ComputeTBD(TBD &pqueue, int maxkeep, int num_threshold, bool outer, bo
     // get path
     if (debug) fprintf(stderr, "path between (%3d, %3d) type=%s fiber=%d:\n", tbd.i, tbd.j, type1_str[tbd.type_clust], tbd.fiber);
     //2fprintf(stderr, "depth: %d\n%s\n%s\n%s\n", maxkeep, seq, LM[tbd.i].str_ch, LM[tbd.j].str_ch);
-    path_t *path = get_path(seq, LM[tbd.i].str_ch, LM[tbd.j].str_ch, maxkeep);
+    if (pknots) {
+      path_pk *path = get_path_pk(seq, LM[tbd.i].str_ch, LM[tbd.j].str_ch, maxkeep);
 
-    // variables for outer insertion
-    double max_energy= -1e8;
-    path_t *max_path = path;
+      // variables for outer insertion
+      double max_energy= -1e8;
+      path_pk *max_path = path;
 
-    // variables for inner loops and insertions
+      // variables for inner loops and insertions
 
-    // get the length of path for speed up
-    int length = 0;
-    for (path_t *tmp = path; tmp && tmp->s; tmp++) {
-      length ++;
-    }
+      // get the length of path for speed up
+      int length = 0;
+      for (path_pk *tmp = path; tmp && tmp->s; tmp++) {
+        length ++;
+      }
 
-    // create vector of known LM numbers on path (where 0 and length-1 are known)
-    vector<int> lm_numbers(length, -1);
-    lm_numbers[0] = tbd.i;
-    lm_numbers[length-1] = tbd.j;
+      // create vector of known LM numbers on path (where 0 and length-1 are known)
+      vector<int> lm_numbers(length, -1);
+      lm_numbers[0] = tbd.i;
+      lm_numbers[length-1] = tbd.j;
 
-    // bisect the path and find new LMs:
-    FindNumbers(0, length-1, path, lm_numbers, shifts, noLP, debug);
-
-
-    // debug
-    if (debug) {
-      int diff = 1;
-      int last_num = lm_numbers[0];
-      for (int i=0; i<length; i++) {
-        fprintf(stderr, "path[%3d]= %4d (%s %6.2f)\n", i, lm_numbers[i], path[i].s, path[i].en);
-        if (lm_numbers[i]!=last_num && lm_numbers[i]!=-1) {
-          diff++;
-          last_num=lm_numbers[i];
+      // debug
+      if (debug) {
+        for (int i=0; i<length; i++) {
+          fprintf(stderr, "path[%3d] %s %6.2f\n", i, path[i].s, path[i].en/100.0);
         }
       }
-      histo[length][diff]++;
-      histo[length][0]++;
-    }
 
-    // now process the array of found numbers:
-    int last_num = lm_numbers[0];
-    for (int i=1; i<length; i++) {
-      if (lm_numbers[i]!=-1 && lm_numbers[i]!=last_num) {
-
-        // save saddle
-        RNAsaddle saddle(last_num, lm_numbers[i], DIRECT);
-        saddle.energy = en_fltoi(max(path[i-1].en, path[i].en));
-        saddle.str_ch = NULL;
-        saddle.structure = (path[i-1].en > path[i].en ? make_pair_table(path[i-1].s) : make_pair_table(path[i].s));
-        bool inserted = InsertUB(saddle, debug);
-
-        // ???
-        if (output_saddles && inserted) {
-          output_saddles->push_back(saddle);
-        }
-
-        // try to insert new things into TBD:
-        if (lm_numbers[i]!=lm_numbers[length-1] || lm_numbers[i-1]!=lm_numbers[0]) {
-          // check no-conn
-          if (conectivity.size() > 0) conectivity.union_set(tbd.i, tbd.j);
-          pqueue.insert(lm_numbers[i-1], lm_numbers[i], NEW_FOUND, true);
-        }
-        last_num = lm_numbers[i];
-      }
-    }
-
-   /* // loop through whole path
-    while (tmp && tmp->s) {
-      dbg_count++;
-      // debug??
-      if (debug) fprintf(stderr, "%s %6.2f", tmp->s, tmp->en);
-
-      // update max_energy
-      if (max_energy < tmp->en) {
-        max_energy = tmp->en;
-        max_path = tmp;
-      }
-      // find adaptive walk
-      short *tmp_str = make_pair_table(tmp->s);
-      //int tmp_en = move_rand(seq, tmp_str, s0, s1, 0);
-      int tmp_en = move_deepest(seq, tmp_str, s0, s1, 0, shifts, noLP);
-
-      // do the stuff if we have 2 structs and they are not equal
-      if (last && !str_eq(last_str, tmp_str)) {
-        path_length++;
-        // not equal LM - we can update something in UBlist
-          // find LM num:
-        int num1 = (last_num!=-1?last_num:FindNum(last_en, last_str));
-        int num2 = FindNum(tmp_en, tmp_str);
-
-        if (debug) fprintf(stderr, " %d\n", num2);
+      // bisect the path and find new LMs:
+      FindNumbers(0, length-1, path, lm_numbers, shifts, noLP, debug);
 
 
-
-        // update UBlist
-        if (num1==-1 || num2==-1) {
-          if (num2==-1) {
-            if (gl_maxen <= tmp_en) {
-              //fprintf(stderr, "exceeds en.: %s %6.2f\n", pt_to_str(tmp_str).c_str(), tmp_en/100.0);
-              num2 = AddLMtoTBD(tmp_str, tmp_en, EE_DSU, debug);
-
-            } else {
-              fprintf(stderr, "cannot find: %s %6.2f\n", pt_to_str(tmp_str).c_str(), tmp_en/100.0);
-              // add to list of minima and count with them later...
-              num2 = AddLMtoTBD(tmp_str, tmp_en, NORM_CF, debug);
-            }
+      // debug
+      if (debug) {
+        int diff = 1;
+        int last_num = lm_numbers[0];
+        for (int i=0; i<length; i++) {
+          fprintf(stderr, "path[%3d]= %4d (%s %6.2f)\n", i, lm_numbers[i], path[i].s, path[i].en/100.0);
+          if (lm_numbers[i]!=last_num && lm_numbers[i]!=-1) {
+            diff++;
+            last_num=lm_numbers[i];
           }
         }
-        // again check if we can add better saddle
-        if (num1!=-1 && num2!=-1) {
-          // store (maybe) better saddle to UB
-          RNAsaddle saddle(num1, num2, DIRECT);
-          saddle.energy = en_fltoi(max(last->en, tmp->en));
-          saddle.str_ch = NULL;
-          saddle.structure = (last->en > tmp->en ? make_pair_table(last->s) : make_pair_table(tmp->s));
+        histo[length][diff]++;
+        histo[length][0]++;
+      }
 
+      // now process the array of found numbers:
+      int last_num = lm_numbers[0];
+      for (int i=1; i<length; i++) {
+        if (lm_numbers[i]!=-1 && lm_numbers[i]!=last_num) {
+
+          // save saddle
+          RNAsaddle saddle(last_num, lm_numbers[i], DIRECT);
+          saddle.energy = max(path[i-1].en, path[i].en);
+          saddle.str_ch = NULL;
+          saddle.structure = (path[i-1].en > path[i].en ? allocopy(path[i-1].structure) : allocopy(path[i].structure));
           bool inserted = InsertUB(saddle, debug);
 
+          // ???
           if (output_saddles && inserted) {
             output_saddles->push_back(saddle);
           }
 
           // try to insert new things into TBD:
-          bool do_insert = path_length>2;
-          if (path_length==2) {
-            path_t *check = tmp;
-            check++;
-            if (check != NULL) {
-              do_insert = true;
-            }
+          if (lm_numbers[i]!=lm_numbers[length-1] || lm_numbers[i-1]!=lm_numbers[0]) {
+            // check no-conn
+            if (conectivity.size() > 0) conectivity.union_set(tbd.i, tbd.j);
+            pqueue.insert(lm_numbers[i-1], lm_numbers[i], NEW_FOUND, true);
           }
-          if (do_insert) {
-            pqueue.insert(num1, num2, NEW_FOUND, true);
+          last_num = lm_numbers[i];
+        }
+      }
+
+      // insert saddle between outer structures
+      if (outer) {
+        RNAsaddle tmp(tbd.i, tbd.j, NOT_SURE);
+        tmp.energy = en_fltoi(max_energy);
+        tmp.str_ch = NULL;
+        tmp.structure = make_pair_table_PK(max_path->s);
+
+        bool inserted = InsertUB(tmp, debug);
+
+        if (output_saddles && inserted) {
+          output_saddles->push_back(tmp);
+        }
+      }
+
+      free_path_pk(path);
+    } else {
+      path_t *path = get_path(seq, LM[tbd.i].str_ch, LM[tbd.j].str_ch, maxkeep);
+
+      // variables for outer insertion
+      double max_energy= -1e8;
+      path_t *max_path = path;
+
+      // variables for inner loops and insertions
+
+      // get the length of path for speed up
+      int length = 0;
+      for (path_t *tmp = path; tmp && tmp->s; tmp++) {
+        length ++;
+      }
+
+      // create vector of known LM numbers on path (where 0 and length-1 are known)
+      vector<int> lm_numbers(length, -1);
+      lm_numbers[0] = tbd.i;
+      lm_numbers[length-1] = tbd.j;
+
+      // bisect the path and find new LMs:
+      FindNumbers(0, length-1, path, lm_numbers, shifts, noLP, debug);
+
+
+      // debug
+      if (debug) {
+        int diff = 1;
+        int last_num = lm_numbers[0];
+        for (int i=0; i<length; i++) {
+          fprintf(stderr, "path[%3d]= %4d (%s %6.2f)\n", i, lm_numbers[i], path[i].s, path[i].en);
+          if (lm_numbers[i]!=last_num && lm_numbers[i]!=-1) {
+            diff++;
+            last_num=lm_numbers[i];
           }
         }
-
-        // change last_num
-        last_num = num2;
-      } else if (debug) fprintf(stderr, "\n");
-
-      // move one next
-      if (last_str) free(last_str);
-      last_en = tmp_en;
-      last_str = tmp_str;
-      last = tmp;
-      tmp++;
-    } // crawling path*/
-
-    // insert saddle between outer structures
-    if (outer) {
-      RNAsaddle tmp(tbd.i, tbd.j, NOT_SURE);
-      tmp.energy = en_fltoi(max_energy);
-      tmp.str_ch = NULL;
-      tmp.structure = make_pair_table(max_path->s);
-
-      bool inserted = InsertUB(tmp, debug);
-
-      if (output_saddles && inserted) {
-        output_saddles->push_back(tmp);
+        histo[length][diff]++;
+        histo[length][0]++;
       }
+
+      // now process the array of found numbers:
+      int last_num = lm_numbers[0];
+      for (int i=1; i<length; i++) {
+        if (lm_numbers[i]!=-1 && lm_numbers[i]!=last_num) {
+
+          // save saddle
+          RNAsaddle saddle(last_num, lm_numbers[i], DIRECT);
+          saddle.energy = en_fltoi(max(path[i-1].en, path[i].en));
+          saddle.str_ch = NULL;
+          saddle.structure = (path[i-1].en > path[i].en ? make_pair_table(path[i-1].s) : make_pair_table(path[i].s));
+          bool inserted = InsertUB(saddle, debug);
+
+          // ???
+          if (output_saddles && inserted) {
+            output_saddles->push_back(saddle);
+          }
+
+          // try to insert new things into TBD:
+          if (lm_numbers[i]!=lm_numbers[length-1] || lm_numbers[i-1]!=lm_numbers[0]) {
+            // check no-conn
+            if (conectivity.size() > 0) conectivity.union_set(tbd.i, tbd.j);
+            pqueue.insert(lm_numbers[i-1], lm_numbers[i], NEW_FOUND, true);
+          }
+          last_num = lm_numbers[i];
+        }
+      }
+
+      // insert saddle between outer structures
+      if (outer) {
+        RNAsaddle tmp(tbd.i, tbd.j, NOT_SURE);
+        tmp.energy = en_fltoi(max_energy);
+        tmp.str_ch = NULL;
+        tmp.structure = make_pair_table(max_path->s);
+
+        bool inserted = InsertUB(tmp, debug);
+
+        if (output_saddles && inserted) {
+          output_saddles->push_back(tmp);
+        }
+      }
+
+      free_path(path);
     }
 
     // free stuff
     //if (last_str) free(last_str);
-    free_path(path);
+
   } // all doing while
 }
 
@@ -631,7 +752,8 @@ int DSU::AddLMtoTBD(short *tmp_str, int tmp_en, LMtype type, bool debug)
   RNAlocmin rna;
   rna.energy = tmp_en;
   rna.structure = allocopy(tmp_str);
-  rna.str_ch = pt_to_char(tmp_str);
+  rna.str_ch = pt_to_chars_pk(tmp_str);
+  //if (pknots) pt_to_str_pk(tmp_str, rna.str_ch);
   rna.type = type;
 
   // insert LM and return its number

@@ -1,4 +1,5 @@
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 
 extern "C" {
@@ -6,6 +7,7 @@ extern "C" {
 }
 
 #include "RNAutils.h"
+#include "move_set_pk.h"
 
 /* reads a line no matter how long*/
 char* my_getline(FILE *fp)
@@ -68,12 +70,12 @@ bool isStruct(const char *p)
 {
   // check first two chars - should be enough
   if (strlen(p)<2) return false;
-  if ((p[0]=='.' || p[0]=='(' || p[0]==')') && (p[1]=='.' || p[1]=='(' || p[1]==')')) return true;
+  if ((p[0]=='.' || p[0]=='(') && (p[1]=='.' || p[1]=='(' || p[1]=='[')) return true;
   else return false;
 }
 
 int HammingDist(char* struct1, const short* struct2) {
-  short* s1 = make_pair_table(struct1);
+  short* s1 = make_pair_table_PK(struct1);
 
   int bpdist = HammingDist(s1, struct2);
 
@@ -83,8 +85,8 @@ int HammingDist(char* struct1, const short* struct2) {
 }
 
 int HammingDist(char* struct1, char* struct2) {
-  short* s1 = make_pair_table(struct1);
-  short* s2 = make_pair_table(struct2);
+  short* s1 = make_pair_table_PK(struct1);
+  short* s2 = make_pair_table_PK(struct2);
 
   int bpdist = HammingDist(s1, s2);
 

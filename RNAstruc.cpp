@@ -8,13 +8,14 @@ extern "C" {
   #include "pair_mat.h"
 
   #include "fold.h"
-  #include "findpath.h"
+  //#include "findpath.h"
   #include "move_set.h"
   #include "read_epars.h"
 }
 
 #include "BHGbuilder.h"
 #include "hash_util.h"
+#include "move_set_pk.h"
 
 #include <algorithm>
 
@@ -45,6 +46,7 @@ Opt::Opt(gengetopt_args_info &args_info)
   this->fbarrier = !args_info.cluster_fsaddle_flag;
   this->no_conn = args_info.no_conn_flag;
 
+  this->pknots = args_info.pseudoknots_flag;
   //update_fold_params();
 }
 
@@ -57,7 +59,10 @@ void RNAstruc::recompute_str()
 {
   if (str_ch) free(str_ch);
   if (!structure) str_ch = NULL;
-  else str_ch = pt_to_char(structure);
+  else {
+    str_ch = pt_to_chars_pk(structure);
+    //pt_to_str_pk(structure, str_ch);
+  }
 }
 
 inline double rate(int en_from, int en_to, double _kT) {

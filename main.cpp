@@ -40,7 +40,7 @@ int main(int argc, char **argv)
   // code
     // BHGbuilder
   Opt opt(args_info);
-  DSU dsu(stdin, args_info.noLP_flag, args_info.shift_flag, args_info.time_max_arg, args_info.number_lm_arg, args_info.just_read_flag);
+  DSU dsu(stdin, args_info.noLP_flag, args_info.shift_flag, args_info.pseudoknots_flag, args_info.time_max_arg, args_info.number_lm_arg, args_info.just_read_flag, args_info.debug_flag);
 
   if (!args_info.just_read_flag) {
     dsu.Cluster(opt, args_info.cluster_Kmax_arg);
@@ -188,7 +188,7 @@ int main(int argc, char **argv)
       fclose(file_h);
     }
 
-    // gaph analyze:
+    // graph analyze:
     if (args_info.analyze_graph_flag) {
       FILE *histo;
       histo = fopen("histogram.txt", "w");

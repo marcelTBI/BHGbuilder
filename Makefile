@@ -6,13 +6,15 @@ NAME=BHGbuilder
 
 OBJ = $(NAME)_cmdline.o\
 			main.o\
-			move_set.o\
+			move_set_pk.o\
 			$(NAME).o\
 			RNAutils.o\
 			flooding.o\
 			graph_tech.o\
 			RNAstruc.o\
-			clustering.o
+			clustering.o\
+			pknots.o\
+			findpath_pk.o
 
 # should stay unchanged: 
 CPP = g++

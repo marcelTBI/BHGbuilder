@@ -4,7 +4,7 @@
 
 extern "C" {
   #include "fold.h"
-  #include "findpath.h"
+ // #include "findpath.h"
   #include "move_set.h"
 }
 
@@ -106,7 +106,7 @@ int DSU::FloodUp(RNAlocmin &i, RNAlocmin &j, RNAsaddle &saddle, Opt &opt, bool d
     }
 
     // start browsing
-    curr.energy = browse_neighs(seq, curr.structure, s0, s1, 0, opt.shifts, opt.noLP, funct);
+    curr.energy = browse_neighs_pt(seq, curr.structure, s0, s1, 0, opt.shifts, opt.noLP, funct);
 
     // found DS - quitting
     if (foundDS) {
@@ -224,7 +224,7 @@ bool DSU::FloodSaddle(RNAsaddle &saddle_lower, RNAsaddle &saddle_higher, Opt &op
     }
 
     // start browsing
-    curr.energy = browse_neighs(seq, curr.structure, s0, s1, 0, opt.shifts, opt.noLP, funct_saddle);
+    curr.energy = browse_neighs_pt(seq, curr.structure, s0, s1, 0, opt.shifts, opt.noLP, funct_saddle);
 
     // found DS - quitting
     if (found_saddle) {

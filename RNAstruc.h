@@ -36,16 +36,16 @@ struct RNAstruc {
     if (energy==second.energy) {
       // comparator for structures (in notation as used in energy_of_move)
       int i=1;
-      char l=0,r=0;
+      short l=0,r=0;
       while (i<=structure[0]) {
-        l = (structure[i]==0?'.':(structure[i]<structure[structure[i]]?')':'('));
-        r = (second.structure[i]==0?'.':(second.structure[i]<second.structure[second.structure[i]]?')':'('));
+        l = structure[i];
+        r = second.structure[i];
         if (l != r) break;
         i++;
       }
       //fprintf(stderr, "%s %c %s\n", pt_to_str(lhs).c_str(), (i<=lhs[0] && l<r) ? '<':'>', pt_to_str(rhs).c_str());
       if (i>structure[0]) return false;
-      return l<r;
+      return l>r;
     } else return energy<second.energy;
   }
 
@@ -55,8 +55,8 @@ struct RNAstruc {
       int i=1;
       char l=0,r=0;
       while (i<=structure[0]) {
-        l = (structure[i]==0?'.':(structure[i]<structure[structure[i]]?')':'('));
-        r = (second.structure[i]==0?'.':(second.structure[i]<second.structure[second.structure[i]]?')':'('));
+        l = structure[i];
+        r = second.structure[i];
         if (l != r) break;
         i++;
       }
@@ -122,6 +122,8 @@ struct Opt {
   int flood_height;
 
   bool no_conn;
+
+  bool pknots; // if we allow pseudoknots
 
   // for clustering
   bool debug;
