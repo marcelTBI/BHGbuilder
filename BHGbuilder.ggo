@@ -32,6 +32,7 @@ details="\nWith -d1 only unpaired bases can participate in at most one dangling 
  treat dangling ends differently. Use -d2 in addition to -p to ensure that both algorithms use the same\
  energy model.\n\n" int default="2" optional
 option "pseudoknots"        k "Allow for pseudoknots according to \"gfold\" model - H, K, L, and M types (genus one) of pseudoknots are allowed. (slower)" flag off
+option "quiet"              q "Do not output regular output, only output on demand (paths, graphs, ...)." flag off
 
 section "UBlist"
 option "hd-threshold"       - "Do not try to process pairs with Hamming distance more than this. (0 means no threshold)" int default="0" no
@@ -43,6 +44,7 @@ option "components"         c "Also link components with DSU-algorithm" flag on
 option "noSaddle"           - "Do not flood-link sadddles (saves some computation time, usually saddles are not connected anyway)" flag off
 option "just-ub"  					- "Do not find connections - just do first part of program" hidden flag off
 option "no-conn"            - "Do not connect what is already connected (saves computation time greatly, decreases accuracy greatly)" flag off hidden
+option "conn-neighs"        - "Number of neighbours of newly found minima to connect. Saves computation time if set to 0 (and low values)." int default="0" no
 
 option "floodMax"           - "Flood cap on number - how many structures to flood (flooding is disabled by default)" int default="0" no
 option "floodHeight"        - "Flood cap on height - what is the maximal energy height we will flood in 10cal/mol (0 = unlimited)" int default="0" no

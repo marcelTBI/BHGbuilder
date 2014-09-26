@@ -36,7 +36,7 @@ int     find_saddle_pk(const char *seq,
 
 /**
  *  \brief Find refolding path between 2 structures
- *  (serch only direct path)
+ *  (serch only direct path) (light version does not fill the "s" data in path_pk data structure.)
  *
  *  \param seq RNA sequence
  *  \param s1 A pointer to the character array where the first
@@ -49,6 +49,11 @@ int     find_saddle_pk(const char *seq,
 path_pk* get_path_pk( const char *seq,
                   const char *s1,
                   const char *s2,
+                  int maxkeep);
+
+path_pk* get_path_light_pk( const char *seq,
+                  short *s1,
+                  short* s2,
                   int maxkeep);
 
 /**

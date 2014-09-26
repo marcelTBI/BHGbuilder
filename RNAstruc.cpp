@@ -47,6 +47,8 @@ Opt::Opt(gengetopt_args_info &args_info)
   this->no_conn = args_info.no_conn_flag;
 
   this->pknots = args_info.pseudoknots_flag;
+
+  this->conn_neighs = args_info.conn_neighs_arg;
   //update_fold_params();
 }
 

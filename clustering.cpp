@@ -192,7 +192,7 @@ int DSU::Cluster(Opt &opt, int kmax)
   fprintf(stderr, "output size = %d (%d, %d, %d)\n", output.size(), output.sizes[0], output.sizes[1], output.sizes[2]);
 
   // now finish:
-  ComputeTBD(output, opt.maxkeep, opt.num_threshold, opt.outer, opt.noLP, opt.shifts, opt.debug);
+  ComputeTBD(output, opt.maxkeep, opt.num_threshold, opt.outer, opt.noLP, opt.shifts, opt.debug, NULL, opt.conn_neighs);
 
   // now just resort UBlist to something sorted according energy
   saddles.reserve(UBlist.size());
@@ -275,7 +275,7 @@ void DSU::GetRepre(TBD &output, set<int> &represents, set<int> &children, Opt &o
 
   // collect saddles for intercluster connections
   vector<RNAsaddle> input;
-  ComputeTBD(cluster, opt.maxkeep, opt.num_threshold, opt.outer, opt.noLP, opt.shifts, opt.debug, &input);
+  ComputeTBD(cluster, opt.maxkeep, opt.num_threshold, opt.outer, opt.noLP, opt.shifts, opt.debug, &input, opt.conn_neighs);
 
   // insert new representatives
   if (opt.fbarrier) {
@@ -532,9 +532,11 @@ void DSU::FindNumbers(int begin, int end, path_pk *path, vector<int> &lm_numbers
   return ;
 }
 
-void DSU::ComputeTBD(TBD &pqueue, int maxkeep, int num_threshold, bool outer, bool noLP, bool shifts, bool debug, vector<RNAsaddle> *output_saddles)
+void DSU::ComputeTBD(TBD &pqueue, int maxkeep, int num_threshold, bool outer, bool noLP, bool shifts, bool debug, vector<RNAsaddle> *output_saddles, int conn_neighs)
 {
   int cnt = 0;
+
+  clock_t time_tbd = clock();
 
   // go through all pairs in queue
   while (pqueue.size()>0) {
@@ -546,8 +548,9 @@ void DSU::ComputeTBD(TBD &pqueue, int maxkeep, int num_threshold, bool outer, bo
     }
 
     // just visualisation
-    if (!output_saddles && cnt%100==0) {
-      fprintf(stderr, "Finding path: %7d/%7d\n", cnt, pqueue.size()+cnt);
+    if (!output_saddles && cnt%100==0 && cnt!=0) {
+      double tim = (clock()  - time_tbd)/(double)CLOCKS_PER_SEC;
+      fprintf(stderr, "Finding path: %7d/%7d; Time: %6.2f; Est.:%6.2f\n", cnt, pqueue.size()+cnt, tim, tim/(double)cnt*pqueue.size());
     }
 
     // apply threshold
@@ -570,7 +573,7 @@ void DSU::ComputeTBD(TBD &pqueue, int maxkeep, int num_threshold, bool outer, bo
     if (debug) fprintf(stderr, "path between (%3d, %3d) type=%s fiber=%d:\n", tbd.i, tbd.j, type1_str[tbd.type_clust], tbd.fiber);
     //2fprintf(stderr, "depth: %d\n%s\n%s\n%s\n", maxkeep, seq, LM[tbd.i].str_ch, LM[tbd.j].str_ch);
     if (pknots) {
-      path_pk *path = get_path_pk(seq, LM[tbd.i].str_ch, LM[tbd.j].str_ch, maxkeep);
+      path_pk *path = get_path_light_pk(seq, LM[tbd.i].structure, LM[tbd.j].structure, maxkeep);
 
       // variables for outer insertion
       double max_energy= -1e8;
@@ -580,7 +583,7 @@ void DSU::ComputeTBD(TBD &pqueue, int maxkeep, int num_threshold, bool outer, bo
 
       // get the length of path for speed up
       int length = 0;
-      for (path_pk *tmp = path; tmp && tmp->s; tmp++) {
+      for (path_pk *tmp = path; tmp && tmp->structure; tmp++) {
         length ++;
       }
 
@@ -592,20 +595,45 @@ void DSU::ComputeTBD(TBD &pqueue, int maxkeep, int num_threshold, bool outer, bo
       // debug
       if (debug) {
         for (int i=0; i<length; i++) {
-          fprintf(stderr, "path[%3d] %s %6.2f\n", i, path[i].s, path[i].en/100.0);
+          fprintf(stderr, "path[%3d] %s %6.2f\n", i, pt_to_str_pk(path[i].structure).c_str(), path[i].en/100.0);
         }
       }
 
       // bisect the path and find new LMs:
+      unsigned int old_size = LM.size();
       FindNumbers(0, length-1, path, lm_numbers, shifts, noLP, debug);
 
+      // if we have found new minima and we want to do more than simple reevaluation of path (--conn-neighs>0)
+      if (LM.size() - old_size > 0 && conn_neighs > 0) {
+        for (unsigned int j=old_size; j<LM.size(); j++) {
+
+          // sort 'em according to Hamming D. and take first "conn_neighs"
+          multimap<int, int> distances;
+          for (unsigned int i=0; i<old_size; i++) {
+            distances.insert(make_pair(HammingDist(LM[i].structure, LM[j].structure), i));
+          }
+          int cnt = 0;
+          int last_hd = -1;
+          for (auto it=distances.begin(); it!=distances.end(); it++) {
+            if (cnt > conn_neighs && last_hd != it->first) {
+              break;
+            }
+
+            pqueue.insert(it->second, j, EXPERIM, false);
+
+            cnt++;
+            last_hd = it->first;
+          }
+        }
+
+      }
 
       // debug
       if (debug) {
         int diff = 1;
         int last_num = lm_numbers[0];
         for (int i=0; i<length; i++) {
-          fprintf(stderr, "path[%3d]= %4d (%s %6.2f)\n", i, lm_numbers[i], path[i].s, path[i].en/100.0);
+          fprintf(stderr, "path[%3d]= %4d (%s %6.2f)\n", i, lm_numbers[i], pt_to_str_pk(path[i].structure).c_str(), path[i].en/100.0);
           if (lm_numbers[i]!=last_num && lm_numbers[i]!=-1) {
             diff++;
             last_num=lm_numbers[i];
@@ -637,6 +665,8 @@ void DSU::ComputeTBD(TBD &pqueue, int maxkeep, int num_threshold, bool outer, bo
             // check no-conn
             if (conectivity.size() > 0) conectivity.union_set(tbd.i, tbd.j);
             pqueue.insert(lm_numbers[i-1], lm_numbers[i], NEW_FOUND, true);
+
+
           }
           last_num = lm_numbers[i];
         }
@@ -658,6 +688,7 @@ void DSU::ComputeTBD(TBD &pqueue, int maxkeep, int num_threshold, bool outer, bo
 
       free_path_pk(path);
     } else {
+      //fprintf(stderr, "%s\n%s\n%s\n", seq, LM[tbd.i].str_ch, LM[tbd.j].str_ch);
       path_t *path = get_path(seq, LM[tbd.i].str_ch, LM[tbd.j].str_ch, maxkeep);
 
       // variables for outer insertion
@@ -678,8 +709,33 @@ void DSU::ComputeTBD(TBD &pqueue, int maxkeep, int num_threshold, bool outer, bo
       lm_numbers[length-1] = tbd.j;
 
       // bisect the path and find new LMs:
+      unsigned int old_size = LM.size();
       FindNumbers(0, length-1, path, lm_numbers, shifts, noLP, debug);
 
+      // if we have found new minima and we want to do more than simple reevaluation of path (--conn-neighs>0)
+      if (LM.size() - old_size > 0 && conn_neighs > 0) {
+        for (unsigned int j=old_size; j<LM.size(); j++) {
+
+          // sort 'em according to Hamming D. and take first "conn_neighs"
+          multimap<int, int> distances;
+          for (unsigned int i=0; i<old_size; i++) {
+            distances.insert(make_pair(HammingDist(LM[i].structure, LM[j].structure), i));
+          }
+          int cnt = 0;
+          int last_hd = -1;
+          for (auto it=distances.begin(); it!=distances.end(); it++) {
+            if (cnt > conn_neighs && last_hd != it->first) {
+              break;
+            }
+
+            pqueue.insert(it->second, j, EXPERIM, false);
+
+            cnt++;
+            last_hd = it->first;
+          }
+        }
+
+      }
 
       // debug
       if (debug) {

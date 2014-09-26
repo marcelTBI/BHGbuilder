@@ -228,7 +228,7 @@ public:
   }
 
   int ComputeSaddle(short *str1, short *str2);
-  path_pk *GetPath(short *str1, short *str2);
+  path_pk *GetPath(short *str1, short *str2, bool chars = true);
 
   vector<move_fp> GetMoves(const short *str1, const short *str2);
 
@@ -394,7 +394,7 @@ int Findpath::ComputeSaddle(short *str1, short *str2)
         if (verbose_lvl > 1) {
           short *st = allocopy(inter.structure);
           if (MoveStr(st, it->left, it->right)) {
-            fprintf(stderr, "TRY: %s\n", pt_to_str_pk(st).c_str());
+            fprintf(stderr, "TRY: %s %6.2f %6.2f %d\n", pt_to_str_pk(st).c_str(), inter.Sen/100.0, inter.energy/100.0, inter.dist);
           }
           free(st);
         }
@@ -447,7 +447,7 @@ char *allocopy(const char *src)
   return res;
 }
 
-path_pk *Findpath::GetPath(short *str1, short *str2)
+path_pk *Findpath::GetPath(short *str1, short *str2, bool chars)
 {
   ComputeSaddle(str1, str2);
 
@@ -456,7 +456,7 @@ path_pk *Findpath::GetPath(short *str1, short *str2)
   res[result.moves_done.size()+1].structure = NULL;
   res[result.moves_done.size()+1].s = NULL;
   res[result.moves_done.size()].structure = allocopy(result.structure);
-  res[result.moves_done.size()].s = allocopy(pt_to_str_pk(result.structure).c_str());
+  res[result.moves_done.size()].s = chars?pt_to_chars_pk(result.structure):NULL;
   res[result.moves_done.size()].en = result.energy;
 
   for (int i=result.moves_done.size()-1; i>=0; i--) {
@@ -470,7 +470,7 @@ path_pk *Findpath::GetPath(short *str1, short *str2)
       res[i].structure[-left] = -right;
       res[i].structure[-right] = -left;
     }
-    res[i].s = allocopy(pt_to_str_pk(res[i].structure).c_str()); // not the right thing
+    res[i].s = chars?pt_to_chars_pk(res[i].structure):NULL;
     res[i].en = res[i+1].en - result.moves_done[i].dE; // minus the difference
   }
 
@@ -509,11 +509,22 @@ path_pk* get_path_pk( const char *seq,
   return res;
 }
 
+path_pk* get_path_light_pk( const char *seq,
+                  short *s1,
+                  short* s2,
+                  int maxkeep)
+{
+  Findpath fp(seq, verbosity);
+  fp.SetMaxKeep(maxkeep);
+  path_pk *res = fp.GetPath(s1, s2, false);
+  return res;
+}
+
 void free_path_pk(path_pk *path)
 {
   path_pk *old = path;
-  while (path->s) {
-    free(path->s);
+  while (path->structure) {
+    if (path->s) free(path->s);
     free(path->structure);
     path++;
   }

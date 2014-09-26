@@ -80,9 +80,11 @@ int main(int argc, char **argv)
   */
 
 
-    // real output:
-    dsu.PrintLM(stdout);
-    dsu.PrintSaddles(stdout);
+    if (!args_info.quiet_flag) {
+      // real output:
+      dsu.PrintLM(stdout);
+      dsu.PrintSaddles(stdout);
+    }
 
     // barriers-like output
     if (args_info.barr_file_given) {
@@ -165,35 +167,44 @@ int main(int argc, char **argv)
 
     // evaluation
     if (args_info.energy_heights_given) {
+      fprintf(stderr, "Printing energy heights...");
       FILE *file_h;
       file_h = fopen(args_info.energy_heights_arg, "w");
       bool full = true;
-      dsu.EHeights(file_h, full);
+      bool only_norm = true;
+      dsu.EHeights(file_h, full, only_norm);
       fclose(file_h);
+      fprintf(stderr, "done, it took %.2f secs.\n", (clock()-time)/(double)CLOCKS_PER_SEC); time = clock();
     }
 
     // evaluation
     if (args_info.energy_rank_given) {
+      fprintf(stderr, "Printing energy ranks...");
       FILE *file_h;
       file_h = fopen(args_info.energy_rank_arg, "w");
       dsu.ERank(file_h, false, true);
       fclose(file_h);
+      fprintf(stderr, "done, it took %.2f secs.\n", (clock()-time)/(double)CLOCKS_PER_SEC); time = clock();
     }
 
     // evaluation
     if (args_info.energy_barrier_given) {
+      fprintf(stderr, "Printing energy barriers...");
       FILE *file_h;
       file_h = fopen(args_info.energy_barrier_arg, "w");
-      dsu.ERank(file_h, true);
+      dsu.ERank(file_h, true, true);
       fclose(file_h);
+      fprintf(stderr, "done, it took %.2f secs.\n", (clock()-time)/(double)CLOCKS_PER_SEC); time = clock();
     }
 
     // graph analyze:
     if (args_info.analyze_graph_flag) {
+      fprintf(stderr, "Analysing the graph...");
       FILE *histo;
       histo = fopen("histogram.txt", "w");
       dsu.Histo(histo);
       fclose(histo);
+      fprintf(stderr, "done, it took %.2f secs.\n", (clock()-time)/(double)CLOCKS_PER_SEC); time = clock();
     }
   }
 

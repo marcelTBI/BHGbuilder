@@ -122,6 +122,7 @@ struct Opt {
   int flood_height;
 
   bool no_conn;
+  int conn_neighs;
 
   bool pknots; // if we allow pseudoknots
 

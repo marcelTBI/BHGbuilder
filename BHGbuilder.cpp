@@ -923,6 +923,9 @@ struct que_tmp {
   char *str_ch1;
   char *str_ch2;
 
+  short *str1;
+  short *str2;
+
   int hd;
 
   // debug info
@@ -933,10 +936,12 @@ struct que_tmp {
     return hd>second.hd;
   };
 
-  que_tmp(char *ch1, char *ch2, int hd) {
+  que_tmp(short *st1, short *st2, char *ch1, char *ch2, int hd) {
     this->hd = hd;
     str_ch1 = ch1;
     str_ch2 = ch2;
+    str1 = st1;
+    str2 = st2;
   }
 
 };
@@ -962,7 +967,7 @@ void DSU::ConnectComps(int maxkeep, bool debug)
       if (comps[i].max_saddle!=-1) first = saddles[comps[i].max_saddle];
       if (comps[j].max_saddle!=-1) second = saddles[comps[j].max_saddle];
 
-      que_tmp tmp(first.str_ch, second.str_ch, HammingDist(first.structure, second.structure));
+      que_tmp tmp(first.structure, second.structure, first.str_ch, second.str_ch, HammingDist(first.structure, second.structure));
       tmp.i = comps[i].LMs[0];
       tmp.j = comps[j].LMs[0];
       tmp.ci = i;
@@ -991,7 +996,7 @@ void DSU::ConnectComps(int maxkeep, bool debug)
     // get path
     if (debug) fprintf(stderr, "path between (LM: %d, %d) (comp: %d, %d) (hd: %d):\n", top.i, top.j, top.ci, top.cj, top.hd);
     if (pknots) {
-      path_pk *path = get_path_pk(seq, top.str_ch1, top.str_ch2, maxkeep);
+      path_pk *path = get_path_light_pk(seq, top.str1, top.str2, maxkeep);
 
       /*// variables for outer insertion
       double max_energy= -1e8;
@@ -1005,10 +1010,10 @@ void DSU::ConnectComps(int maxkeep, bool debug)
       int last_num = -1;
 
       // loop through whole path
-      while (tmp && tmp->s) {
+      while (tmp && tmp->structure) {
         dbg_count++;
         // debug??
-        if (debug) fprintf(stderr, "%s %6.2f ", tmp->s, tmp->en);
+        if (debug) fprintf(stderr, "%s %6.2f ", pt_to_str_pk(tmp->structure).c_str(), tmp->en);
 
         /*// update max_energy
         if (max_energy < tmp->en) {
@@ -1020,13 +1025,10 @@ void DSU::ConnectComps(int maxkeep, bool debug)
         //int tmp_en = move_rand(seq, tmp_str, s0, s1, 0);
 
         int tmp_en;
-        if (pknots) {
-          Structure str(seq, tmp_str, s0, s1);
-          tmp_en = move_gradient_pk(seq, &str, s0, s1, 0);
-          copy_arr(tmp_str, str.str);
-        } else {
-          tmp_en = move_gradient(seq, tmp_str, s0, s1, 0, 0, 0);
-        }
+        Structure str(seq, tmp_str, s0, s1);
+        tmp_en = move_gradient_pk(seq, &str, s0, s1, 0);
+        copy_arr(tmp_str, str.str);
+
         if (debug) fprintf(stderr, "%s %6.2f (LM: %4d) (comp: %4d)\n", pt_to_str(tmp_str).c_str(), tmp_en/100.0, FindNum(tmp_en, tmp_str)+1, LM_to_comp[FindNum(tmp_en, tmp_str)]);
 
         // do the stuff if we have 2 structs and they are not equal

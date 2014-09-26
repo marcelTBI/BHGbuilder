@@ -23,8 +23,8 @@ extern "C" {
 
 using namespace std;
 
-enum type1 {INTER_CLUSTER, REPRESENT, CRIT_EDGE, NEW_FOUND};
-const char type1_str[][14] = {"INTER_CLUSTER", "REPRESENT", "CRIT_EDGE", "NEW_FOUND"};
+enum type1 {INTER_CLUSTER, REPRESENT, CRIT_EDGE, NEW_FOUND, EXPERIM};
+const char type1_str[][14] = {"INTER_CLUSTER", "REPRESENT", "CRIT_EDGE", "NEW_FOUND", "EXPERIM"};
 const int type1_len = 4;
 
 struct TBDentry {
@@ -141,7 +141,7 @@ public:
 
   // clustering
   int Cluster(Opt &opt, int kmax);
-  void ComputeTBD(TBD &pqueue, int maxkeep, int num_threshold, bool outer, bool noLP, bool shifts, bool debug, vector<RNAsaddle> *output_saddles = NULL);
+  void ComputeTBD(TBD &pqueue, int maxkeep, int num_threshold, bool outer, bool noLP, bool shifts, bool debug, vector<RNAsaddle> *output_saddles = NULL, int conn_neighs = 0);
   int AddLMtoTBD(short *tmp_str, int tmp_en, LMtype type, bool debug);
   int JoinClusters(Opt &opt, UF_set_child &ufset, set<int> &represents, TBD &output, int i, int j);
   void GetRepre(TBD &output, set<int> &represents, set<int> &children, Opt &opt);
@@ -196,7 +196,7 @@ public:
   void GetPath(int start, int stop, int maxkeep = 0);
 
   // evaluation
-  void EHeights(FILE *heights, bool full);
+  void EHeights(FILE *heights, bool full, bool only_norm);
   void ERank(FILE *rank, bool barrier, bool out_conns = false);
 
   void Histo(FILE *histo);

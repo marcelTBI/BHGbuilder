@@ -46,7 +46,7 @@ vector<std::pair<int, int> > DSU::HeightSearch(int start, vector< set<edgeLL> > 
     pq_height pq = que.top(); que.pop();
     if (done[pq.number]) continue;
 
-    //fprintf(stderr, "from %d to %d, en %d dist %d\n", pq.from+1, pq.number+1, pq.height, pq.distance);
+    //fprintf(stderr, "from %6d to %6d, en %6.2f dist %6d\n", pq.from+1, pq.number+1, pq.height/100.0, pq.distance);
 
     // write him:
     done[pq.number] = true;
@@ -69,8 +69,7 @@ vector<std::pair<int, int> > DSU::HeightSearch(int start, vector< set<edgeLL> > 
     }
   }
 
-
-
+  // construct the result: vector of heights and distances from the start point to all other points.
   vector<std::pair<int, int> > res(LM.size());
   for (unsigned int i=0; i<heights.size(); i++) {
     //fprintf(stderr, "%d en: %d dist: %d prev: %d\n", i+1, heights[i], distance[i], previous[i]+1);
@@ -112,7 +111,7 @@ void DSU::GetPath(int start, int stop,  vector< set<edgeLL> > &edgesV_l, char *f
     pq_height pq = que.top(); que.pop();
     if (done[pq.number]) continue;
 
-    //fprintf(stderr, "from %d to %d, en %d dist %d\n", pq.from+1, pq.number+1, pq.height, pq.distance);
+    //fprintf(stderr, "from %6d to %6d, en %6.2f dist %6d\n", pq.from+1, pq.number+1, pq.height/100.0, pq.distance);
 
     // write him:
     done[pq.number] = true;
@@ -129,7 +128,7 @@ void DSU::GetPath(int start, int stop,  vector< set<edgeLL> > &edgesV_l, char *f
       int to = it->goesTo(pq.number);
       // if we already had him
       if (done[to]) {
-        if (max(it->en, pq.height) < heights[to]) fprintf(stderr, "WRONG from: %d to: %d enLM %d enHeight %d\n", pq.number+1, to+1, pq.height, heights[to]);
+        if (max(it->en, pq.height) < heights[to]) fprintf(stderr, "WRONG from: %6d to: %6d enLM %6.2f enHeight %6d\n", pq.number+1, to+1, pq.height/100.0, heights[to]);
         continue;
       }
       // push next ones
@@ -165,7 +164,7 @@ void DSU::GetPath(int start, int stop,  vector< set<edgeLL> > &edgesV_l, char *f
           path_pk *tmp = get_path_pk(seq, LM[lms[i]].str_ch, saddles[sdd[i-1]].str_ch, maxkeep);
           path_pk *path = tmp+1;
           while (path && path->s && (path+1) && (path+1)->s) {
-            fprintf(fil, " inter  %s %7.2f %3d\n", path->s, path->en, HammingDist(path->s, LM[lms[0]].structure));
+            fprintf(fil, " inter  %s %7.2f %3d\n", path->s, path->en/100.0, HammingDist(path->s, LM[lms[0]].structure));
             path++;
             count++;
           }
@@ -188,7 +187,7 @@ void DSU::GetPath(int start, int stop,  vector< set<edgeLL> > &edgesV_l, char *f
           path_pk *tmp = get_path_pk(seq, saddles[sdd[i-1]].str_ch, LM[lms[i-1]].str_ch, maxkeep);
           path_pk *path = tmp+1;
           while (path && path->s && (path+1) && (path+1)->s) {
-            fprintf(fil, " inter  %s %7.2f %3d\n", path->s, path->en, HammingDist(path->s, LM[lms[0]].structure));
+            fprintf(fil, " inter  %s %7.2f %3d\n", path->s, path->en/100.0, HammingDist(path->s, LM[lms[0]].structure));
             path++;
             count++;
           }
@@ -214,7 +213,7 @@ void DSU::GetPath(int start, int stop,  vector< set<edgeLL> > &edgesV_l, char *f
   }
 }
 
-void DSU::EHeights(FILE *heights, bool full)
+void DSU::EHeights(FILE *heights, bool full, bool only_norm)
 {
   if (!full) {
     for (unsigned int i=0; i< saddles.size(); i++) {
@@ -224,12 +223,18 @@ void DSU::EHeights(FILE *heights, bool full)
   } else {
     vector<vector<std::pair<int, int> > > res(LM.size());
     for (unsigned int i=0; i<LM.size(); i++) {
+      if (i % 1000 == 0) fprintf(stderr, "searching... %6d/%7d\n", i, res.size());
+      if (only_norm && LM[i].type != NORMAL) continue;
+
+      // search:
       res[i] = HeightSearch(i, edgesV_l);
     }
     for (unsigned int i=0; i<res.size(); i++) {
       for (unsigned int j=i+1; j<res[i].size(); j++) {
-        // print lines: energy heights: from_node, to_node, energy height, distance
-        fprintf(heights, "%4d %4d %.2f %3d\n", i+1, j+1, res[i][j].first/100.0, res[i][j].second);
+        if (only_norm && LM[i].type == NORMAL && LM[j].type == NORMAL) {
+          // print lines: energy heights: from_node, to_node, energy height, distance
+          fprintf(heights, "%4d %4d %.2f %3d\n", i+1, j+1, res[i][j].first/100.0, res[i][j].second);
+        }
       }
     }
   }
@@ -263,7 +268,7 @@ void DSU::ERank(FILE *rank, bool barr, bool out_conns)
         energy_pair ep;
         ep.barrier = res[i][j].first;
         if (barr) {
-          ep.barrier -= max(LM[i].energy, LM[j].energy);
+          ep.barrier -= (LM[i].energy + LM[j].energy)/2;
         }
         ep.i=i;
         ep.j=j;
@@ -274,7 +279,7 @@ void DSU::ERank(FILE *rank, bool barr, bool out_conns)
 
   // variables
   int count = 1;
-  int total_en = 0.0;
+  int total_en = 0;
 
   // build a tree.
   UF_set ufset;
@@ -302,6 +307,10 @@ void DSU::ERank(FILE *rank, bool barr, bool out_conns)
 
       // finally join them
       ufset.union_set(father, child);
+    }
+
+    if (saddles.size()<10) {
+      fprintf(stderr, "%4d %8.2f %4d %4d\n", count++, ep.barrier/100.0, ep.i+1, ep.j+1);
     }
   }
   fprintf(stderr, "average energy = %6.2f/%4d = %11.8f\n", total_en/100.0, (count-1), total_en/100.0/(double)(count-1));
