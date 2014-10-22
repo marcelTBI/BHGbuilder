@@ -12,11 +12,10 @@ extern "C" {
 }
 
 #include "move_set_pk.h"
+#include "findpath_pk.h"
 
 #include "BHGbuilder.h"
 #include "hash_util.h"
-
-#include "move_set_pk.h"
 
 #include <algorithm>
 
@@ -229,7 +228,7 @@ DSU::DSU(FILE *input, bool noLP, bool shifts, bool pknots, int time_max, int max
         int en;
         if (pknots) {
           Structure str(seq, tmp, s0, s1);
-          en = move_gradient_pk(seq, &str, s0, s1, 0);
+          en = move_gradient_pk(seq, &str, s0, s1, shifts, 0);
           copy_arr(tmp, str.str);
         } else {
           en = move_gradient(seq, tmp, s0, s1, 0, shifts, noLP);
@@ -1026,7 +1025,7 @@ void DSU::ConnectComps(int maxkeep, bool debug)
 
         int tmp_en;
         Structure str(seq, tmp_str, s0, s1);
-        tmp_en = move_gradient_pk(seq, &str, s0, s1, 0);
+        tmp_en = move_gradient_pk(seq, &str, s0, s1, 0, 0);
         copy_arr(tmp_str, str.str);
 
         if (debug) fprintf(stderr, "%s %6.2f (LM: %4d) (comp: %4d)\n", pt_to_str(tmp_str).c_str(), tmp_en/100.0, FindNum(tmp_en, tmp_str)+1, LM_to_comp[FindNum(tmp_en, tmp_str)]);

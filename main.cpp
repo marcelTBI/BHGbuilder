@@ -98,7 +98,7 @@ int main(int argc, char **argv)
     //dsu.PrintSaddles(stderr);
     //dsu.PrintComps(stderr, true);
 
-
+    dsu.SetkT(args_info.rates_temp_arg);
     //print optimal path
     for (int i=0; i<(int)args_info.get_path_given; i++) {
       int a, b;
@@ -112,7 +112,7 @@ int main(int argc, char **argv)
           b--;
           if (a>=dsu.Size() || b>=dsu.Size()) {
             fprintf(stderr, "WARNING: visualisation number(s) exceeds number of minima (%d) (%s)\n", dsu.Size(), args_info.get_path_arg[i]);
-          } else dsu.GetPath(a, b, args_info.depth_arg);
+          } else dsu.GetPath(a, b, args_info.depth_arg, args_info.rate_path_flag);
         }
       }
     }

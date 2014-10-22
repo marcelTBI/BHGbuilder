@@ -187,13 +187,15 @@ public:
   // small
   int Size() {return LM.size();}
 
+  void SetkT(double temp) {_kT = 0.00198717*(273.15 + temp);}
+
   // graph techniques
   // -- Height-first Search  -- returns energy barriers to get i-th minima from start minima + distances in graph
   vector<std::pair<int, int> > HeightSearch(int start, vector< set<edgeLL> > &edgesV_l);
 
   // prints optimal path between start and stop to filename.
-  void GetPath(int start, int stop,  vector< set<edgeLL> > &edgesV_l, char *filename, int maxkeep);
-  void GetPath(int start, int stop, int maxkeep = 0);
+  void GetPath(int start, int stop,  vector< set<edgeLL> > &edgesV_l, char *filename, int maxkeep, bool rate_path);
+  void GetPath(int start, int stop, int maxkeep, bool rate_path);
 
   // evaluation
   void EHeights(FILE *heights, bool full, bool only_norm);

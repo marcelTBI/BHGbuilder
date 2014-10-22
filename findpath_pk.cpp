@@ -66,7 +66,7 @@ struct compare_struct {
       }
       i++;
     }
-    return (i<=lhs[0] && l>r);
+    return (i<=lhs[0] && l<r);
   }
 };
 
@@ -186,7 +186,7 @@ bool compare_intermeds::operator()(const intermediate_pk &left, const intermedia
     }
     i++;
   }
-  return (i<=lhs[0] && l>r);
+  return (i<=lhs[0] && l<r);
 }
 
 class Findpath

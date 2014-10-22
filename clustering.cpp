@@ -348,7 +348,7 @@ void DSU::FindNumbers(int begin, int end, path_t *path, vector<int> &lm_numbers,
       int tmp_en;
       if (pknots) {
         Structure str(seq, tmp_str, s0, s1);
-        tmp_en = move_gradient_pk(seq, &str, s0, s1, 0);
+        tmp_en = move_gradient_pk(seq, &str, s0, s1, shifts, 0);
         copy_arr(tmp_str, str.str);
       } else {
         tmp_en = move_gradient(seq, tmp_str, s0, s1, 0, shifts, noLP);
@@ -443,7 +443,7 @@ void DSU::FindNumbers(int begin, int end, path_pk *path, vector<int> &lm_numbers
       int tmp_en;
       if (pknots) {
         Structure str(seq, tmp_str, s0, s1);
-        tmp_en = move_gradient_pk(seq, &str, s0, s1, 0);
+        tmp_en = move_gradient_pk(seq, &str, s0, s1, shifts, 0);
         copy_arr(tmp_str, str.str);
       } else {
         tmp_en = move_gradient(seq, tmp_str, s0, s1, 0, shifts, noLP);
@@ -488,7 +488,7 @@ void DSU::FindNumbers(int begin, int end, path_pk *path, vector<int> &lm_numbers
   int tmp_en;
   if (pknots) {
     Structure str(seq, tmp_str, s0, s1);
-    tmp_en = move_gradient_pk(seq, &str, s0, s1, 0);
+    tmp_en = move_gradient_pk(seq, &str, s0, s1, shifts, 0);
     copy_arr(tmp_str, str.str);
   } else {
     tmp_en = move_gradient(seq, tmp_str, s0, s1, 0, shifts, noLP);
