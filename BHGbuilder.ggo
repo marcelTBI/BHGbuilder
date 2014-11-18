@@ -53,7 +53,7 @@ section "Output"
 option "dot"                - "Use dot instead of neato for graph plotting" flag on
 option "dot-energies"       - "Print energies along with the LM number in graph" flag off
 option "tree-visualise"     t "Use tree visualisation (landmark)" flag off
-option "print-full"         - "Print matrices for all found LM. (default is print only for input, this influences ALL matrices) (switches on --print-energy flag)" flag off
+option "print-full"         - "Print matrices for all found LM. (default is print only for input, this influences ALL matrices)." flag off
 
 option "get-path"           - "Get path between 2 local minima and print it into file pathL1_L2.path" typestr="<l1>=<l2>" string multiple
 option "rate-path"          - "Compute the optimal path according to kinetics (returns path with best cumulative rate). Takes into accout length and saddle heights." flag off
@@ -65,9 +65,10 @@ option "energy-file"        - "Fileneme for energy barrier matrix (does not prin
 option "dist-file"          - "Filename for distance matrix (does not print by default)" string no
 option "gdist-file"         - "Filename for graph distance matrix (does not print by default)" string no
 option "rates-file"         - "Filename for rates for treekin (does not print by default, appends mode_rates on end of filename)" string no
-option "print-all"          - "generate all output (switches on all text '*-file' to default)" flag off
+option "print-all"          - "Generate all output (switches on all text '*-file' to default)" flag off
 option "rates-temp"         T "Temperature for rates (in Celsius)" float default="37.0" no
 option "rates-mode"         - "Mode for rates generation (V - vertex contraction, taking into acount only max_height; S - vertex contraction, taking into acount path; E - edge contraction (minimal barrier); M - edge contraction (maximal barrier); F - full matrix for all LMs)" string default="F" multiple no
+option "filter-file"        - "Filter the results only to those in filter file. Affects only --energy-file, --dist-file, and --gdist-file. Overrides the --print-full option for theese matrices." string no
 
 option "visualise"          v "Visualise paths between 2 structures, can be specified multiple times, output goes to file pathL1_L2.eps" typestr="<l1>=<l2>" string multiple
 option "vis-dist"           - "Set distance as a bounding condition for visualisation (instead of energy)" flag off

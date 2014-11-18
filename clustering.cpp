@@ -563,7 +563,10 @@ void DSU::ComputeTBD(TBD &pqueue, int maxkeep, int num_threshold, bool outer, bo
 
     // get next
     TBDentry tbd = pqueue.get_first();
-    if (tbd.i==-1) break;
+    if (tbd.i==-1) {
+      fprintf(stderr, "Ending the path-finding -- i = %5d ; j = %5d ; fiber = %c ; type = %s \n", tbd.i, tbd.j, tbd.fiber?'Y':'N', type1_str[tbd.type_clust]);
+      break;
+    }
 
     // check no-conn
     if (conectivity.size() > 0 && !tbd.fiber && conectivity.joint(tbd.i, tbd.j)) continue;
@@ -800,6 +803,7 @@ void DSU::ComputeTBD(TBD &pqueue, int maxkeep, int num_threshold, bool outer, bo
     //if (last_str) free(last_str);
 
   } // all doing while
+  fprintf(stderr, "The end of finding paths. Size of pqueue = %d\n", (int)pqueue.size());
 }
 
 

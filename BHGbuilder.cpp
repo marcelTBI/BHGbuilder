@@ -689,8 +689,80 @@ void DSU::VisPath(int src, int dest, bool en_barriers, int max_length, bool dot_
 vector<vector<std::pair<int, int> > > matrix;
 bool generated = false;
 
-void DSU::PrintMatrix(char *filename, bool full, char type)
+void DSU::PrintMatrix(char *filename, bool full, char* filter_file, char type)
 {
+  // firest read the filter file
+  if (filter_file) {
+
+    FILE *filter = fopen(filter_file, "r");
+    if (filter) {
+      mapping.clear();
+
+      char *line = my_getline(filter);
+      while (line) {
+        //fprintf(stderr, "working: %s\n",line);
+        bool empty_line = false;
+        short *tmp = NULL;
+        int num;
+        int energy_tmp;
+
+        char *p;
+        for (int i=0; i<3; i++) {
+          p = strtok(i==0?line:NULL, " ");
+          switch (i) {
+          case 0:
+            if (!p) {empty_line = true; break;}
+            sscanf(p, "%d", &num);
+            break;
+          case 1:
+            if (!p) {empty_line = true; break;}
+            if (isStruct(p)) {
+              if (tmp) free(tmp); // only one struct per line!
+              tmp = pknots?make_pair_table_PK(p):make_pair_table(p);
+              break;
+            }
+          case 2:
+            sscanf(p, "%d", &energy_tmp);
+            break;
+          }
+          if (empty_line) {
+            free(line);
+            break;
+          }
+        }
+
+        // write down the data to mapping
+        if (tmp) {
+          RNAstruc tmpstruc;
+          tmpstruc.structure = tmp;
+          tmpstruc.energy = energy_tmp;
+
+          if (vertex_l.count(tmpstruc)==0) {
+            fprintf(stderr, "WARNING: structure %5d ""%s"" %6.2f  not found in DSU\n", num, pt_to_str_pk(tmp).c_str(), tmpstruc.energy/100.0);
+          } else {
+            int num_real = vertex_l[tmpstruc];
+            mapping.push_back(num_real);
+          }
+        }
+
+        if (tmp) free(tmp); tmp = NULL;
+        free(line);
+        line = my_getline(filter);
+      }
+      fclose(filter);
+
+      mapping_rev.clear();
+      mapping_rev.resize(LM.size());
+      for (int i=0; i<(int)mapping.size(); i++) {
+        mapping_rev[mapping[i]] = i;
+      }
+
+    } else {
+      fprintf(stderr, "WARNING: cannot open filter file ""%s""!", filter_file);
+    }
+  }
+
+
   if (!full && mapping.size() == 0) {
     mapping_rev.resize(LM.size(), 0);
     fprintf(stderr, "Mapping: \n");
@@ -701,9 +773,10 @@ void DSU::PrintMatrix(char *filename, bool full, char type)
         fprintf(stderr, "%4d[%4d] ", i+1, (int)mapping.size());
       }
     }
-    fprintf(stderr, "(%d mapped to %d) \n", (int)LM.size(), (int)mapping.size());
+    //fprintf(stderr, "(%d mapped to %d) \n", (int)LM.size(), (int)mapping.size());
   }
 
+  fprintf(stderr, "Generating the matrix %c\n", type);
   int size = (full?LM.size():mapping.size());
   FILE *energies;
   energies = fopen(filename, "w");
@@ -714,6 +787,7 @@ void DSU::PrintMatrix(char *filename, bool full, char type)
       for (int i=0; i<size; i++) {
         int to_search = full?i:mapping[i];
         matrix.push_back(HeightSearch(to_search, edgesV_l));
+        fprintf(stderr, "done %d/%d\r", i, size);
         // discard those we dont want
         if (!full) {
           for (int j=0; j<(int)mapping.size(); j++) {
@@ -732,6 +806,7 @@ void DSU::PrintMatrix(char *filename, bool full, char type)
     }
 
     // print
+    //fprintf(stderr, "Printing the matrix type %c\n", type);
     for (unsigned int i=0; i<matrix.size(); i++) {
       fprintf(energies, "%6d %s ", mapping[i]+1, LM[mapping[i]].str_ch);
       for (unsigned int j=0; j<matrix[i].size(); j++) {

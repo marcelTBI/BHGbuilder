@@ -117,22 +117,26 @@ int main(int argc, char **argv)
       }
     }
 
+    //#######  this part is influenced by filter-file:
+
     // print energy matrix
     if (args_info.energy_file_given) {
-      dsu.PrintMatrix(args_info.energy_file_arg, args_info.print_full_flag, 'E');
+      dsu.PrintMatrix(args_info.energy_file_arg, args_info.print_full_flag, args_info.filter_file_given?args_info.filter_file_arg:NULL, 'E');
     }
 
     // print dist matrix
     if (args_info.dist_file_given) {
-      dsu.PrintMatrix(args_info.dist_file_arg, args_info.print_full_flag, 'D');
+      dsu.PrintMatrix(args_info.dist_file_arg, args_info.print_full_flag, args_info.filter_file_given?args_info.filter_file_arg:NULL, 'D');
     }
 
     // print graph distance matrix
     if (args_info.gdist_file_given) {
-      dsu.PrintMatrix(args_info.gdist_file_arg, args_info.print_full_flag, 'G');
+      dsu.PrintMatrix(args_info.gdist_file_arg, args_info.print_full_flag, args_info.filter_file_given?args_info.filter_file_arg:NULL, 'G');
     }
 
     fprintf(stderr, "printing matrices took %.2f secs.\n", (clock()-time)/(double)CLOCKS_PER_SEC); time = clock();
+
+    //##########  end of influence
 
     // print rates matrix
     if (args_info.rates_file_given) {

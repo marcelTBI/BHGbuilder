@@ -169,7 +169,7 @@ public:
   void PrintBarr(FILE *output = stdout);
 
   // print files:
-  void PrintMatrix(char *filename, bool full, char type); // print matrices (E - energy, D - distance, G - graph distance)
+  void PrintMatrix(char *filename, bool full, char *filter_file, char type); // print matrices (E - energy, D - distance, G - graph distance)
   void PrintRates(char *filename, bool full, double temp, char mode);
 
     // find components
