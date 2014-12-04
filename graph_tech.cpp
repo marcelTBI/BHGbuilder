@@ -11,31 +11,41 @@ struct pq_height {
   int saddle_num;
   double rate;
 
+  int bdist;
+  PKNOT_TYPES pt;
+
   bool operator<(const pq_height &right) const {
     if (!rate_path_st || rate == right.rate) {
       if (height == right.height) {
-        if (distance == right.distance) return number > right.number;
-        else return distance > right.distance;
+        if (distance == right.distance) {
+          if (bdist == right.bdist) { return number > right.number;
+          } else return bdist > right.bdist;
+        } else return distance > right.distance;
       } else return height > right.height;
     } else return rate < right.rate;
   }
 
-  pq_height(int h, int d, int n, int f, int s, double rat = 0.0) {
+  pq_height(int h, int d, int n, int f, int s, double rat = 0.0, int bist = 0, PKNOT_TYPES pt = PKNOT_TYPES()) {
     height = h;
     distance = d;
     number = n;
     from = f;
     saddle_num = s;
     rate = rat;
+    bdist = bist;
+    this->pt = pt;
   }
 };
 
-vector<std::pair<int, int> > DSU::HeightSearch(int start, vector< set<edgeLL> > &edgesV_l)
+
+vector<HeightData> DSU::HeightSearch(int start, vector< set<edgeLL> > &edgesV_l)
 {
   // define + init
   vector<int> heights(LM.size(), INT_MAX);
   vector<int> distance(LM.size(), INT_MAX);
+  vector<int> bdist(LM.size(), INT_MAX);
   vector<bool> done(LM.size(), false);
+  vector<PKNOT_TYPES> pknot_types(LM.size());
 
   priority_queue<pq_height> que;
 
@@ -43,8 +53,15 @@ vector<std::pair<int, int> > DSU::HeightSearch(int start, vector< set<edgeLL> > 
   done[start] = true;
   distance[start] = 0;
   heights[start] = LM[start].energy;
+  bdist[start] = 0;
   for (set<edgeLL>::iterator it=edgesV_l[start].begin(); it!=edgesV_l[start].end(); it++) {
-    que.push(pq_height(it->en, 1, it->goesTo(start), start, it->saddle));
+    int to = it->goesTo(start);
+    int sadd = it->saddle;
+    int hd = HammingDist(LM[to].structure, saddles[sadd].structure) + HammingDist(saddles[sadd].structure, LM[start].structure);
+    PKNOT_TYPES pt(Identify_PK(LM[start].structure));
+    pt.Add(Identify_PK(LM[to].structure));
+    pt.Add(Identify_PK(saddles[sadd].structure));
+    que.push(pq_height(it->en, 1, it->goesTo(start), start, it->saddle, 0.0, hd, pt));
   }
 
   // main loop -- dijkstra-like (take one with lowest energy, proceed it)
@@ -59,10 +76,13 @@ vector<std::pair<int, int> > DSU::HeightSearch(int start, vector< set<edgeLL> > 
     done[pq.number] = true;
     distance[pq.number] = pq.distance;
     heights[pq.number] = pq.height;
+    bdist[pq.number] = pq.bdist;
+    pknot_types[pq.number] = pq.pt;
 
     // push next ones:
     for (set<edgeLL>::iterator it=edgesV_l[pq.number].begin(); it!=edgesV_l[pq.number].end(); it++) {
       int to = it->goesTo(pq.number);
+      int sadd = it->saddle;
       // if we already had him
       if (done[to]) {
         if (max(it->en, pq.height) < heights[to]) fprintf(stderr, "WRONG from: %d to: %d enLM %d enHeight %d\n", pq.number+1, to+1, pq.height, heights[to]);
@@ -71,16 +91,22 @@ vector<std::pair<int, int> > DSU::HeightSearch(int start, vector< set<edgeLL> > 
       // push next ones
       //fprintf(stderr, "adding(%d): from %d to %d, en %d dist %d\n", (int)!done[to], pq.number+1, to+1, max(it->en, pq.height), pq.distance+1);
       if (!done[to]) {
-        que.push(pq_height(max(it->en, pq.height), pq.distance+1, to, pq.number, it->saddle));
+        int hd = HammingDist(LM[to].structure, saddles[sadd].structure) + HammingDist(saddles[sadd].structure, LM[pq.number].structure);
+        //fprintf(stderr, "%4d %4d %4d \n", pq.number, to, hd);
+        PKNOT_TYPES pt = pq.pt;
+        pt.Add(Identify_PK(LM[to].structure));
+        pt.Add(Identify_PK(saddles[sadd].structure));
+        que.push( pq_height(max(it->en, pq.height), pq.distance+1, to, pq.number, it->saddle, 0.0, pq.bdist+hd, pt) );
       }
     }
   }
 
   // construct the result: vector of heights and distances from the start point to all other points.
-  vector<std::pair<int, int> > res(LM.size());
+  vector<HeightData> res;
   for (unsigned int i=0; i<heights.size(); i++) {
     //fprintf(stderr, "%d en: %d dist: %d prev: %d\n", i+1, heights[i], distance[i], previous[i]+1);
-    res[i] = make_pair(heights[i], distance[i]);
+    //res[i] = make_pair(heights[i], distance[i]);
+    res.push_back(HeightData(heights[i], distance[i], bdist[i], pknot_types[i]));
   }
 
   return res;
@@ -95,6 +121,12 @@ void DSU::GetPath(int start, int stop, int maxkeep, bool rate_path)
 
 void DSU::GetPath(int start, int stop,  vector< set<edgeLL> > &edgesV_l, char *filename, int maxkeep, bool rate_path)
 {
+  /*bool swapped = false;
+  if (LM[start].energy > LM[stop].energy && !rate_path) {
+    swapped = true;
+    swap(start, stop);
+  }*/
+
   rate_path_st = rate_path;
   // define + init
   vector<int> heights(LM.size(), INT_MAX);
@@ -157,7 +189,7 @@ void DSU::GetPath(int start, int stop,  vector< set<edgeLL> > &edgesV_l, char *f
         double r21 = 1.0*exp(-(saddles[pq.saddle_num].energy-LM[pq.number].energy)/100.0/_kT);
         //fprintf(stderr, "%10.8g %10.8g %10.8g => %10.8g\n", pq.rate, r23, r21, pq.rate*r23/(r23+r21));
         rate = pq.rate*r23/(r23+r21); /// combine
-        que.push(pq_height(max(it->en, pq.height), pq.distance+1, to, pq.number, it->saddle, rate));
+        que.push( pq_height(max(it->en, pq.height), pq.distance+1, to, pq.number, it->saddle, rate) );
       }
     }
   }
@@ -176,6 +208,28 @@ void DSU::GetPath(int start, int stop,  vector< set<edgeLL> > &edgesV_l, char *f
   }
   lms.push_back(number);
   rats.push_back(0.0);
+
+  // swap back:
+  /*if (swapped) {
+    swap(start, stop);
+    reverse(lms.begin(), lms.end());
+    reverse(sdd.begin(), sdd.end());
+    // recompute rates:
+    rats.clear();
+
+    rats.push_back(0.0);
+
+    double rate = 1.0*exp(-(saddles[sdd[sdd.size()-1]].energy-LM[lms[lms.size()-1]].energy)/100.0/_kT);
+    rats.push_back(rate);
+    for (int i=sdd.size()-2; i>=0; i--) {
+      double r23 = 1.0*exp(-(saddles[sdd[i+1]].energy-LM[lms[i]].energy)/100.0/_kT);
+      double r21 = 1.0*exp(-(saddles[sdd[i]].energy-LM[lms[i]].energy)/100.0/_kT);
+      rate = rate*r23/(r23+r21);
+      rats.push_back(rate);
+      end_rate = rate;
+    }
+    reverse(rats.begin(),rats.end());
+  }*/
 
 
   // write it down:
@@ -249,7 +303,7 @@ void DSU::EHeights(FILE *heights, bool full, bool only_norm)
       fprintf(heights, "%4d %4d %.2f\n", saddles[i].lm1+1, saddles[i].lm2+1, saddles[i].energy/100.0);
     }
   } else {
-    vector<vector<std::pair<int, int> > > res(LM.size());
+    vector<vector<HeightData> > res(LM.size());
     for (unsigned int i=0; i<LM.size(); i++) {
       if (i % 1000 == 0) fprintf(stderr, "searching... %6d/%7d\n", i, (int)res.size());
       if (only_norm && LM[i].type != NORMAL) continue;
@@ -261,7 +315,7 @@ void DSU::EHeights(FILE *heights, bool full, bool only_norm)
       for (unsigned int j=i+1; j<res[i].size(); j++) {
         if (only_norm && LM[i].type == NORMAL && LM[j].type == NORMAL) {
           // print lines: energy heights: from_node, to_node, energy height, distance
-          fprintf(heights, "%4d %4d %.2f %3d\n", i+1, j+1, res[i][j].first/100.0, res[i][j].second);
+          fprintf(heights, "%4d %4d %.2f %3d %3d\n", i+1, j+1, res[i][j].height/100.0, res[i][j].gdist, res[i][j].bdist);
         }
       }
     }
@@ -272,7 +326,7 @@ void DSU::EHeights(FILE *heights, bool full, bool only_norm)
 void DSU::ERank(FILE *rank, bool barr, bool out_conns)
 {
   // saddle point energies + distances
-  vector<vector<std::pair<int, int> > > res(number_lm);
+  vector<vector<HeightData> > res(number_lm);
   for (int i=0; i<number_lm; i++) {
     res[i] = HeightSearch(i, edgesV_l);
   }
@@ -292,9 +346,9 @@ void DSU::ERank(FILE *rank, bool barr, bool out_conns)
     //if (nodes[i].father!=-1) continue;
     for (int j=i+1; j<n; j++) {
       //if (nodes[j].father!=-1) continue;
-      if (res[i][j].first<1e8) {
+      if (res[i][j].height<1e8) {
         energy_pair ep;
-        ep.barrier = res[i][j].first;
+        ep.barrier = res[i][j].height;
         if (barr) {
           ep.barrier -= (LM[i].energy + LM[j].energy)/2;
         }

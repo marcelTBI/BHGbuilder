@@ -1262,3 +1262,42 @@ int Contains_PK(short *str)
   }
   return 0;
 }
+
+BPAIR_TYPE Identify_PK(short *str)
+{
+  stack<int> pairing;
+  pairing.push(str[0]+1);
+  for (int i=1; i<=str[0]; i++) {
+    if (str[i]==0) continue;
+    if (str[i]>i) { //'('              ///  ?...i.....pairing.top().....str[i]
+      if (str[i]>pairing.top()) {      ///  (...[.....).................]
+        // identified a PKNOT
+          //guess type
+        // check for K-type
+        bool K_type = false;  // ktype - begin between p and str[i], end away
+        bool L_type = false;  // ltype - begin between i and p, end away
+        for (int j=i+1; j< pairing.top(); j++) {
+          if (str[j]>j && str[j]> str[i]) {
+            L_type = true;
+            break;
+          }
+        }
+        for (int j=pairing.top(); j<str[i]; j++) {
+          if (str[j]>j && str[j]> str[i]) {
+            K_type = true;
+            break;
+          }
+        }
+        if (K_type  && L_type) return P_M;
+        if (K_type) return P_K;
+        if (L_type) return P_L;
+        return P_H;
+      }
+      pairing.push(str[i]);
+    }
+    else { //')'
+      pairing.pop();
+    }
+  }
+  return N_S;
+}

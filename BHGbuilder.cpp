@@ -686,7 +686,7 @@ void DSU::VisPath(int src, int dest, bool en_barriers, int max_length, bool dot_
   //printf("%s returned %d", syst, res);
 }
 
-vector<vector<std::pair<int, int> > > matrix;
+vector<vector<HeightData> > matrix;
 bool generated = false;
 
 void DSU::PrintMatrix(char *filename, bool full, char* filter_file, char type)
@@ -701,32 +701,26 @@ void DSU::PrintMatrix(char *filename, bool full, char* filter_file, char type)
       char *line = my_getline(filter);
       while (line) {
         //fprintf(stderr, "working: %s\n",line);
-        bool empty_line = false;
         short *tmp = NULL;
         int num;
-        int energy_tmp;
+        float energy_tmp;
 
         char *p;
         for (int i=0; i<3; i++) {
           p = strtok(i==0?line:NULL, " ");
+          if (!p) break;
           switch (i) {
           case 0:
-            if (!p) {empty_line = true; break;}
             sscanf(p, "%d", &num);
             break;
           case 1:
-            if (!p) {empty_line = true; break;}
             if (isStruct(p)) {
               if (tmp) free(tmp); // only one struct per line!
               tmp = pknots?make_pair_table_PK(p):make_pair_table(p);
               break;
             }
           case 2:
-            sscanf(p, "%d", &energy_tmp);
-            break;
-          }
-          if (empty_line) {
-            free(line);
+            sscanf(p, "%f", &energy_tmp);
             break;
           }
         }
@@ -735,7 +729,7 @@ void DSU::PrintMatrix(char *filename, bool full, char* filter_file, char type)
         if (tmp) {
           RNAstruc tmpstruc;
           tmpstruc.structure = tmp;
-          tmpstruc.energy = energy_tmp;
+          tmpstruc.energy = en_fltoi(energy_tmp);
 
           if (vertex_l.count(tmpstruc)==0) {
             fprintf(stderr, "WARNING: structure %5d ""%s"" %6.2f  not found in DSU\n", num, pt_to_str_pk(tmp).c_str(), tmpstruc.energy/100.0);
@@ -794,26 +788,30 @@ void DSU::PrintMatrix(char *filename, bool full, char* filter_file, char type)
             matrix[i][j] = matrix[i][mapping[j]];
           }
         }
-        if ((int)matrix[i].size()!=size) {
+        /*if ((int)matrix[i].size()!=size) {
           matrix[i].resize(size);
-        }
+        }*/
       }
       // resolve i==i
-      for (unsigned int i=0; i<matrix.size(); i++) {
+      /*for (unsigned int i=0; i<matrix.size(); i++) {
         matrix[i][i] = make_pair(LM[i].energy, 0);
-      }
+      }*/
       generated = true;
     }
+
+
 
     // print
     //fprintf(stderr, "Printing the matrix type %c\n", type);
     for (unsigned int i=0; i<matrix.size(); i++) {
       fprintf(energies, "%6d %s ", mapping[i]+1, LM[mapping[i]].str_ch);
-      for (unsigned int j=0; j<matrix[i].size(); j++) {
+      for (int j=0; j<size; j++) {
         switch (type) {
-        case 'E': fprintf(energies, "%6.2f ", matrix[i][j].first/100.0); break;
+        case 'E': fprintf(energies, "%6.2f ", matrix[i][j].height/100.0); break;
         case 'D': fprintf(energies, "%5d ", HammingDist(LM[i].structure, LM[j].structure)); break;
-        case 'G': fprintf(energies, "%5d ", matrix[i][j].second); break;
+        case 'G': fprintf(energies, "%5d ", matrix[i][j].gdist); break;  /// shouldn't it be the minimum??? then the get pah is not always the same as the number reported here
+        case 'B': fprintf(energies, "%5d ", matrix[i][j].bdist); break;
+        case 'P': fprintf(energies, "%s ", matrix[i][j].ptype.Print()); break;
         }
       }
       fprintf(energies, "\n");
@@ -1335,7 +1333,7 @@ void DSU::PrintBarr(FILE *output)
   fprintf(output, "     %s\n", seq);
 
   //get heights
-  vector<vector<std::pair<int, int> > > res(number_lm);
+  vector<vector<HeightData> > res(number_lm);
   for (int i=0; i<number_lm; i++) {
     res[i] = HeightSearch(i, edgesV_l);
   }
@@ -1347,8 +1345,8 @@ void DSU::PrintBarr(FILE *output)
     int minim = INT_MAX;
     int index;
     for (int j=i-1; j>=0; j--) {
-      if (res[i][j].first <= minim) {
-        minim = res[i][j].first;
+      if (res[i][j].height <= minim) {
+        minim = res[i][j].height;
         index = j;
       }
     }

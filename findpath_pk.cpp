@@ -359,7 +359,8 @@ int Findpath::ComputeSaddle(short *str1, short *str2)
 
 
     // for each in maxkeep do:
-    for (int j=0; j<maxkeep; j++) {
+    int cnt = 0;
+    while (cnt < maxkeep) {
 
       int size = pqueue.size();
 
@@ -413,6 +414,9 @@ int Findpath::ComputeSaddle(short *str1, short *str2)
 
         }
       }
+      // if we want to have it like the findpath...
+      ///if (!Contains_PK(inter.structure))
+      cnt++;
 
       free(inter.structure);
 

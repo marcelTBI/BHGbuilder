@@ -27,6 +27,7 @@ void pt_to_chars_pk(const short *str, char *dest);
 //void copy_arr(short *dest, const short *src);
 
 int Contains_PK(short *str);
+BPAIR_TYPE Identify_PK(short *str);
 
 //debug
 float get_eos_time();

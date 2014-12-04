@@ -20,6 +20,7 @@ extern "C" {
 
 #include "RNAutils.h"
 #include "RNAstruc.h"
+#include "pknots.h"
 
 using namespace std;
 
@@ -70,6 +71,57 @@ public:
   void join(TBD &second);
 private:
   void ResizeDone(int new_size);
+};
+
+struct PKNOT_TYPES {
+  bool H;
+  bool K;
+  bool L;
+  bool M;
+
+  PKNOT_TYPES() {
+    H = K = L = M = false;
+  }
+
+  PKNOT_TYPES(BPAIR_TYPE bpt) {
+    H = K = L = M = false;
+    Add(bpt);
+  }
+
+  void Add(BPAIR_TYPE bpt) {
+    switch (bpt) {
+    case P_H: H = true; break;
+    case P_K: K = true; break;
+    case P_L: L = true; break;
+    case P_M: M = true; break;
+    default: break;
+    }
+  }
+
+  const char* Print() {
+    static string res = "";
+    res[0] = H?'H':'_';
+    res[1] = K?'K':'_';
+    res[2] = L?'L':'_';
+    res[3] = M?'M':'_';
+    res[4] = '\0';
+    return res.c_str();
+  }
+};
+
+struct HeightData {
+  int height; // energies
+  int bdist; // base pair distances
+  int gdist; // graph distances
+  PKNOT_TYPES ptype;
+
+
+  HeightData(int en, int gdist, int bdist, PKNOT_TYPES ptyp) {
+    height = en;
+    this->bdist = bdist;
+    this->gdist = gdist;
+    this->ptype = ptyp;
+  }
 };
 
 class DSU {
@@ -169,7 +221,7 @@ public:
   void PrintBarr(FILE *output = stdout);
 
   // print files:
-  void PrintMatrix(char *filename, bool full, char *filter_file, char type); // print matrices (E - energy, D - distance, G - graph distance)
+  void PrintMatrix(char *filename, bool full, char *filter_file, char type); // print matrices (E - energy, D - distance, G - graph distance, B - base pair distance)
   void PrintRates(char *filename, bool full, double temp, char mode);
 
     // find components
@@ -191,7 +243,7 @@ public:
 
   // graph techniques
   // -- Height-first Search  -- returns energy barriers to get i-th minima from start minima + distances in graph
-  vector<std::pair<int, int> > HeightSearch(int start, vector< set<edgeLL> > &edgesV_l);
+  vector<HeightData> HeightSearch(int start, vector< set<edgeLL> > &edgesV_l);
 
   // prints optimal path between start and stop to filename.
   void GetPath(int start, int stop,  vector< set<edgeLL> > &edgesV_l, char *filename, int maxkeep, bool rate_path);

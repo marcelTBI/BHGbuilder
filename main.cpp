@@ -129,9 +129,19 @@ int main(int argc, char **argv)
       dsu.PrintMatrix(args_info.dist_file_arg, args_info.print_full_flag, args_info.filter_file_given?args_info.filter_file_arg:NULL, 'D');
     }
 
+    // print bdist matrix
+    if (args_info.bdist_file_given) {
+      dsu.PrintMatrix(args_info.bdist_file_arg, args_info.print_full_flag, args_info.filter_file_given?args_info.filter_file_arg:NULL, 'B');
+    }
+
     // print graph distance matrix
     if (args_info.gdist_file_given) {
       dsu.PrintMatrix(args_info.gdist_file_arg, args_info.print_full_flag, args_info.filter_file_given?args_info.filter_file_arg:NULL, 'G');
+    }
+
+    // print pknot-type matrix
+    if (args_info.ptype_file_given) {
+      dsu.PrintMatrix(args_info.ptype_file_arg, args_info.print_full_flag, args_info.filter_file_given?args_info.filter_file_arg:NULL, 'P');
     }
 
     fprintf(stderr, "printing matrices took %.2f secs.\n", (clock()-time)/(double)CLOCKS_PER_SEC); time = clock();
