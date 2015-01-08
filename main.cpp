@@ -4,6 +4,7 @@
 #include <string.h>
 
 #include "BHGbuilder.h"
+#include "RateGraph.h"
 
 
 extern "C" {
@@ -148,7 +149,59 @@ int main(int argc, char **argv)
 
     //##########  end of influence
 
-    // print rates matrix
+    // Shur removal
+    if (!args_info.filter_given && args_info.filter_file_given) {
+      if (!args_info.filter_arg) free(args_info.filter_arg);
+      args_info.filter_arg = (char*)malloc(sizeof(char)*(strlen(args_info.filter_file_arg)+1));
+      strcpy(args_info.filter_arg, args_info.filter_file_arg);
+      args_info.filter_given = 1;
+    }
+    if (args_info.max_given || args_info.filter_given || args_info.rates_file_given) {
+      RateGraph rg(dsu, args_info.rates_temp_arg, args_info.rate_path_flag?args_info.depth_arg:0);
+
+      // read filter
+      if (args_info.filter_given) {
+        args_info.max_arg = max(rg.ReadFilter(args_info.filter_arg), args_info.max_arg);
+        args_info.ordering_arg[0] = 'F';
+      }
+      if (args_info.max_arg == -1 || args_info.max_arg > rg.Size()) args_info.max_arg = rg.Size();
+      int x= 0;
+
+      // start actual removing: remove one by one using the sparsity:
+      if (rg.Size()-args_info.max_arg > 0) {
+        int queue = rg.ConstructQueue(args_info.ordering_arg[0], rg.Size()-args_info.max_arg);
+        fprintf(stderr, "creating graph took %.2f secs.\n", (clock()-time)/(double)CLOCKS_PER_SEC); time = clock();
+        x = rg.RemoveX(rg.Size()-args_info.max_arg, args_info.fraction_arg, !args_info.nreeval_flag, args_info.schur_maximal_arg);
+        fprintf(stderr, "removal of %d lm took %.2f secs. (one by one removal)\n", x, (clock()-time)/(double)CLOCKS_PER_SEC); time = clock();
+      }
+
+      // bulk remove:
+      if (rg.Size()-args_info.max_arg-x > 0) {
+        x = rg.RemoveShur(rg.Size()-args_info.max_arg-x, args_info.Schur_step_arg);
+        fprintf(stderr, "removal of %d lm took %.2f secs. (bulk matrix removal)\n", x, (clock()-time)/(double)CLOCKS_PER_SEC); time = clock();
+      }
+
+      // print rates
+      if (args_info.rates_file_given) {
+        FILE *file = fopen(args_info.rates_file_arg, "w");
+        if (file){
+          fprintf(stderr, "printing rates ... ");
+          rg.PrintRates(file);
+          fprintf(stderr, "into \"%s\" took %.2f secs.\n", args_info.rates_file_arg, (clock()-time)/(double)CLOCKS_PER_SEC); time = clock();
+          fclose(file);
+        }
+      }
+
+      char outrates[500];
+      strcpy(outrates, args_info.rates_file_arg);
+      int len = strlen(outrates);
+      outrates[len] = 'O';
+      outrates[len+1] = '\0';
+      rg.PrintOutput(outrates);
+      //rg.PrintDot(args_info.dot_file_arg, args_info.graph_file_given);
+    }
+
+    /*// print rates matrix
     if (args_info.rates_file_given) {
       for (int i=0; i<max(1, (int)args_info.rates_mode_given); i++) {
         char filename[strlen(args_info.rates_file_arg)+2];
@@ -159,7 +212,7 @@ int main(int argc, char **argv)
         dsu.PrintRates(filename, args_info.print_full_flag, args_info.rates_temp_arg, args_info.rates_mode_arg[i][0]);
       }
       fprintf(stderr, "printing rates(%d) took %.2f secs.\n", max(1, (int)args_info.rates_mode_given), (clock()-time)/(double)CLOCKS_PER_SEC); time = clock();
-    }
+    }*/
 
     // visualisation
     for (unsigned int i=0; i<args_info.visualise_given; i++) {

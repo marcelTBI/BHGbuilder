@@ -689,72 +689,74 @@ void DSU::VisPath(int src, int dest, bool en_barriers, int max_length, bool dot_
 vector<vector<HeightData> > matrix;
 bool generated = false;
 
-void DSU::PrintMatrix(char *filename, bool full, char* filter_file, char type)
+void DSU::ReadFilter(char *filter_file)
 {
   // firest read the filter file
-  if (filter_file) {
+  FILE *filter = fopen(filter_file, "r");
+  if (filter) {
+    mapping.clear();
 
-    FILE *filter = fopen(filter_file, "r");
-    if (filter) {
-      mapping.clear();
+    char *line = my_getline(filter);
+    while (line) {
+      //fprintf(stderr, "working: %s\n",line);
+      short *tmp = NULL;
+      int num;
+      float energy_tmp;
 
-      char *line = my_getline(filter);
-      while (line) {
-        //fprintf(stderr, "working: %s\n",line);
-        short *tmp = NULL;
-        int num;
-        float energy_tmp;
-
-        char *p;
-        for (int i=0; i<3; i++) {
-          p = strtok(i==0?line:NULL, " ");
-          if (!p) break;
-          switch (i) {
-          case 0:
-            sscanf(p, "%d", &num);
-            break;
-          case 1:
-            if (isStruct(p)) {
-              if (tmp) free(tmp); // only one struct per line!
-              tmp = pknots?make_pair_table_PK(p):make_pair_table(p);
-              break;
-            }
-          case 2:
-            sscanf(p, "%f", &energy_tmp);
+      char *p;
+      for (int i=0; i<3; i++) {
+        p = strtok(i==0?line:NULL, " ");
+        if (!p) break;
+        switch (i) {
+        case 0:
+          sscanf(p, "%d", &num);
+          break;
+        case 1:
+          if (isStruct(p)) {
+            if (tmp) free(tmp); // only one struct per line!
+            tmp = pknots?make_pair_table_PK(p):make_pair_table(p);
             break;
           }
+        case 2:
+          sscanf(p, "%f", &energy_tmp);
+          break;
         }
-
-        // write down the data to mapping
-        if (tmp) {
-          RNAstruc tmpstruc;
-          tmpstruc.structure = tmp;
-          tmpstruc.energy = en_fltoi(energy_tmp);
-
-          if (vertex_l.count(tmpstruc)==0) {
-            fprintf(stderr, "WARNING: structure %5d ""%s"" %6.2f  not found in DSU\n", num, pt_to_str_pk(tmp).c_str(), tmpstruc.energy/100.0);
-          } else {
-            int num_real = vertex_l[tmpstruc];
-            mapping.push_back(num_real);
-          }
-        }
-
-        if (tmp) free(tmp); tmp = NULL;
-        free(line);
-        line = my_getline(filter);
-      }
-      fclose(filter);
-
-      mapping_rev.clear();
-      mapping_rev.resize(LM.size());
-      for (int i=0; i<(int)mapping.size(); i++) {
-        mapping_rev[mapping[i]] = i;
       }
 
-    } else {
-      fprintf(stderr, "WARNING: cannot open filter file ""%s""!", filter_file);
+      // write down the data to mapping
+      if (tmp) {
+        RNAstruc tmpstruc;
+        tmpstruc.structure = tmp;
+        tmpstruc.energy = en_fltoi(energy_tmp);
+
+        if (vertex_l.count(tmpstruc)==0) {
+          fprintf(stderr, "WARNING: structure %5d ""%s"" %6.2f  not found in DSU\n", num, pt_to_str_pk(tmp).c_str(), tmpstruc.energy/100.0);
+        } else {
+          int num_real = vertex_l[tmpstruc];
+          mapping.push_back(num_real);
+        }
+      }
+
+      if (tmp) free(tmp); tmp = NULL;
+      free(line);
+      line = my_getline(filter);
     }
+    fclose(filter);
+
+    mapping_rev.clear();
+    mapping_rev.resize(LM.size());
+    for (int i=0; i<(int)mapping.size(); i++) {
+      mapping_rev[mapping[i]] = i;
+    }
+  } else {
+    fprintf(stderr, "WARNING: cannot open filter file ""%s""!", filter_file);
   }
+}
+
+void DSU::PrintMatrix(char *filename, bool full, char* filter_file, char type)
+{
+  // read_filter!
+  if (filter_file && mapping.empty()) ReadFilter(filter_file);
 
 
   if (!full && mapping.size() == 0) {

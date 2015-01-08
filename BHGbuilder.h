@@ -126,7 +126,7 @@ struct HeightData {
 
 class DSU {
 
-private:
+public:
   // sequence
   char *seq;
   short *s0;
@@ -219,6 +219,9 @@ public:
   void PrintSaddles(FILE *output = stdout, bool fix = true);
   void PrintComps(FILE *output = stdout, bool fill = true);
   void PrintBarr(FILE *output = stdout);
+
+  // read filter
+  void ReadFilter(char *filter_file);
 
   // print files:
   void PrintMatrix(char *filename, bool full, char *filter_file, char type); // print matrices (E - energy, D - distance, G - graph distance, B - base pair distance)

@@ -49,6 +49,15 @@ option "conn-neighs"        - "Number of neighbours of newly found minima to con
 option "floodMax"           - "Flood cap on number - how many structures to flood (flooding is disabled by default)" int default="0" no
 option "floodHeight"        - "Flood cap on height - what is the maximal energy height we will flood in 10cal/mol (0 = unlimited)" int default="0" no
 
+section "Schur removal for rate creation"
+option "max"								- "Maximal number of nodes remaining after removal (default all)" int default="-1" no
+option "fraction"           - "Fraction of connections after which program stops individual computation and computes the Schur complement." int default="10" no
+option "Schur-step"         - "Step in Schur transformation (affects speed - very high and very low values are not recommended)" int default="20" no
+option "filter"             - "Filename with local minima, which should not be filtered out (skips identification of minima step). Defaults to --filter-file option below." string no
+option "ordering"           - "Method for identifying minima to remove. Filtering option overrides this. \nE ==> remove highest energy minima first\nC ==> remove minima with least number of connections first" default="C" string no
+option "nreeval"            - "Do not re-evaluate the connection number after removal of each edge. Only for individual computation. If this flag is on, the output should be same with each fraction number, otherwise it is not guaranteed." flag off
+option "schur-maximal"      - "Maximal number for complete Schur removal. For 2GB RAM for the process, 7000-8000 is recommended." int default="8000" no
+
 section "Output"
 option "dot"                - "Use dot instead of neato for graph plotting" flag on
 option "dot-energies"       - "Print energies along with the LM number in graph" flag off
@@ -70,7 +79,7 @@ option "rates-file"         - "Filename for rates for treekin (does not print by
 option "print-all"          - "Generate all output (switches on all text '*-file' to default)" flag off
 option "rates-temp"         T "Temperature for rates (in Celsius)" float default="37.0" no
 option "rates-mode"         - "Mode for rates generation (V - vertex contraction, taking into acount only max_height; S - vertex contraction, taking into acount path; E - edge contraction (minimal barrier); M - edge contraction (maximal barrier); F - full matrix for all LMs)" string default="F" multiple no
-option "filter-file"        - "Filter the results only to those in filter file. Affects only --energy-file, --dist-file, --bdist-file, and --gdist-file. Overrides the --print-full option for theese matrices." string no
+option "filter-file"        - "Filter the results only to those in filter file. Affects only --energy-file, --dist-file, --bdist-file, and --gdist-file. Overrides the --print-full option for these matrices." string no
 
 option "visualise"          v "Visualise paths between 2 structures, can be specified multiple times, output goes to file pathL1_L2.eps" typestr="<l1>=<l2>" string multiple
 option "vis-dist"           - "Set distance as a bounding condition for visualisation (instead of energy)" flag off
