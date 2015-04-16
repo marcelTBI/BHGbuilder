@@ -1,9 +1,9 @@
 #include "BHGbuilder.h"
 
+static char optimality = 'B';
 
-static bool rate_path_st;
-
-struct pq_height {
+class pq_height {
+public:
   int height;
   int distance;
   int number;
@@ -11,21 +11,36 @@ struct pq_height {
   int saddle_num;
   double rate;
 
+  // probability/time dependent likelihood (the higher the better)
+  double criterion;
+  double time_min;
+
   int bdist;
   PKNOT_TYPES pt;
 
+public:
   bool operator<(const pq_height &right) const {
-    if (!rate_path_st || rate == right.rate) {
-      if (height == right.height) {
+
+    switch (optimality) {
+      case 'B': if (height != right.height) return height > right.height;
+      case 'L': if (bdist != right.bdist) return bdist > right.bdist;
+      case 'M': if (distance != right.distance) return distance > right.distance;
+      case 'R': if (rate != right.rate) return rate < right.rate;
+      case 'T':
+      case 'P': if (criterion != right.criterion) return criterion < right.criterion;
+    }
+
+    // default ordering:
+    if (height == right.height) {
+      if (bdist == right.bdist) {
         if (distance == right.distance) {
-          if (bdist == right.bdist) { return number > right.number;
-          } else return bdist > right.bdist;
+          return rate < right.rate;
         } else return distance > right.distance;
-      } else return height > right.height;
-    } else return rate < right.rate;
+      } else return bdist > right.bdist;
+    } else return height > right.height;
   }
 
-  pq_height(int h, int d, int n, int f, int s, double rat = 0.0, int bist = 0, PKNOT_TYPES pt = PKNOT_TYPES()) {
+  pq_height(int h, int d, int n, int f, int s, double rat = 0.0, int bist = 0, double other = 0.0, double time = 0.0, PKNOT_TYPES pt = PKNOT_TYPES()) {
     height = h;
     distance = d;
     number = n;
@@ -33,6 +48,8 @@ struct pq_height {
     saddle_num = s;
     rate = rat;
     bdist = bist;
+    criterion = other;
+    time_min = time;
     this->pt = pt;
   }
 };
@@ -40,6 +57,8 @@ struct pq_height {
 
 vector<HeightData> DSU::HeightSearch(int start, vector< set<edgeLL> > &edgesV_l)
 {
+  optimality = 'B';
+
   // define + init
   vector<int> heights(LM.size(), INT_MAX);
   vector<int> distance(LM.size(), INT_MAX);
@@ -58,10 +77,10 @@ vector<HeightData> DSU::HeightSearch(int start, vector< set<edgeLL> > &edgesV_l)
     int to = it->goesTo(start);
     int sadd = it->saddle;
     int hd = HammingDist(LM[to].structure, saddles[sadd].structure) + HammingDist(saddles[sadd].structure, LM[start].structure);
-    PKNOT_TYPES pt(Identify_PK(LM[start].structure));
-    pt.Add(Identify_PK(LM[to].structure));
-    pt.Add(Identify_PK(saddles[sadd].structure));
-    que.push(pq_height(it->en, 1, it->goesTo(start), start, it->saddle, 0.0, hd, pt));
+    PKNOT_TYPES pt(Identify_AllPK(LM[start].structure));
+    pt.Add(Identify_AllPK(LM[to].structure));
+    pt.Add(Identify_AllPK(saddles[sadd].structure));
+    que.push(pq_height(it->en, 1, it->goesTo(start), start, it->saddle, 0.0, hd, 0.0, 0.0, pt));
   }
 
   // main loop -- dijkstra-like (take one with lowest energy, proceed it)
@@ -94,9 +113,9 @@ vector<HeightData> DSU::HeightSearch(int start, vector< set<edgeLL> > &edgesV_l)
         int hd = HammingDist(LM[to].structure, saddles[sadd].structure) + HammingDist(saddles[sadd].structure, LM[pq.number].structure);
         //fprintf(stderr, "%4d %4d %4d \n", pq.number, to, hd);
         PKNOT_TYPES pt = pq.pt;
-        pt.Add(Identify_PK(LM[to].structure));
-        pt.Add(Identify_PK(saddles[sadd].structure));
-        que.push( pq_height(max(it->en, pq.height), pq.distance+1, to, pq.number, it->saddle, 0.0, pq.bdist+hd, pt) );
+        pt.Add(Identify_AllPK(LM[to].structure));
+        pt.Add(Identify_AllPK(saddles[sadd].structure));
+        que.push( pq_height(max(it->en, pq.height), pq.distance+1, to, pq.number, it->saddle, 0.0, pq.bdist+hd, 0.0, 0.0, pt) );
       }
     }
   }
@@ -112,14 +131,18 @@ vector<HeightData> DSU::HeightSearch(int start, vector< set<edgeLL> > &edgesV_l)
   return res;
 }
 
-void DSU::GetPath(int start, int stop, int maxkeep, bool rate_path)
+void DSU::GetPath(int start, int stop, int maxkeep, char optimality, int max_saddle, double time_fold, int bulk)
 {
   char filename[100];
-  sprintf(filename, "path%d_%d.path", start+1, stop+1);
-  GetPath(start, stop, edgesV_l, filename, maxkeep, rate_path);
+  if (bulk) {
+    sprintf(filename, "pathB%d.%spath%c%s", bulk, optimality=='T'?std::to_string((int)time_fold).c_str():"", optimality, max_saddle<1000?"_":"");
+  } else {
+    sprintf(filename, "path%d_%d.%spath%c%s", start+1, stop+1, optimality=='T'?std::to_string((int)time_fold).c_str():"", optimality, max_saddle<1000?"_":"");
+  }
+  GetPath(start, stop, edgesV_l, filename, maxkeep, optimality, max_saddle, time_fold);
 }
 
-void DSU::GetPath(int start, int stop,  vector< set<edgeLL> > &edgesV_l, char *filename, int maxkeep, bool rate_path)
+void DSU::GetPath(int start, int stop,  vector< set<edgeLL> > &edgesV_l, char *filename, int maxkeep, char optim, int max_saddle, double time_fold)
 {
   /*bool swapped = false;
   if (LM[start].energy > LM[stop].energy && !rate_path) {
@@ -127,7 +150,28 @@ void DSU::GetPath(int start, int stop,  vector< set<edgeLL> > &edgesV_l, char *f
     swap(start, stop);
   }*/
 
-  rate_path_st = rate_path;
+  optimality = optim;
+
+  switch (optimality) {
+    case 'B':
+    case 'R':
+    case 'L':
+    case 'M':
+    case 'T':
+    case 'P':  break;
+    default: fprintf(stderr, "ERROR: weird optimality criterion (%c).\n", optimality); return;
+  }
+
+  // calculate outgoing rates
+  vector<double> outgoing_rates(LM.size());
+  if (optimality == 'P' || optimality == 'T') {
+    for (unsigned int i=0; i<outgoing_rates.size(); i++) {
+      for (set<edgeLL>::iterator it=edgesV_l[i].begin(); it!=edgesV_l[i].end(); it++) {
+        outgoing_rates[i] += 1.0*exp(-(it->en-LM[i].energy)/100.0/_kT);
+      }
+    }
+  }
+
   // define + init
   vector<int> heights(LM.size(), INT_MAX);
   vector<int> distance(LM.size(), INT_MAX);
@@ -144,12 +188,30 @@ void DSU::GetPath(int start, int stop,  vector< set<edgeLL> > &edgesV_l, char *f
   rates[start] = 0.0;
   heights[start] = LM[start].energy;
   for (set<edgeLL>::iterator it=edgesV_l[start].begin(); it!=edgesV_l[start].end(); it++) {
+    //  add it if it does not contradict the max_saddle
+    if (it->en > max_saddle) continue;
+
+    // calculate other info
     double rate = 1.0*exp(-(it->en-heights[start])/100.0/_kT);
-    //fprintf(stderr, "%14.8g\n", rate);
-    que.push(pq_height(it->en, 1, it->goesTo(start), start, it->saddle, rate));
+    int to = it->goesTo(start);
+    int sadd = it->saddle;
+    int hd = HammingDist(LM[to].structure, saddles[sadd].structure) + HammingDist(saddles[sadd].structure, LM[start].structure);
+
+    double crit = 0.0;
+    double time = 0.0;
+    if (optimality == 'P') {
+      crit = log(rate/outgoing_rates[start]);
+    }
+    if (optimality == 'T') {
+      crit = log(rate);
+      time = min(outgoing_rates[to], outgoing_rates[start]);
+      crit += -(time)*time_fold;
+    }
+    que.push(pq_height(it->en, 1, it->goesTo(start), start, it->saddle, rate, hd, crit, time));
   }
 
   double end_rate = 0.0;
+  double end_crit = 0.0;
 
   // main loop -- dijkstra-like (take one with lowest energy, proceed it)
   while (!que.empty()) {
@@ -170,14 +232,18 @@ void DSU::GetPath(int start, int stop,  vector< set<edgeLL> > &edgesV_l, char *f
     // end when we have reached destination
      if (pq.number==stop) {
       end_rate = pq.rate;
+      end_crit = pq.criterion;
       break;
     }
 
     // push next ones:
     for (set<edgeLL>::iterator it=edgesV_l[pq.number].begin(); it!=edgesV_l[pq.number].end(); it++) {
+      //  add it if it does not contradict the max_saddle
+      if (it->en > max_saddle) continue;
+
       int to = it->goesTo(pq.number);
       // if we already had him
-      if (done[to] && !rate_path) {
+      if (done[to] && optimality == 'B') {
         if (max(it->en, pq.height) < heights[to]) fprintf(stderr, "WRONG from: %6d to: %6d enLM %6.2f enHeight %6d\n", pq.number+1, to+1, pq.height/100.0, heights[to]);
         continue;
       }
@@ -189,7 +255,24 @@ void DSU::GetPath(int start, int stop,  vector< set<edgeLL> > &edgesV_l, char *f
         double r21 = 1.0*exp(-(saddles[pq.saddle_num].energy-LM[pq.number].energy)/100.0/_kT);
         //fprintf(stderr, "%10.8g %10.8g %10.8g => %10.8g\n", pq.rate, r23, r21, pq.rate*r23/(r23+r21));
         rate = pq.rate*r23/(r23+r21); /// combine
-        que.push( pq_height(max(it->en, pq.height), pq.distance+1, to, pq.number, it->saddle, rate) );
+
+        int sadd = it->saddle;
+        int hd = HammingDist(LM[to].structure, saddles[sadd].structure) + HammingDist(saddles[sadd].structure, LM[pq.number].structure);
+
+        double crit = 0.0;
+        double time = 0.0;
+        if (optimality == 'P') {
+          crit = pq.criterion + log(r23/outgoing_rates[pq.number]);
+        }
+        if (optimality == 'T') {
+          crit = pq.criterion + log(r23);
+          time = outgoing_rates[to];
+          if (pq.time_min > time) {
+            crit += -(pq.time_min - time)*time_fold;
+          } else time = pq.time_min;
+        }
+
+        que.push( pq_height(max(it->en, pq.height), pq.distance+1, to, pq.number, it->saddle, rate, pq.bdist+hd, crit, time) );
       }
     }
   }
@@ -231,6 +314,7 @@ void DSU::GetPath(int start, int stop,  vector< set<edgeLL> > &edgesV_l, char *f
     reverse(rats.begin(),rats.end());
   }*/
 
+  int cumulative_height = 0;
 
   // write it down:
   FILE *fil;
@@ -240,6 +324,7 @@ void DSU::GetPath(int start, int stop,  vector< set<edgeLL> > &edgesV_l, char *f
     fprintf(fil,"        %s\n", seq);
     for (int i=(int)lms.size()-1; i>0; i--) {
       fprintf(fil, "%6d  %s %7.2f %3d %3d %14.8g\n", lms[i]+1, LM[lms[i]].str_ch, LM[lms[i]].energy/100.0, HammingDist(LM[lms[i]].structure, LM[lms[0]].structure), HammingDist(LM[lms[i]].structure, saddles[sdd[i-1]].structure), rats[i]);
+      cumulative_height += saddles[sdd[i-1]].energy - LM[lms[i]].energy;
       if (maxkeep) {
         if (pknots) {
           path_pk *tmp = get_path_pk(seq, LM[lms[i]].str_ch, saddles[sdd[i-1]].str_ch, maxkeep);
@@ -288,7 +373,7 @@ void DSU::GetPath(int start, int stop,  vector< set<edgeLL> > &edgesV_l, char *f
     fprintf(fil, "%6d  %s %7.2f   0   0 %14.8g\n", lms[0]+1, LM[lms[0]].str_ch, LM[lms[0]].energy/100.0, rats[0]);
     if (maxkeep)  fprintf(fil, "Path from %6d to %6d: %4d local minima, %d structures, %6.2f kcal/mol highest point.\n", start+1, stop+1, (int)lms.size(), count + (int)lms.size() + (int)sdd.size(), heights[stop]/100.0);
     else          fprintf(fil, "Path from %6d to %6d: %4d local minima, %6.2f kcal/mol highest point.\n", start+1, stop+1, (int)lms.size(), heights[stop]/100.0);
-    fprintf(fil, "Path has rate of %14.8g", end_rate);
+    fprintf(fil, "Path has rate of %14.8g, cumulative energy barrier %6.2f, criterion (log-prob or log (time dependent likelihood)): %14.8g", end_rate, cumulative_height/100.0, end_crit);
     fclose(fil);
   } else {
     fprintf(stderr, "Unable to open file %s!\n", filename);

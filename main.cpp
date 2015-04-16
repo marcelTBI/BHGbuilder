@@ -80,6 +80,11 @@ int main(int argc, char **argv)
     dsu.PrintLinkCP(false);
   */
 
+   /* // remov if we have too many:
+    if (args_info.keep_maximum_given) {
+      if (dsu.Size() > args_info.keep_maximum_arg) dsu.RemoveLM(dsu.Size() - args_info.keep_maximum_arg, args_info.filter_file_given?args_info.filter_file_arg:NULL);
+    }*/
+
 
     if (!args_info.quiet_flag) {
       // real output:
@@ -100,6 +105,15 @@ int main(int argc, char **argv)
     //dsu.PrintComps(stderr, true);
 
     dsu.SetkT(args_info.rates_temp_arg);
+
+    if (args_info.bulk_path_given) {
+      vector <int> indices_path;
+      indices_path = dsu.GetNumbers(args_info.bulk_path_arg);
+      for (unsigned int i=1; i<indices_path.size(); i++) {
+        dsu.GetPath(indices_path[i-1], indices_path[i], args_info.depth_arg, args_info.optimal_path_arg[0], args_info.saddle_path_given?en_fltoi(args_info.saddle_path_arg):10000, args_info.time_path_arg, i);
+      }
+    }
+
     //print optimal path
     for (int i=0; i<(int)args_info.get_path_given; i++) {
       int a, b;
@@ -113,7 +127,7 @@ int main(int argc, char **argv)
           b--;
           if (a>=dsu.Size() || b>=dsu.Size()) {
             fprintf(stderr, "WARNING: visualisation number(s) exceeds number of minima (%d) (%s)\n", dsu.Size(), args_info.get_path_arg[i]);
-          } else dsu.GetPath(a, b, args_info.depth_arg, args_info.rate_path_flag);
+          } else dsu.GetPath(a, b, args_info.depth_arg, args_info.optimal_path_arg[0], args_info.saddle_path_given?en_fltoi(args_info.saddle_path_arg):10000, args_info.time_path_arg);
         }
       }
     }
@@ -147,7 +161,6 @@ int main(int argc, char **argv)
 
     fprintf(stderr, "printing matrices took %.2f secs.\n", (clock()-time)/(double)CLOCKS_PER_SEC); time = clock();
 
-    //##########  end of influence
 
     // Shur removal
     if (!args_info.filter_given && args_info.filter_file_given) {
@@ -156,13 +169,12 @@ int main(int argc, char **argv)
       strcpy(args_info.filter_arg, args_info.filter_file_arg);
       args_info.filter_given = 1;
     }
-    if (args_info.max_given || args_info.filter_given || args_info.rates_file_given) {
-      RateGraph rg(dsu, args_info.rates_temp_arg, args_info.rate_path_flag?args_info.depth_arg:0);
+    if (args_info.rates_file_given) {
+      RateGraph rg(dsu, args_info.rates_temp_arg, args_info.rates_fullpath_flag?args_info.depth_arg:0, args_info.minimal_rate_arg, args_info.ordering_arg[0]);
 
       // read filter
       if (args_info.filter_given) {
         args_info.max_arg = max(rg.ReadFilter(args_info.filter_arg), args_info.max_arg);
-        args_info.ordering_arg[0] = 'F';
       }
       if (args_info.max_arg == -1 || args_info.max_arg > rg.Size()) args_info.max_arg = rg.Size();
       int x= 0;
@@ -171,27 +183,26 @@ int main(int argc, char **argv)
       if (rg.Size()-args_info.max_arg > 0) {
         int queue = rg.ConstructQueue(args_info.ordering_arg[0], rg.Size()-args_info.max_arg);
         fprintf(stderr, "creating graph took %.2f secs.\n", (clock()-time)/(double)CLOCKS_PER_SEC); time = clock();
-        x = rg.RemoveX(rg.Size()-args_info.max_arg, args_info.fraction_arg, !args_info.nreeval_flag, args_info.schur_maximal_arg);
+        x = rg.RemoveX(rg.Size()-args_info.max_arg, args_info.fraction_arg, !args_info.nreeval_flag, args_info.schur_maximal_arg, args_info.minimal_rate_arg);
         fprintf(stderr, "removal of %d lm took %.2f secs. (one by one removal)\n", x, (clock()-time)/(double)CLOCKS_PER_SEC); time = clock();
       }
 
       // bulk remove:
       if (rg.Size()-args_info.max_arg-x > 0) {
-        x = rg.RemoveShur(rg.Size()-args_info.max_arg-x, args_info.Schur_step_arg);
+        x = rg.RemoveShur(rg.Size()-args_info.max_arg-x, args_info.Schur_step_arg, args_info.minimal_rate_arg);
         fprintf(stderr, "removal of %d lm took %.2f secs. (bulk matrix removal)\n", x, (clock()-time)/(double)CLOCKS_PER_SEC); time = clock();
       }
 
       // print rates
-      if (args_info.rates_file_given) {
-        FILE *file = fopen(args_info.rates_file_arg, "w");
-        if (file){
-          fprintf(stderr, "printing rates ... ");
-          rg.PrintRates(file);
-          fprintf(stderr, "into \"%s\" took %.2f secs.\n", args_info.rates_file_arg, (clock()-time)/(double)CLOCKS_PER_SEC); time = clock();
-          fclose(file);
-        }
+      FILE *file = fopen(args_info.rates_file_arg, "w");
+      if (file) {
+        fprintf(stderr, "printing rates ... ");
+        rg.PrintRates(file);
+        fprintf(stderr, "into \"%s\" took %.2f secs.\n", args_info.rates_file_arg, (clock()-time)/(double)CLOCKS_PER_SEC); time = clock();
+        fclose(file);
       }
 
+      // now output the list of stuff that we haven't removed
       char outrates[500];
       strcpy(outrates, args_info.rates_file_arg);
       int len = strlen(outrates);
@@ -199,7 +210,10 @@ int main(int argc, char **argv)
       outrates[len+1] = '\0';
       rg.PrintOutput(outrates);
       //rg.PrintDot(args_info.dot_file_arg, args_info.graph_file_given);
+
     }
+
+    //##########  end of influence
 
     /*// print rates matrix
     if (args_info.rates_file_given) {

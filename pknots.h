@@ -26,8 +26,60 @@ void pt_to_chars_pk(const short *str, char *dest);
 //char *allocopy(const char *src);
 //void copy_arr(short *dest, const short *src);
 
+class PKNOT_TYPES;
+
 int Contains_PK(short *str);
 BPAIR_TYPE Identify_PK(short *str);
+PKNOT_TYPES Identify_AllPK(short *str);
+
+
+struct PKNOT_TYPES {
+  bool H;
+  bool K;
+  bool L;
+  bool M;
+
+  PKNOT_TYPES() {
+    H = K = L = M = false;
+  }
+
+  PKNOT_TYPES(BPAIR_TYPE bpt) {
+    H = K = L = M = false;
+    Add(bpt);
+  }
+
+  PKNOT_TYPES(const PKNOT_TYPES &bpt) {
+    H = K = L = M = false;
+    Add(bpt);
+  }
+
+  void Add(BPAIR_TYPE bpt) {
+    switch (bpt) {
+    case P_H: H = true; break;
+    case P_K: K = true; break;
+    case P_L: L = true; break;
+    case P_M: M = true; break;
+    default: break;
+    }
+  }
+
+  void Add(const PKNOT_TYPES &pt) {
+    H = H || pt.H;
+    K = K || pt.K;
+    L = L || pt.L;
+    M = M || pt.M;
+  }
+
+  const char* Print() {
+    static char res[5] = "";
+    res[0] = H?'H':'_';
+    res[1] = K?'K':'_';
+    res[2] = L?'L':'_';
+    res[3] = M?'M':'_';
+    res[4] = '\0';
+    return res;
+  }
+};
 
 //debug
 float get_eos_time();

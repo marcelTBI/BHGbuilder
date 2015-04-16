@@ -1263,6 +1263,7 @@ int Contains_PK(short *str)
   return 0;
 }
 
+// careful : identifies only the first pk type!!!
 BPAIR_TYPE Identify_PK(short *str)
 {
   stack<int> pairing;
@@ -1300,4 +1301,52 @@ BPAIR_TYPE Identify_PK(short *str)
     }
   }
   return N_S;
+}
+
+// identifies all pknots on level 0 (not-nested ones) // not-tested :-/ not enough time
+PKNOT_TYPES Identify_AllPK(short *str)
+{
+  PKNOT_TYPES res;
+  stack<int> pairing;
+  pairing.push(str[0]+1);
+  for (int i=1; i<=str[0]; i++) {
+    if (str[i]==0) continue;
+    if (str[i]>i) { //'('              ///  ?...i.....pairing.top().....str[i]
+      if (str[i]>pairing.top()) {      ///  (...[.....).................]
+        // identified a PKNOT
+          //guess type
+        // check for K-type
+        bool K_type = false;  // ktype - begin between p and str[i], end away
+        bool L_type = false;  // ltype - begin between i and p, end away
+        int end = str[i];
+        for (int j=i+1; j< pairing.top(); j++) {
+          if (str[j]>j && str[j]> str[i]) {
+            L_type = true;
+            end = max(end, (int)str[j]);
+            break;
+          }
+        }
+        for (int j=pairing.top(); j<str[i]; j++) {
+          if (str[j]>j && str[j]> str[i]) {
+            K_type = true;
+            end = max(end, (int)str[j]);
+            break;
+          }
+        }
+        if (K_type  && L_type) res.M = true;
+        else if (K_type) res.K = true;
+        else if (L_type) res.L = true;
+        else res.H = true;
+        // move a pknot away...
+        i = end;
+        while (pairing.top()<i) pairing.pop();
+      } else {
+        pairing.push(str[i]);
+      }
+    }
+    else { //')'
+      if (pairing.top() == i) pairing.pop();
+    }
+  }
+  return res;
 }

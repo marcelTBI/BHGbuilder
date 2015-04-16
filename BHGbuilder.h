@@ -73,42 +73,6 @@ private:
   void ResizeDone(int new_size);
 };
 
-struct PKNOT_TYPES {
-  bool H;
-  bool K;
-  bool L;
-  bool M;
-
-  PKNOT_TYPES() {
-    H = K = L = M = false;
-  }
-
-  PKNOT_TYPES(BPAIR_TYPE bpt) {
-    H = K = L = M = false;
-    Add(bpt);
-  }
-
-  void Add(BPAIR_TYPE bpt) {
-    switch (bpt) {
-    case P_H: H = true; break;
-    case P_K: K = true; break;
-    case P_L: L = true; break;
-    case P_M: M = true; break;
-    default: break;
-    }
-  }
-
-  const char* Print() {
-    static string res = "";
-    res[0] = H?'H':'_';
-    res[1] = K?'K':'_';
-    res[2] = L?'L':'_';
-    res[3] = M?'M':'_';
-    res[4] = '\0';
-    return res.c_str();
-  }
-};
-
 struct HeightData {
   int height; // energies
   int bdist; // base pair distances
@@ -174,9 +138,12 @@ public:
   // UFset for no-conn in ComputeTBD
   UF_set conectivity;
 
-  // mapping for not full matrices
-  vector<int> mapping;
-  vector<int> mapping_rev;
+  // mapping for not full matrices (via filter_file)
+  vector<int> mapping;  // filter number -> real number
+  vector<int> mapping_rev; // real number -> fiter number (otherwise -1)
+
+  vector<vector<HeightData> > matrix;
+  bool generated;
 
 private:
   DSU() {};
@@ -220,6 +187,9 @@ public:
   void PrintComps(FILE *output = stdout, bool fill = true);
   void PrintBarr(FILE *output = stdout);
 
+  // remove the excess minima
+  void RemoveLM(int to_remove, char* filter);
+
   // read filter
   void ReadFilter(char *filter_file);
 
@@ -249,13 +219,15 @@ public:
   vector<HeightData> HeightSearch(int start, vector< set<edgeLL> > &edgesV_l);
 
   // prints optimal path between start and stop to filename.
-  void GetPath(int start, int stop,  vector< set<edgeLL> > &edgesV_l, char *filename, int maxkeep, bool rate_path);
-  void GetPath(int start, int stop, int maxkeep, bool rate_path);
+  void GetPath(int start, int stop,  vector< set<edgeLL> > &edgesV_l, char *filename, int maxkeep, char optimality, int max_saddle, double time_fold);
+  void GetPath(int start, int stop, int maxkeep, char optimality, int max_saddle, double time_fold, int bulk = 0);
 
   // evaluation
   void EHeights(FILE *heights, bool full, bool only_norm);
   void ERank(FILE *rank, bool barrier, bool out_conns = false);
 
   void Histo(FILE *histo);
+
+  vector<int> GetNumbers(char *filename);
 };
 #endif

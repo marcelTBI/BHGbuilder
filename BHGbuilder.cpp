@@ -29,6 +29,8 @@ DSU::DSU(FILE *input, bool noLP, bool shifts, bool pknots, int time_max, int max
   s1 = NULL;
   gl_maxen = INT_MIN;
 
+  generated = false;
+
   // pseudoknots?
   this->pknots = pknots;
 
@@ -153,6 +155,22 @@ DSU::DSU(FILE *input, bool noLP, bool shifts, bool pknots, int time_max, int max
 
           gl_maxen = max(gl_maxen, struc.energy);
         } else {
+
+          int wrong = -1;
+          for (int a=0; a<(int)LM_c.size(); a++) {
+            if ((int)LM.size()<=LM_c[a]) {
+              wrong = LM_c[a];
+              break;
+            }
+          }
+          if (wrong != -1) {
+            fprintf(stderr, "WARNING: saddle end not found: %d on line %s\n", wrong, line);
+            free(tmp);
+            free(line);
+            line = my_getline(input);
+            continue;
+          }
+
           RNAsaddle struc(LM_c[0], LM_c[1], (SDtype)type);
           struc.structure = tmp;
           struc.str_ch = pt_to_chars_pk(struc.structure);
@@ -686,9 +704,6 @@ void DSU::VisPath(int src, int dest, bool en_barriers, int max_length, bool dot_
   //printf("%s returned %d", syst, res);
 }
 
-vector<vector<HeightData> > matrix;
-bool generated = false;
-
 void DSU::ReadFilter(char *filter_file)
 {
   // firest read the filter file
@@ -744,13 +759,68 @@ void DSU::ReadFilter(char *filter_file)
     fclose(filter);
 
     mapping_rev.clear();
-    mapping_rev.resize(LM.size());
+    mapping_rev.resize(LM.size(), -1);
     for (int i=0; i<(int)mapping.size(); i++) {
       mapping_rev[mapping[i]] = i;
     }
   } else {
     fprintf(stderr, "WARNING: cannot open filter file ""%s""!", filter_file);
   }
+}
+
+void DSU::RemoveLM(int many_remove, char* filter)
+{
+  //make a queue of removal LMs
+  vector<std::pair<int, int> > transitions;
+
+  // read the filter file
+  if (filter && mapping.empty()) ReadFilter(filter);
+
+  // construct queue
+  for (int i=0; i<(int)edgesV_l.size(); i++) {
+    // check if not in filter:
+    if (mapping_rev[i] == -1) transitions.push_back(make_pair(edgesV_l[i].size(), i));
+  }
+  sort(transitions.begin(), transitions.end());
+
+  // now we can destroy individual minima:
+  for (int i=0; i<many_remove; i++) {
+    int to_remove = transitions[i].second;
+
+    // remove transitions:
+    for (auto j=edgesV_l[i].begin(); j!=edgesV_l[i].end(); j++) {
+      auto k = j;
+      k++;
+      for (; k!=edgesV_l[i].end(); k++) {
+        // do only saddle reusing
+        int sad1 = j->saddle;
+        int sad2 = k->saddle;
+
+        // pick the higher saddle
+        int sad;
+        if (j->en > k->en) sad = sad1;
+        else sad = sad2;
+
+        int ii = j->i == to_remove?j->j:j->i;
+        int jj = k->i == to_remove?k->j:k->i;
+
+
+
+        // now check if the saddle already exists:
+        edgeLL e(ii,jj,max(j->en, k->en), sad);
+        auto edg = edges_l.find(e);
+        if (edg != edges_l.end()) {
+
+        }
+      }
+    }
+  }
+
+
+
+  //reset mapping:
+  mapping.clear();
+  mapping_rev.clear();
 }
 
 void DSU::PrintMatrix(char *filename, bool full, char* filter_file, char type)
@@ -1458,4 +1528,51 @@ bool DSU::SortFix()
     return true;
   }
   return false;
+}
+
+char *to_emptyspc(char *line)
+{
+  int i=0;
+  while (line && line[i]!='\0') {
+    if (line[i]=='\t') line[i]=' ';
+    i++;
+  }
+  return line;
+}
+
+vector<int> DSU::GetNumbers(char *filename)
+{
+  vector<int> res;
+  FILE *file = fopen(filename, "r");
+  if (file) {
+    char *line = to_emptyspc(my_getline(file));
+    while (line) {
+
+      char *p = strtok(line, " ");
+      while (p) {
+        if (isStruct(p)) {
+          int num = -1;
+          for (unsigned int i=0; i<LM.size(); i++) {
+            if (strcmp(LM[i].str_ch, p) == 0) {
+              //fprintf(stderr, "found:    %s as %d minimum\n", p, i+1);
+              num = i;
+              break;
+            }
+          }
+          if (num == -1) {
+            fprintf(stderr, "structure %s not found!\n", p);
+          } else {
+            res.push_back(num);
+          }
+        }
+        p = strtok(NULL, " ");
+      }
+      line = to_emptyspc(my_getline(file));
+    }
+    fclose(file);
+  } else {
+    fprintf(stderr, "WARNING: cannot open file %s\n", filename);
+  }
+
+  return res;
 }
