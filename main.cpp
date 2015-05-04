@@ -181,7 +181,7 @@ int main(int argc, char **argv)
 
       // start actual removing: remove one by one using the sparsity:
       if (rg.Size()-args_info.max_arg > 0) {
-        int queue = rg.ConstructQueue(args_info.ordering_arg[0], rg.Size()-args_info.max_arg);
+        int queue = rg.ConstructQueue(args_info.ordering_arg[0], rg.Size()-args_info.max_arg, args_info.leave_transitions_flag);
         fprintf(stderr, "creating graph took %.2f secs.\n", (clock()-time)/(double)CLOCKS_PER_SEC); time = clock();
         x = rg.RemoveX(rg.Size()-args_info.max_arg, args_info.fraction_arg, !args_info.nreeval_flag, args_info.schur_maximal_arg, args_info.minimal_rate_arg);
         fprintf(stderr, "removal of %d lm took %.2f secs. (one by one removal)\n", x, (clock()-time)/(double)CLOCKS_PER_SEC); time = clock();

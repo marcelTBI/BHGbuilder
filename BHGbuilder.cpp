@@ -764,7 +764,7 @@ void DSU::ReadFilter(char *filter_file)
       mapping_rev[mapping[i]] = i;
     }
   } else {
-    fprintf(stderr, "WARNING: cannot open filter file ""%s""!", filter_file);
+    fprintf(stderr, "WARNING: cannot open filter file ""%s""!\n", filter_file);
   }
 }
 
