@@ -60,6 +60,7 @@ option "nreeval"            - "Do not re-evaluate the connection number after re
 option "schur-maximal"      - "Maximal number for complete Schur removal. For 2GB RAM for the process, 7000-8000 is recommended." int default="8000" no
 #option "ignore-transitions" - "Ignore transition minima - minima that have 2 or less connections. Filtered minima are not affected." flag off
 option "minimal-rate"       - "Ignore smaller transition rates than this. Affect all computations. Should decrease the numerical error maybe." float default="0.0"
+option "leave-transitions"  - "By default we remove transition minima (minima that have 2(or less) connections) regardless of ordering. Turn on to leave them in computation (does not makedev sense with --ordering=C )." flag off
 
 section "Path searching"
 option "get-path"           - "Get optimal path between 2 local minima and print it into file pathL1_L2.path. Optimality criterion is picked in the --optimal-path." typestr="<l1>=<l2>" string multiple

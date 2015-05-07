@@ -47,11 +47,11 @@ DSU::DSU(FILE *input, bool noLP, bool shifts, bool pknots, int time_max, int max
   int num = 0;
 
   line = my_getline(input);
-  char *seq2 = strtok(line, " ");
+  char *seq2 = strtok(line, " \t");
   if (!isSeq(seq2)) {
     free(line);
     line = my_getline(input);
-    seq2 = strtok(line, " ");
+    seq2 = strtok(line, " \t");
     if (!isSeq(seq2)) {
       free(line);
       return ;
@@ -79,7 +79,7 @@ DSU::DSU(FILE *input, bool noLP, bool shifts, bool pknots, int time_max, int max
 
       char *p;
       for (int i=0; i<4; i++) {
-        p = strtok(i==0?line:NULL, " ");
+        p = strtok(i==0?line:NULL, " \t");
         switch (i) {
         case 1:
           if (!p) {empty_line = true; break;}
@@ -123,7 +123,7 @@ DSU::DSU(FILE *input, bool noLP, bool shifts, bool pknots, int time_max, int max
       vector<int> saddle_c;
       int number;
       if (saddle_reading) {
-        while ((p=strtok(NULL, " "))) {
+        while ((p=strtok(NULL, " \t"))) {
           if (p[strlen(p)-1]=='S') {
             sscanf(p, "%dS", &number);
             saddle_c.push_back(number-1);
@@ -222,7 +222,7 @@ DSU::DSU(FILE *input, bool noLP, bool shifts, bool pknots, int time_max, int max
 
 
       char *p;
-      p = strtok(line, " ");
+      p = strtok(line, " \t");
       while (p !=NULL && (!has_energy || !tmp)) {
         // is struct?
         if (isStruct(p)) {
@@ -237,7 +237,7 @@ DSU::DSU(FILE *input, bool noLP, bool shifts, bool pknots, int time_max, int max
             has_energy = true;
           }
         }
-        p = strtok(NULL, " ");
+        p = strtok(NULL, " \t");
       }
 
       // add info:
@@ -720,7 +720,7 @@ void DSU::ReadFilter(char *filter_file)
 
       char *p;
       for (int i=0; i<3; i++) {
-        p = strtok(i==0?line:NULL, " ");
+        p = strtok(i==0?line:NULL, " \t");
         if (!p) break;
         switch (i) {
         case 0:
@@ -764,7 +764,7 @@ void DSU::ReadFilter(char *filter_file)
       mapping_rev[mapping[i]] = i;
     }
   } else {
-    fprintf(stderr, "WARNING: cannot open filter file ""%s""!", filter_file);
+    fprintf(stderr, "WARNING: cannot open filter file ""%s""!\n", filter_file);
   }
 }
 
@@ -1548,7 +1548,7 @@ vector<int> DSU::GetNumbers(char *filename)
     char *line = to_emptyspc(my_getline(file));
     while (line) {
 
-      char *p = strtok(line, " ");
+      char *p = strtok(line, " \t");
       while (p) {
         if (isStruct(p)) {
           int num = -1;
@@ -1565,7 +1565,7 @@ vector<int> DSU::GetNumbers(char *filename)
             res.push_back(num);
           }
         }
-        p = strtok(NULL, " ");
+        p = strtok(NULL, " \t");
       }
       line = to_emptyspc(my_getline(file));
     }
