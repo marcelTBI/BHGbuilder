@@ -14,7 +14,9 @@ OBJ = $(NAME)_cmdline.o\
 			RNAstruc.o\
 			clustering.o\
 			pknots.o\
-			findpath_pk.o
+			findpath_pk.o\
+			RateGraph.o\
+			mxccm.o
 
 # should stay unchanged: 
 CPP = g++
