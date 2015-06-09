@@ -1,6 +1,6 @@
 #ViennaRNA package location
-ViennaRNA=~/software/include/ViennaRNA
-ViennaLIB=~/software/lib/libRNA.a
+ViennaRNA=/home/mescalin/marcel/software/ViennaRNA-2.1.8/H
+ViennaLIB=/home/mescalin/marcel/software/ViennaRNA-2.1.8/lib/libRNA.a
 
 NAME=BHGbuilder
 
