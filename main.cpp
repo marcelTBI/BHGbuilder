@@ -42,10 +42,11 @@ int main(int argc, char **argv)
     // BHGbuilder
   Opt opt(args_info);
   DSU dsu(stdin, args_info.noLP_flag, args_info.shift_flag, args_info.pseudoknots_flag, args_info.time_max_arg, args_info.number_lm_arg, args_info.just_read_flag, args_info.debug_flag);
+  fprintf(stderr, "reading input took %.2f secs.\n", (clock()-time)/(double)CLOCKS_PER_SEC); time = clock();
 
   if (!args_info.just_read_flag) {
     dsu.Cluster(opt, args_info.cluster_Kmax_arg);
-    fprintf(stderr, "computation of saddles took %.2f secs.\n", (clock()-time)/(double)CLOCKS_PER_SEC);
+    fprintf(stderr, "computation of saddles took %.2f secs.\n", (clock()-time)/(double)CLOCKS_PER_SEC); time = clock();
   }
 
   if (args_info.just_ub_flag) {
@@ -63,7 +64,7 @@ int main(int argc, char **argv)
       }
       dsu.SortFix();
 
-      fprintf(stderr, "printing dot took %.2f secs.\n", (clock()-time)/(double)CLOCKS_PER_SEC); time = clock();
+      fprintf(stderr, "sorting took %.2f secs.\n", (clock()-time)/(double)CLOCKS_PER_SEC); time = clock();
 
         // connect comps
       if (args_info.components_flag) {
@@ -73,23 +74,22 @@ int main(int argc, char **argv)
         fprintf(stderr, "connnecting components took %.2f secs.\n", (clock()-time)/(double)CLOCKS_PER_SEC); time = clock();
       }
     }
+
+    // reduce!
+    if (args_info.reduce_given) {
+      dsu.Reduce(args_info.reduce_arg, args_info.filter_file_given?args_info.filter_file_arg:NULL);
+      fprintf(stderr, "reduction took %.2f secs.\n", (clock()-time)/(double)CLOCKS_PER_SEC); time = clock();
+    }
+
+    // print dot
     dsu.PrintDot(args_info.dot_file_arg, args_info.dot_flag, args_info.graph_file_given, args_info.graph_file_arg, args_info.tree_visualise_flag, args_info.dot_energies_flag);
-
-    /*// just debug
-    dsu.PrintComps();
-    dsu.PrintLinkCP(false);
-  */
-
-   /* // remov if we have too many:
-    if (args_info.keep_maximum_given) {
-      if (dsu.Size() > args_info.keep_maximum_arg) dsu.RemoveLM(dsu.Size() - args_info.keep_maximum_arg, args_info.filter_file_given?args_info.filter_file_arg:NULL);
-    }*/
+    fprintf(stderr, "printing dot took %.2f secs.\n", (clock()-time)/(double)CLOCKS_PER_SEC); time = clock();
 
 
     if (!args_info.quiet_flag) {
       // real output:
       dsu.PrintLM(stdout);
-      dsu.PrintSaddles(stdout);
+      dsu.PrintSaddles(stdout, true, args_info.no_new_flag);
     }
 
     // barriers-like output
@@ -169,7 +169,7 @@ int main(int argc, char **argv)
       strcpy(args_info.filter_arg, args_info.filter_file_arg);
       args_info.filter_given = 1;
     }
-    if (args_info.rates_file_given) {
+    if (args_info.rates_file_given || args_info.prob_param_given || args_info.fret_given) {
       RateGraph rg(dsu, args_info.rates_temp_arg, args_info.rates_fullpath_flag?args_info.depth_arg:0, args_info.minimal_rate_arg, args_info.ordering_arg[0]);
 
       // read filter
@@ -193,23 +193,55 @@ int main(int argc, char **argv)
         fprintf(stderr, "removal of %d lm took %.2f secs. (bulk matrix removal)\n", x, (clock()-time)/(double)CLOCKS_PER_SEC); time = clock();
       }
 
-      // print rates
-      FILE *file = fopen(args_info.rates_file_arg, "w");
-      if (file) {
-        fprintf(stderr, "printing rates ... ");
-        rg.PrintRates(file);
-        fprintf(stderr, "into \"%s\" took %.2f secs.\n", args_info.rates_file_arg, (clock()-time)/(double)CLOCKS_PER_SEC); time = clock();
-        fclose(file);
+      if (args_info.rates_file_given) {
+        // print rates
+        FILE *file = fopen(args_info.rates_file_arg, "w");
+        if (file) {
+          fprintf(stderr, "printing rates ... ");
+          rg.PrintRates(file);
+          fprintf(stderr, "into \"%s\" took %.2f secs.\n", args_info.rates_file_arg, (clock()-time)/(double)CLOCKS_PER_SEC); time = clock();
+          fclose(file);
+        }
+
+        // now output the list of stuff that we haven't removed
+        char outrates[500];
+        strcpy(outrates, args_info.rates_file_arg);
+        int len = strlen(outrates);
+        outrates[len] = 'O';
+        outrates[len+1] = '\0';
+        rg.PrintOutput(outrates);
+        //rg.PrintDot(args_info.dot_file_arg, args_info.graph_file_given);
       }
 
-      // now output the list of stuff that we haven't removed
-      char outrates[500];
-      strcpy(outrates, args_info.rates_file_arg);
-      int len = strlen(outrates);
-      outrates[len] = 'O';
-      outrates[len+1] = '\0';
-      rg.PrintOutput(outrates);
-      //rg.PrintDot(args_info.dot_file_arg, args_info.graph_file_given);
+      // now output the prob matrix:
+      if (args_info.prob_param_given) {
+        char filename[500];
+        sprintf(filename, "prob_matrix%.0f.tsv", args_info.prob_param_arg);
+        fprintf(stderr, "exponentiating rate matrix ... ");
+        rg.PrintProb(args_info.prob_param_arg, filename);
+        fprintf(stderr, "into \"%s\" took %.2f secs.\n", filename, (clock()-time)/(double)CLOCKS_PER_SEC); time = clock();
+      }
+
+      // now output all the FRET data:
+      if (args_info.fret_given) {
+        fprintf(stderr, "exponentiating rate matrix ... ");
+        rg.CreateProb(args_info.prob_param_arg);
+
+        // first file:
+        char filename[500];
+        sprintf(filename, "idstr_%s.tsv", args_info.fret_arg);
+        dsu.PrintFRET1(filename);
+
+        // second file:
+        sprintf(filename, "iniprob_%s.tsv", args_info.fret_arg);
+        dsu.PrintFRET2(filename);
+
+        // third file:
+        sprintf(filename, "tranprob_%s.tsv", args_info.fret_arg);
+        rg.PrintProb(args_info.prob_param_arg, filename);
+
+        fprintf(stderr, "creating FRET files took %.2f secs.\n", (clock()-time)/(double)CLOCKS_PER_SEC); time = clock();
+      }
 
     }
 

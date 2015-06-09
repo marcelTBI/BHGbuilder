@@ -160,15 +160,15 @@ public:
 
   // clustering
   int Cluster(Opt &opt, int kmax);
-  void ComputeTBD(TBD &pqueue, int maxkeep, int num_threshold, bool outer, bool noLP, bool shifts, bool debug, vector<RNAsaddle> *output_saddles = NULL, int conn_neighs = 0);
+  void ComputeTBD(TBD &pqueue, int maxkeep, int num_threshold, bool outer, bool noLP, bool shifts, bool debug, vector<RNAsaddle> *output_saddles = NULL, int conn_neighs = 0, bool no_new = false);
   int AddLMtoTBD(short *tmp_str, int tmp_en, LMtype type, bool debug);
   int JoinClusters(Opt &opt, UF_set_child &ufset, set<int> &represents, TBD &output, int i, int j);
   void GetRepre(TBD &output, set<int> &represents, set<int> &children, Opt &opt);
 
   // helpers
   int FindNum(int energy, short *str);           // find number of structure
-  void FindNumbers(int begin, int end, path_t *path, vector<int> &lm_numbers, bool shifts, bool noLP, bool debug); // find all numbers of LM on path by bisection
-  void FindNumbers(int begin, int end, path_pk *path, vector<int> &lm_numbers, bool shifts, bool noLP, bool debug); // and the PK version
+  void FindNumbers(int begin, int end, path_t *path, vector<int> &lm_numbers, bool shifts, bool noLP, bool debug, bool no_new); // find all numbers of LM on path by bisection
+  void FindNumbers(int begin, int end, path_pk *path, vector<int> &lm_numbers, bool shifts, bool noLP, bool debug, bool no_new); // and the PK version
   bool InsertUB(RNAsaddle saddle, bool debug); // insert into UBlist
     // link cp
   int FloodUp(RNAlocmin &i, RNAlocmin &j, RNAsaddle &saddle, Opt &opt, bool debug); // flood up from i and j to find direct saddle
@@ -183,7 +183,7 @@ public:
   // print text
   void PrintLinkCP(FILE *output = stdout, bool fix = true);
   void PrintLM(FILE *output = stdout, bool fix = true);
-  void PrintSaddles(FILE *output = stdout, bool fix = true);
+  void PrintSaddles(FILE *output = stdout, bool fix = true, bool condensed = true);
   void PrintComps(FILE *output = stdout, bool fill = true);
   void PrintBarr(FILE *output = stdout);
 
@@ -226,8 +226,22 @@ public:
   void EHeights(FILE *heights, bool full, bool only_norm);
   void ERank(FILE *rank, bool barrier, bool out_conns = false);
 
+  enum ReductionMethod {HighestSaddle};
+
+  // reduction:
+  void ReduceOne(int number, ReductionMethod method = HighestSaddle);
+  void ReductionClean();
+  void Reduce(int to_keep, char *filterfile);
+
   void Histo(FILE *histo);
 
   vector<int> GetNumbers(char *filename);
+
+  // FRET:
+  void PrintFRET1(char *filename);
+  void PrintFRET2(char *filename);
+
+  void PrintFRET1(FILE *output);
+  void PrintFRET2(FILE *output);
 };
 #endif

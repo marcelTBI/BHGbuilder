@@ -192,7 +192,7 @@ int DSU::Cluster(Opt &opt, int kmax)
   fprintf(stderr, "output size = %d (%d, %d, %d)\n", output.size(), output.sizes[0], output.sizes[1], output.sizes[2]);
 
   // now finish:
-  ComputeTBD(output, opt.maxkeep, opt.num_threshold, opt.outer, opt.noLP, opt.shifts, opt.debug, NULL, opt.conn_neighs);
+  ComputeTBD(output, opt.maxkeep, opt.num_threshold, opt.outer, opt.noLP, opt.shifts, opt.debug, NULL, opt.conn_neighs, opt.no_new);
 
   // now just resort UBlist to something sorted according energy
   saddles.reserve(UBlist.size());
@@ -336,7 +336,7 @@ void DSU::GetRepre(TBD &output, set<int> &represents, set<int> &children, Opt &o
   output.join(cluster);
 }
 
-void DSU::FindNumbers(int begin, int end, path_t *path, vector<int> &lm_numbers, bool shifts, bool noLP, bool debug)
+void DSU::FindNumbers(int begin, int end, path_t *path, vector<int> &lm_numbers, bool shifts, bool noLP, bool debug, bool no_new)
 {
   // first resolve small case:
   if (end-begin<4) {
@@ -354,11 +354,11 @@ void DSU::FindNumbers(int begin, int end, path_t *path, vector<int> &lm_numbers,
         tmp_en = move_gradient(seq, tmp_str, s0, s1, 0, shifts, noLP);
       }
       // speedup
-      if (begins && tmp_en == LM[lm_numbers[begin]].energy && str_eq(LM[lm_numbers[begin]].structure, tmp_str)) {
+      if (lm_numbers[begin] != -1 && begins && tmp_en == LM[lm_numbers[begin]].energy && str_eq(LM[lm_numbers[begin]].structure, tmp_str)) {
         lm_numbers[i] = lm_numbers[begin];
       } else {
         begins = false;
-        if (tmp_en == LM[lm_numbers[end]].energy && str_eq(LM[lm_numbers[end]].structure, tmp_str)) {
+        if (lm_numbers[end] != -1 && tmp_en == LM[lm_numbers[end]].energy && str_eq(LM[lm_numbers[end]].structure, tmp_str)) {
           lm_numbers[i] = lm_numbers[end];
         }
       }
@@ -367,7 +367,7 @@ void DSU::FindNumbers(int begin, int end, path_t *path, vector<int> &lm_numbers,
         lm_numbers[i] = FindNum(tmp_en, tmp_str);
 
         // update UBlist
-        if (lm_numbers[i]==-1) {
+        if (lm_numbers[i]==-1 && !no_new) {
           if (gl_maxen < tmp_en) {
             //fprintf(stderr, "exceeds en.: %s %6.2f\n", pt_to_str(tmp_str).c_str(), tmp_en/100.0);
             lm_numbers[i] = AddLMtoTBD(tmp_str, tmp_en, EE_DSU, debug);
@@ -395,10 +395,10 @@ void DSU::FindNumbers(int begin, int end, path_t *path, vector<int> &lm_numbers,
   //fprintf(stderr, "%s\n", pt_to_str(tmp_str).c_str());
 
   // speed up:
-  if (tmp_en == LM[lm_numbers[begin]].energy && str_eq(LM[lm_numbers[begin]].structure, tmp_str)) {
+  if (lm_numbers[begin] != -1 && tmp_en == LM[lm_numbers[begin]].energy && str_eq(LM[lm_numbers[begin]].structure, tmp_str)) {
     lm_numbers[pivot] = lm_numbers[begin];
   } else {
-    if (tmp_en == LM[lm_numbers[end]].energy && str_eq(LM[lm_numbers[end]].structure, tmp_str)) {
+    if (lm_numbers[end] != -1 && tmp_en == LM[lm_numbers[end]].energy && str_eq(LM[lm_numbers[end]].structure, tmp_str)) {
       lm_numbers[pivot] = lm_numbers[end];
     }
   }
@@ -408,7 +408,7 @@ void DSU::FindNumbers(int begin, int end, path_t *path, vector<int> &lm_numbers,
     lm_numbers[pivot] = FindNum(tmp_en, tmp_str);
 
     // update UBlist
-    if (lm_numbers[pivot]==-1) {
+    if (lm_numbers[pivot]==-1 && !no_new) {
       if (gl_maxen < tmp_en) {
         //fprintf(stderr, "exceeds en.: %s %6.2f\n", pt_to_str(tmp_str).c_str(), tmp_en/100.0);
         lm_numbers[pivot] = AddLMtoTBD(tmp_str, tmp_en, EE_DSU, debug);
@@ -424,14 +424,14 @@ void DSU::FindNumbers(int begin, int end, path_t *path, vector<int> &lm_numbers,
   free(tmp_str);
 
   // continue recursion:
-  if (lm_numbers[pivot]!=lm_numbers[begin] && pivot-begin>1) FindNumbers(begin, pivot, path, lm_numbers, shifts, noLP, debug);
-  if (lm_numbers[pivot]!=lm_numbers[end] && end-pivot>1) FindNumbers(pivot, end, path, lm_numbers, shifts, noLP, debug);
+  if ((lm_numbers[pivot]!=lm_numbers[begin] || lm_numbers[pivot]==-1) && pivot-begin>1) FindNumbers(begin, pivot, path, lm_numbers, shifts, noLP, debug, no_new);
+  if ((lm_numbers[pivot]!=lm_numbers[end]   || lm_numbers[pivot]==-1) && end-pivot>1) FindNumbers(pivot, end, path, lm_numbers, shifts, noLP, debug, no_new);
 
   // return maximal energy
   return ;
 }
 
-void DSU::FindNumbers(int begin, int end, path_pk *path, vector<int> &lm_numbers, bool shifts, bool noLP, bool debug)
+void DSU::FindNumbers(int begin, int end, path_pk *path, vector<int> &lm_numbers, bool shifts, bool noLP, bool debug, bool no_new)
 {
   // first resolve small case:
   if (end-begin<4) {
@@ -449,11 +449,11 @@ void DSU::FindNumbers(int begin, int end, path_pk *path, vector<int> &lm_numbers
         tmp_en = move_gradient(seq, tmp_str, s0, s1, 0, shifts, noLP);
       }
       // speedup
-      if (begins && tmp_en == LM[lm_numbers[begin]].energy && str_eq(LM[lm_numbers[begin]].structure, tmp_str)) {
+      if (lm_numbers[begin] != -1 && begins && tmp_en == LM[lm_numbers[begin]].energy && str_eq(LM[lm_numbers[begin]].structure, tmp_str)) {
         lm_numbers[i] = lm_numbers[begin];
       } else {
         begins = false;
-        if (tmp_en == LM[lm_numbers[end]].energy && str_eq(LM[lm_numbers[end]].structure, tmp_str)) {
+        if (lm_numbers[end] != -1 && tmp_en == LM[lm_numbers[end]].energy && str_eq(LM[lm_numbers[end]].structure, tmp_str)) {
           lm_numbers[i] = lm_numbers[end];
         }
       }
@@ -462,7 +462,7 @@ void DSU::FindNumbers(int begin, int end, path_pk *path, vector<int> &lm_numbers
         lm_numbers[i] = FindNum(tmp_en, tmp_str);
 
         // update UBlist
-        if (lm_numbers[i]==-1) {
+        if (lm_numbers[i]==-1 && !no_new) {
           if (gl_maxen < tmp_en) {
             //fprintf(stderr, "exceeds en.: %s %6.2f\n", pt_to_str(tmp_str).c_str(), tmp_en/100.0);
             lm_numbers[i] = AddLMtoTBD(tmp_str, tmp_en, EE_DSU, debug);
@@ -496,10 +496,10 @@ void DSU::FindNumbers(int begin, int end, path_pk *path, vector<int> &lm_numbers
   //fprintf(stderr, "%s\n", pt_to_str(tmp_str).c_str());
 
   // speed up:
-  if (tmp_en == LM[lm_numbers[begin]].energy && str_eq(LM[lm_numbers[begin]].structure, tmp_str)) {
+  if (lm_numbers[begin] != -1 && tmp_en == LM[lm_numbers[begin]].energy && str_eq(LM[lm_numbers[begin]].structure, tmp_str)) {
     lm_numbers[pivot] = lm_numbers[begin];
   } else {
-    if (tmp_en == LM[lm_numbers[end]].energy && str_eq(LM[lm_numbers[end]].structure, tmp_str)) {
+    if (lm_numbers[end] != -1 && tmp_en == LM[lm_numbers[end]].energy && str_eq(LM[lm_numbers[end]].structure, tmp_str)) {
       lm_numbers[pivot] = lm_numbers[end];
     }
   }
@@ -509,7 +509,7 @@ void DSU::FindNumbers(int begin, int end, path_pk *path, vector<int> &lm_numbers
     lm_numbers[pivot] = FindNum(tmp_en, tmp_str);
 
     // update UBlist
-    if (lm_numbers[pivot]==-1) {
+    if (lm_numbers[pivot]==-1 && !no_new) {
       if (gl_maxen < tmp_en) {
         //fprintf(stderr, "exceeds en.: %s %6.2f\n", pt_to_str(tmp_str).c_str(), tmp_en/100.0);
         lm_numbers[pivot] = AddLMtoTBD(tmp_str, tmp_en, EE_DSU, debug);
@@ -525,14 +525,14 @@ void DSU::FindNumbers(int begin, int end, path_pk *path, vector<int> &lm_numbers
   free(tmp_str);
 
   // continue recursion:
-  if (lm_numbers[pivot]!=lm_numbers[begin] && pivot-begin>1) FindNumbers(begin, pivot, path, lm_numbers, shifts, noLP, debug);
-  if (lm_numbers[pivot]!=lm_numbers[end] && end-pivot>1) FindNumbers(pivot, end, path, lm_numbers, shifts, noLP, debug);
+  if ((lm_numbers[pivot]!=lm_numbers[begin] || lm_numbers[pivot]==-1) && pivot-begin>1) FindNumbers(begin, pivot, path, lm_numbers, shifts, noLP, debug, no_new);
+  if ((lm_numbers[pivot]!=lm_numbers[end]   || lm_numbers[pivot]==-1)  && end-pivot>1) FindNumbers(pivot, end, path, lm_numbers, shifts, noLP, debug, no_new);
 
   // return maximal energy
   return ;
 }
 
-void DSU::ComputeTBD(TBD &pqueue, int maxkeep, int num_threshold, bool outer, bool noLP, bool shifts, bool debug, vector<RNAsaddle> *output_saddles, int conn_neighs)
+void DSU::ComputeTBD(TBD &pqueue, int maxkeep, int num_threshold, bool outer, bool noLP, bool shifts, bool debug, vector<RNAsaddle> *output_saddles, int conn_neighs, bool no_new)
 {
   int cnt = 0;
 
@@ -604,10 +604,10 @@ void DSU::ComputeTBD(TBD &pqueue, int maxkeep, int num_threshold, bool outer, bo
 
       // bisect the path and find new LMs:
       unsigned int old_size = LM.size();
-      FindNumbers(0, length-1, path, lm_numbers, shifts, noLP, debug);
+      FindNumbers(0, length-1, path, lm_numbers, shifts, noLP, debug, no_new);
 
       // if we have found new minima and we want to do more than simple reevaluation of path (--conn-neighs>0)
-      if (LM.size() - old_size > 0 && conn_neighs > 0) {
+      if (LM.size() - old_size > 0 && conn_neighs > 0 && !no_new) {
         for (unsigned int j=old_size; j<LM.size(); j++) {
 
           // sort 'em according to Hamming D. and take first "conn_neighs"
@@ -651,11 +651,24 @@ void DSU::ComputeTBD(TBD &pqueue, int maxkeep, int num_threshold, bool outer, bo
       for (int i=1; i<length; i++) {
         if (lm_numbers[i]!=-1 && lm_numbers[i]!=last_num) {
 
+          // get the highest saddle in case we traveled through many "-1" saddles:
+          int j=i-1;
+          int highest_num = i;
+          while (j>0) {
+            // check if not higher saddle:
+            if (path[highest_num].en < path[j].en) highest_num = j;
+
+            // we found first that is not -1
+            if (lm_numbers[j]!=-1) break;
+            j--;
+          }
+
           // save saddle
-          RNAsaddle saddle(last_num, lm_numbers[i], DIRECT);
-          saddle.energy = max(path[i-1].en, path[i].en);
+          SDtype typ = (j==i-1?DIRECT:REDUCED);
+          RNAsaddle saddle(last_num, lm_numbers[i], typ);
+          saddle.energy = path[highest_num].en;
           saddle.str_ch = NULL;
-          saddle.structure = (path[i-1].en > path[i].en ? allocopy(path[i-1].structure) : allocopy(path[i].structure));
+          saddle.structure = allocopy(path[highest_num].structure);
           bool inserted = InsertUB(saddle, debug);
 
           // ???
@@ -664,7 +677,7 @@ void DSU::ComputeTBD(TBD &pqueue, int maxkeep, int num_threshold, bool outer, bo
           }
 
           // try to insert new things into TBD:
-          if (lm_numbers[i]!=lm_numbers[length-1] || lm_numbers[i-1]!=lm_numbers[0]) {
+          if ((lm_numbers[i]!=lm_numbers[length-1] || lm_numbers[i-1]!=lm_numbers[0]) && !no_new) {
             // check no-conn
             if (conectivity.size() > 0) conectivity.union_set(tbd.i, tbd.j);
             pqueue.insert(lm_numbers[i-1], lm_numbers[i], NEW_FOUND, true);
@@ -713,10 +726,10 @@ void DSU::ComputeTBD(TBD &pqueue, int maxkeep, int num_threshold, bool outer, bo
 
       // bisect the path and find new LMs:
       unsigned int old_size = LM.size();
-      FindNumbers(0, length-1, path, lm_numbers, shifts, noLP, debug);
+      FindNumbers(0, length-1, path, lm_numbers, shifts, noLP, debug, no_new);
 
       // if we have found new minima and we want to do more than simple reevaluation of path (--conn-neighs>0)
-      if (LM.size() - old_size > 0 && conn_neighs > 0) {
+      if (LM.size() - old_size > 0 && conn_neighs > 0 && !no_new) {
         for (unsigned int j=old_size; j<LM.size(); j++) {
 
           // sort 'em according to Hamming D. and take first "conn_neighs"
@@ -760,11 +773,24 @@ void DSU::ComputeTBD(TBD &pqueue, int maxkeep, int num_threshold, bool outer, bo
       for (int i=1; i<length; i++) {
         if (lm_numbers[i]!=-1 && lm_numbers[i]!=last_num) {
 
+          // get the highest saddle in case we traveled through many "-1" saddles:
+          int j=i-1;
+          int highest_num = i;
+          while (j>0) {
+            // check if not higher saddle:
+            if (path[highest_num].en < path[j].en) highest_num = j;
+
+            // we found first that is not -1
+            if (lm_numbers[j]!=-1) break;
+            j--;
+          }
+
           // save saddle
-          RNAsaddle saddle(last_num, lm_numbers[i], DIRECT);
-          saddle.energy = en_fltoi(max(path[i-1].en, path[i].en));
+          SDtype typ = (j==i-1?DIRECT:REDUCED);
+          RNAsaddle saddle(last_num, lm_numbers[i], typ);
+          saddle.energy = en_fltoi(path[highest_num].en);
           saddle.str_ch = NULL;
-          saddle.structure = (path[i-1].en > path[i].en ? make_pair_table(path[i-1].s) : make_pair_table(path[i].s));
+          saddle.structure = make_pair_table(path[highest_num].s);
           bool inserted = InsertUB(saddle, debug);
 
           // ???
@@ -773,7 +799,7 @@ void DSU::ComputeTBD(TBD &pqueue, int maxkeep, int num_threshold, bool outer, bo
           }
 
           // try to insert new things into TBD:
-          if (lm_numbers[i]!=lm_numbers[length-1] || lm_numbers[i-1]!=lm_numbers[0]) {
+          if ((lm_numbers[i]!=lm_numbers[length-1] || lm_numbers[i-1]!=lm_numbers[0]) && !no_new) {
             // check no-conn
             if (conectivity.size() > 0) conectivity.union_set(tbd.i, tbd.j);
             pqueue.insert(lm_numbers[i-1], lm_numbers[i], NEW_FOUND, true);

@@ -137,7 +137,7 @@ void DSU::GetPath(int start, int stop, int maxkeep, char optimality, int max_sad
   if (bulk) {
     sprintf(filename, "pathB%d.%spath%c%s", bulk, optimality=='T'?std::to_string((int)time_fold).c_str():"", optimality, max_saddle<1000?"_":"");
   } else {
-    sprintf(filename, "path%d_%d.%spath%c%s", start+1, stop+1, optimality=='T'?std::to_string((int)time_fold).c_str():"", optimality, max_saddle<1000?"_":"");
+    sprintf(filename, "path%d_%d.%spath%c%s", start+1, stop+1, optimality=='T'?std::to_string((time_fold<=1e9?(int)time_fold:time_fold)).c_str():"", optimality, max_saddle<1000?"_":"");
   }
   GetPath(start, stop, edgesV_l, filename, maxkeep, optimality, max_saddle, time_fold);
 }

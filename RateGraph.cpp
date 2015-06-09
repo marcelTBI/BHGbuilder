@@ -11,6 +11,7 @@ extern "C" {
   #include "findpath.h"
   #include "move_set.h"
   #include "mxccm.h"
+  #include "exp_matrix.h"
 }
 
 #include "RateGraph.h"
@@ -200,6 +201,7 @@ RateGraph::RateGraph(DSU &dsu, double temp, int maxkeep, double minimal_rate, ch
 
   // null it.
   rate_matrix = NULL;
+  prob_matrix = NULL;
 }
 
 int RateGraph::ReadFilter(char *filename)
@@ -210,14 +212,14 @@ int RateGraph::ReadFilter(char *filename)
     char *line;
     line = my_getline(file_filt);
     while (line) {
-      char *p = strtok(line, " ");
+      char *p = strtok(line, " \t");
       while (p) {
         if (isStruct(p)) {
           //fprintf(stderr, "%s \n",p);
           filter.insert(p);
           break;
         }
-        p = strtok(NULL, " ");
+        p = strtok(NULL, " \t");
       }
       free(line);
       line = my_getline(file_filt);
@@ -239,6 +241,7 @@ RateGraph::~RateGraph()
     free(lms[i].structure);
     if (lms[i].str_ch) free(lms[i].str_ch);
   }
+  if (prob_matrix) free(prob_matrix);
 }
 
 int RateGraph::ConstructQueue(char order, int number_remove, bool leave_trans)
@@ -742,7 +745,7 @@ void RateGraph::PrintRates(FILE *filname)
   // just print the rate matrix:
   for (unsigned int i=0; i<dim_rates; i++) {
     for (unsigned int j=0; j<dim_rates; j++) {
-        fprintf(filname, "%11.5g ", rate_matrix[dim_rates*i+j]);
+        fprintf(filname, "%16.10g ", rate_matrix[dim_rates*i+j]);
     }
     fprintf(filname, "\n");
   }
@@ -823,5 +826,55 @@ void RateGraph::PrintOutput(FILE *output)
   fprintf(output, "      %s\n", seq.c_str());
   for (unsigned int i=0; i<pos_to_lm.size(); i++) {
     fprintf(output, "%5d %s %6.2f %5d\n", pos_to_lm[i]+1, lms[pos_to_lm[i]].str_ch, lms[pos_to_lm[i]].energy/100.0, i+1);
+  }
+}
+
+void RateGraph::PrintProb(double t0, char *filename)
+{
+  FILE *outpu = fopen(filename, "w");
+  if (outpu) {
+    PrintProb(t0, outpu);
+    fclose(outpu);
+  }
+}
+
+void RateGraph::CreateProb(double t0)
+{
+  if (prob_matrix) return;
+
+  if (!rate_matrix) {
+      //build rate matrix:
+    dim_rates = rates.size();
+    rate_matrix = (double *) malloc(sizeof(double)*dim_rates*dim_rates);
+    for (unsigned int i=0; i<dim_rates*dim_rates; i++) rate_matrix[i] = 0.0;
+
+    for (unsigned int i=0; i<dim_rates; i++) {
+      double sum = 0.0;
+      for (auto a=rates[i].begin(); a!=rates[i].end(); a++) {
+        rate_matrix[i*dim_rates + a->first] = a->second;
+        sum += a->second;
+      }
+      rate_matrix[i*dim_rates + i] = -sum;
+    }
+  }
+
+  // exponentiate it:
+  prob_matrix = (double *) malloc(sizeof(double)*dim_rates*dim_rates);
+  for (unsigned int i=0; i<dim_rates*dim_rates; i++) rate_matrix[i]*=t0;
+  padexp(rate_matrix, prob_matrix, dim_rates, 30);
+  free(rate_matrix);
+  rate_matrix = NULL;
+}
+
+void RateGraph::PrintProb(double t0, FILE *output)
+{
+  CreateProb(t0);
+
+  // print it:
+  fprintf(output, "start\tend\ttransprob\n");
+  for (unsigned int i=0; i<dim_rates; i++) {
+    for (unsigned int j=0; j<dim_rates; j++) {
+      if (prob_matrix[dim_rates*i+j] > 0.0) fprintf(output, "%d\t%d\t%.10g\n", i+1, j+1, prob_matrix[dim_rates*i+j]);
+    }
   }
 }

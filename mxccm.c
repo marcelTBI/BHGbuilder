@@ -29,7 +29,7 @@ eigen(double *a,double *ev,int n)
 int
 qrevec(double *ev,double *evec,double *dp,int n)
 {
-  double cc,sc=0.,d,x,y,h,tzr=1.e-15;
+  double cc,sc=0.,d,x,y,h,tzr=1.e-50;
   int i,j,k,m,mqr=8*n;
   double *p;
   for(j=0,m=n-1;; ++j) {

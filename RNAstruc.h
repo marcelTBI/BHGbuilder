@@ -21,8 +21,8 @@ using namespace std;
 
 enum LMtype { NORMAL, NORM_CF, EE_DSU, EE_COMP }; // normal type, normal which was not in first list, exceeds energy in BHGbuilder, exceeds energy in connect components
 static char LMtype_string[][10] = { "NORMAL", "NORM_CF", "EE_DSU", "EE_COMP"};
-enum SDtype { DIRECT, LDIRECT, NOT_SURE, COMP };   // direct saddle - but not sure if lowest, for sure lowest direct saddle, not sure -- only with outer option, saddle from component join (direct, but maybe not lowest, principially same as DIRECT)
-static char SDtype_string[][10] = { "DIRECT", "LDIRECT", "NOT_SURE", "COMP" };
+enum SDtype { DIRECT, LDIRECT, NOT_SURE, COMP, REDUCED};   // direct saddle - but not sure if lowest, for sure lowest direct saddle, not sure -- only with outer option, saddle from component join (direct, but maybe not lowest, principially same as DIRECT; saddle which contains reduced connections - NOT DIRECT almost for sure)
+static char SDtype_string[][10] = { "DIRECT", "LDIRECT", "NOT_SURE", "COMP", "REDUCED"};
 // modes for rates generation
 enum mode_rates {VERTEX_CONTR, VERTEX_CONTR_SUM, EDGE_CONTR_MIN, EDGE_CONTR_MAX, NO_CONTR};
 
@@ -133,6 +133,8 @@ struct Opt {
   bool outer;
   float repre_portion;
   bool fbarrier;
+
+  bool no_new;
 
   Opt(gengetopt_args_info &args_info);
 };

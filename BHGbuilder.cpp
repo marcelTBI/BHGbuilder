@@ -500,6 +500,7 @@ void DSU::PrintDot(char *filename, bool dot_prog, bool print, char *file_print, 
           case LDIRECT: fprintf(dot, "\"S%d\" [label=\"S%d%s\", color=\"%s\", fontcolor=\"%s\"]\n", i+1, i+1, energy, rgb(color+30, color+30, color+30), rgb(color+30, color+30, color+30)); break;
           case NOT_SURE: fprintf(dot, "\"S%d\" [label=\"S%d%s\", color=\"%s\", fontcolor=\"%s\"]\n", i+1, i+1, energy, rgb(color-30, color-30, color-30), rgb(color-30, color-30, color-30)); break;
           case COMP: fprintf(dot, "\"S%d\" [label=\"S%d%s\", color=\"%s\", fontcolor=\"%s\"]\n", i+1, i+1, energy, rgb(255, color, color), rgb(255, color, color)); break;
+          case REDUCED: fprintf(dot, "\"S%d\" [label=\"S%d%s\", color=\"%s\", fontcolor=\"%s\"]\n", i+1, i+1, energy, rgb(color, 255, color), rgb(color, 255, color)); break;
         }
       }
       fprintf(dot, "\n");
@@ -1436,7 +1437,7 @@ void DSU::PrintBarr(FILE *output)
 }
 
 
-void DSU::PrintSaddles(FILE *output, bool fix)
+void DSU::PrintSaddles(FILE *output, bool fix, bool condensed)
 {
   if (fix) SortFix();
   //printf("Saddles (%4d):\n", (int)saddles.size());
@@ -1451,11 +1452,19 @@ void DSU::PrintSaddles(FILE *output, bool fix)
     saddle_connSadd[it->j].insert(it->i);
     saddle_connSadd[it->i].insert(it->j);
   }
+  bool continuing = false;
+  int j=0;
   for (unsigned int i=0; i<saddles.size(); i++) {
-    fprintf(output, "%4dS %s %7.2f %8s", i+1, saddles[i].str_ch, saddles[i].energy/100.0, SDtype_string[saddles[i].type]);
+    if (!condensed || !continuing) fprintf(output, "%4dS %s %7.2f %8s", j+1, saddles[i].str_ch, saddles[i].energy/100.0, SDtype_string[saddles[i].type]);
     for (set<int>::iterator it=saddle_connLM[i].begin(); it!=saddle_connLM[i].end(); it++) fprintf(output, " %4d", (*it)+1);
     for (set<int>::iterator it=saddle_connSadd[i].begin(); it!=saddle_connSadd[i].end(); it++) fprintf(output, " %3dS", (*it)+1);
-    fprintf(output, "\n");
+    if (!condensed || !(i<saddles.size()-1 && saddles[i+1] == saddles[i])) {
+      fprintf(output, "\n");
+      j++;
+      continuing = false;
+    } else {
+      continuing = true;
+    }
   }
 }
 
@@ -1486,6 +1495,7 @@ bool DSU::SortFix()
     sort(temp.begin(), temp.end());
     for (unsigned int i=0; i<temp.size(); i++) {
       saddles[i]=temp[i].first;
+      //fprintf(stderr, "%d %d %d %d %d %d %d\n", i, saddles[i].lm1, saddles[i].lm2, mappingLM[saddles[i].lm1], mappingLM[saddles[i].lm2], mappingLM.size(), mappingSD.size());
       saddles[i].lm1 = mappingLM[saddles[i].lm1];
       saddles[i].lm2 = mappingLM[saddles[i].lm2];
       if (saddles[i].lm1 > saddles[i].lm2) swap(saddles[i].lm1, saddles[i].lm2);
@@ -1510,6 +1520,7 @@ bool DSU::SortFix()
   for (set<edgeSS>::iterator it=edges_s.begin(); it!=edges_s.end(); it++) {
     edges_s_t.insert(edgeSS(mappingSD[it->i], mappingSD[it->j]));
   }
+  edges_s = edges_s_t;
 
   // process edgesV_l:
   vector<set<edgeLL> > edges_temp(edgesV_l.size());
@@ -1576,3 +1587,272 @@ vector<int> DSU::GetNumbers(char *filename)
 
   return res;
 }
+
+
+
+
+void DSU::ReduceOne(int number, ReductionMethod method)
+{
+  // first get all connections from number
+  for (auto i=edgesV_l[number].begin(); i!=edgesV_l[number].end(); i++) {
+    int from_i = i->goesTo(number);
+    auto j = i;
+    for (j++; j!=edgesV_l[number].end(); j++) {
+      int from_j = j->goesTo(number);
+      // find the highest:
+      int en = i->en>j->en?i->en:j->en;
+      int sadd = i->en>j->en?i->saddle:j->saddle;
+
+      // just add it: (it is already in "saddles")
+        // check if we have it before and better:
+      edgeLL to_insert = edgeLL(from_i, from_j, en, sadd);
+
+      //fprintf(stderr, "checking  %d %d %d %d\n", from_i+1, from_j+1, en, sadd);
+
+      auto old = edges_l.find(to_insert);
+      if (old != edges_l.end()) {
+        if (old->en > en) {  // the old one is WORSE!
+          // delete the old one
+          edgesV_l[old->i].erase(*old);
+          edgesV_l[old->j].erase(*old);
+          edges_ls.erase(edgeLS(old->i, old->saddle));
+          edges_ls.erase(edgeLS(old->j, old->saddle));
+          edges_l.erase(old);
+        } else {   // the old one is same or BETTER!
+          // do nothing!
+          continue;
+        }
+      }
+
+       //fprintf(stderr, "inserting %d %d %d %d\n", from_i+1, from_j+1, en, sadd);
+
+      // change its type to reduced
+      saddles[sadd].type = REDUCED;
+      saddles[sadd].lm1 = min(from_i, from_j);
+      saddles[sadd].lm2 = max(from_i, from_j);
+
+      // insert the new one
+      bool existed1 = edgesV_l[from_i].insert(to_insert).second;
+      bool existed2 = edgesV_l[from_j].insert(to_insert).second;
+      bool existed3 = edges_l.insert(to_insert).second;
+      bool existed4 = edges_ls.insert(edgeLS(from_i, sadd)).second;
+      bool existed5 = edges_ls.insert(edgeLS(from_j, sadd)).second;
+
+      //fprintf(stderr, "%d %d %d %d %d\n", existed1, existed2, existed3, existed4, existed5);
+    }
+  }
+
+  // now delete the connections
+  for (auto i = edgesV_l[number].begin(); i!=edgesV_l[number].end(); i++) {
+    int from_i = i->goesTo(number);
+    edgeLL to_erase = edgeLL(from_i, number, i->en, i->saddle);
+    edgesV_l[from_i].erase(to_erase);
+    edges_l.erase(to_erase);
+    edges_ls.erase(edgeLS(number, i->saddle));
+    //edges_ls.erase(edgeLS(from_i, i->saddle));
+
+    //fprintf(stderr, "deleting: %d %d %d\n", number, from_i ,i->saddle);
+  }
+  edgesV_l[number].clear();
+
+}
+
+// after all reduction we must clear LM and saddles (can be saddles that are no longer needed)
+void DSU::ReductionClean()
+{
+  // first gather all that is to be removed:
+  vector<int> LM_cons(LM.size(), 0);
+  vector<int> SD_cons(saddles.size(), 0);
+
+  for (auto it=edges_ls.begin(); it!=edges_ls.end(); it++) {
+    LM_cons[it->i]++;
+    SD_cons[it->j]++;
+  }
+
+  // create mapping:
+  vector<int> mappingLM(LM.size(), 0);
+  vector<int> mappingSD(saddles.size(), 0);
+
+  int j=0;
+  for (unsigned int i=0; i<LM_cons.size(); i++) {
+    // if exists, write him to mapping:
+    if (LM_cons[i] > 0) {
+      mappingLM[i] = j;
+      j++;
+    } else {
+      //fprintf(stderr, "remLM %d\n", i+1);
+      mappingLM[i] = -1;
+    }
+  }
+  int removedLM = LM_cons.size()-j;
+  j=0;
+  for (unsigned int i=0; i<SD_cons.size(); i++) {
+    // if exists, write him to mapping:
+    if (SD_cons[i] > 1) {
+      mappingSD[i] = j;
+      j++;
+    } else {
+      //fprintf(stderr, "remSD %d\n", i+1);
+      mappingSD[i] = -1;
+    }
+  }
+  int removedSD = SD_cons.size()-j;
+
+  if (removedLM + removedSD == 0) return;
+
+  // first process all nodes:
+  vertex_l.clear();
+  for (unsigned int i=0; i<LM.size(); i++) {
+    if (mappingLM[i] == -1) {
+      LM[i].freeMEM();
+      continue;
+    }
+    LM[mappingLM[i]] = LM[i];
+    vertex_l[LM[mappingLM[i]]] = mappingLM[i];
+  }
+  LM.erase(LM.end()-removedLM, LM.end());
+
+  for (unsigned int i=0; i<saddles.size(); i++) {
+    if (mappingSD[i] == -1) {
+      saddles[i].freeMEM();
+      continue;
+    }
+    saddles[i].lm1 = mappingLM[saddles[i].lm1];
+    saddles[i].lm2 = mappingLM[saddles[i].lm2];
+    saddles[mappingSD[i]] = saddles[i];
+
+  }
+
+  saddles.erase(saddles.end()-removedSD, saddles.end());
+
+  // now process all edges:
+  set<edgeLL> edges_l_t;
+  for (set<edgeLL>::iterator it=edges_l.begin(); it!=edges_l.end(); it++) {
+    if (mappingSD[it->saddle] == -1) continue;
+    if (mappingLM[it->i] == -1) continue;
+    if (mappingLM[it->j] == -1) continue;
+    edges_l_t.insert(edgeLL(mappingLM[it->i], mappingLM[it->j], saddles[mappingSD[it->saddle]].energy, mappingSD[it->saddle]));
+  }
+  edges_l = edges_l_t;
+
+  set<edgeLS> edges_ls_t;
+  for (set<edgeLS>::iterator it=edges_ls.begin(); it!=edges_ls.end(); it++) {
+    if (mappingSD[it->j] == -1) continue;
+    if (mappingLM[it->i] == -1) continue;
+    edges_ls_t.insert(edgeLS(mappingLM[it->i], mappingSD[it->j]));
+  }
+  edges_ls = edges_ls_t;
+
+  set<edgeSS> edges_s_t;
+  for (set<edgeSS>::iterator it=edges_s.begin(); it!=edges_s.end(); it++) {
+    if (mappingSD[it->j] == -1) continue;
+    if (mappingSD[it->i] == -1) continue;
+    edges_s_t.insert(edgeSS(mappingSD[it->i], mappingSD[it->j]));
+  }
+  edges_s = edges_s_t;
+
+  // process edgesV_l:
+  vector<set<edgeLL> > edges_temp(edgesV_l.size() - removedLM);
+  for (unsigned int i=0; i<edgesV_l.size(); i++) {
+    if (mappingLM[i] == -1) continue;
+    for (set<edgeLL>::iterator it=edgesV_l[i].begin(); it!=edgesV_l[i].end(); it++) {
+      if (mappingSD[it->saddle] == -1) continue;
+      if (mappingLM[it->i] == -1) continue;
+      if (mappingLM[it->j] == -1) continue;
+      edges_temp[mappingLM[i]].insert(edgeLL(mappingLM[it->i], mappingLM[it->j], saddles[mappingSD[it->saddle]].energy, mappingSD[it->saddle]));
+    }
+  }
+  edgesV_l.clear();
+  edgesV_l = edges_temp;
+}
+
+struct pq_reduce {
+  int conns;
+  int lm;
+  int energy;
+
+  pq_reduce(int c, int l, int e) {
+    conns = c;
+    lm = l;
+    energy = e;
+  }
+
+  bool operator<(const pq_reduce &scnd) const {
+    if (conns == scnd.conns) {
+      return energy < scnd.energy;
+    } else return conns > scnd.conns;
+  }
+};
+
+void DSU::Reduce(int to_keep, char *filterfile)
+{
+  time = clock();
+
+  //read filter!
+  if (filterfile && mapping.empty()) ReadFilter(filterfile);
+
+  int reduced = 0;
+  int reduced_total = 0;
+
+  //construct a queue:
+  priority_queue<pq_reduce> pq;
+  for (unsigned int i=0; i<LM.size(); i++) {
+    // if in filter skip it
+    if (!mapping_rev.empty() && mapping_rev[i]>0) continue;
+    // insert into queue:
+    pq.push(pq_reduce((int)edgesV_l[i].size(), i, LM[i].energy));
+  }
+
+  // loop:
+  while ((int)LM.size()-reduced != to_keep) {
+    pq_reduce pr = pq.top(); pq.pop();
+
+    ReduceOne(pr.lm);
+
+    if (reduced > 0 && reduced%10000 == 0) {
+      // debug:
+      ReductionClean();
+      fprintf(stderr, "removed L                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            M %8d (%8d remaining) (conns=%4d, energy=%6.2f) (%6.2f secs.)\n", reduced_total, (int)LM.size()-reduced, pr.conns, pr.energy/100.0, (clock()-time)/(double)CLOCKS_PER_SEC); time = clock();
+      reduced = 0;
+    }
+
+    reduced++;
+    reduced_total++;
+  }
+}
+
+void DSU::PrintFRET1(char *filename)
+{
+  FILE *outpu = fopen(filename, "w");
+  if (outpu) {
+    PrintFRET1(outpu);
+    fclose(outpu);
+  }
+}
+
+void DSU::PrintFRET2(char *filename)
+{
+  FILE *outpu = fopen(filename, "w");
+  if (outpu) {
+    PrintFRET2(outpu);
+    fclose(outpu);
+  }
+}
+
+void DSU::PrintFRET1(FILE *output)
+{
+  fprintf(output, "id\tstructure\n");
+  for (unsigned int i=0; i<LM.size(); i++) fprintf(output, "%d\t%s\n", i+1, LM[i].str_ch);
+}
+
+void DSU::PrintFRET2(FILE *output)
+{
+  // calculate the Boltamann sum:
+  long double Bsum = 0.0;
+  for (unsigned int i=0; i<LM.size(); i++) Bsum += exp(-LM[i].energy/100.0/_kT);
+
+  // print
+  fprintf(output, "id\tinitprob\n");
+  for (unsigned int i=0; i<LM.size(); i++) fprintf(output, "%d\t%g\n", i+1, (double)(exp(-LM[i].energy/100.0/_kT)/Bsum));
+}
+

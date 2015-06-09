@@ -45,6 +45,7 @@ Opt::Opt(gengetopt_args_info &args_info)
   this->repre_portion = args_info.cluster_repre_arg;
   this->fbarrier = !args_info.cluster_fsaddle_flag;
   this->no_conn = args_info.no_conn_flag;
+  this->no_new = args_info.no_new_flag;
 
   this->pknots = args_info.pseudoknots_flag;
 

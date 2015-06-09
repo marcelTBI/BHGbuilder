@@ -87,6 +87,7 @@ class RateGraph
 
   // rate_matrix for shur removal (temporary)
   double *rate_matrix;
+  double *prob_matrix;
   unsigned int dim_rates;  // dimension of the matrix rate_matrix
 
   // local minima
@@ -124,6 +125,10 @@ public:
 
   void PrintOutput(char *filename);
   void PrintOutput(FILE *output);
+
+  void PrintProb(double t0, char *filename);
+  void PrintProb(double t0, FILE *output);
+  void CreateProb(double t0);
 
   int Size() {return lms.size();};
 

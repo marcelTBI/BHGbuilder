@@ -33,6 +33,7 @@ details="\nWith -d1 only unpaired bases can participate in at most one dangling 
  energy model.\n\n" int default="2" optional
 option "pseudoknots"        k "Allow for pseudoknots according to \"gfold\" model - H, K, L, and M types (genus one) of pseudoknots are allowed. (slower)" flag off
 option "quiet"              q "Do not output regular output, only output on demand (paths, graphs, ...)." flag off
+option "reduce"             r "Reduce the BHG to smaller size. Keep the LM in filter untouched." int default="-1" no
 
 section "UBlist"
 option "hd-threshold"       - "Do not try to process pairs with Hamming distance more than this. (0 means no threshold)" int default="0" no
@@ -41,11 +42,12 @@ option "outer"              o "Add to UBlist also outer structures - we will not
 #option "keep-maximum"       - "Keep maximum of this many local minima, throw other according to their connectivity. Minima in filter stays always." int default="-1"
 
 section "Graph creation"
-option "components"         c "Also link components with DSU-algorithm" flag on
+option "components"         c "Also link components with DSU-algorithm" flag off
 option "noSaddle"           - "Do not flood-link sadddles (saves some computation time, usually saddles are not connected anyway)" flag off
 option "just-ub"  					- "Do not find connections - just do first part of program" hidden flag off
 option "no-conn"            - "Do not connect what is already connected (saves computation time greatly, decreases accuracy greatly)" flag off hidden
 option "conn-neighs"        - "Number of neighbours of newly found minima to connect. Saves computation time if set to 0 (and low values)." int default="0" no
+option "no-new"             - "Do not add new minima to whole computation at all." flag off
 
 option "floodMax"           - "Flood cap on number - how many structures to flood (flooding is disabled by default)" int default="0" no
 option "floodHeight"        - "Flood cap on height - what is the maximal energy height we will flood in 10cal/mol (0 = unlimited)" int default="0" no
@@ -75,6 +77,7 @@ option "dot"                - "Use dot instead of neato for graph plotting" flag
 option "dot-energies"       - "Print energies along with the LM number in graph" flag off
 option "tree-visualise"     t "Use tree visualisation (landmark)" flag off
 option "print-full"         - "Print matrices for all found LM. (default is print only for input, this influences ALL matrices)." flag off
+option "fret"               - "Produce all FRET input files (their names are: idstr_NAME.tsv; iniprob_NAME.tsv; tranprob_NAME.tsv; where name is the string provided in this option)." string no
 
 option "dot-file"					  - "Filename for dot graph file" string default="DSUeval.dot" no
 option "graph-file"					- "Filename for landmap/landmark graph image (does not print by default)" string no
@@ -88,8 +91,9 @@ option "rates-file"         - "Filename for rates for treekin (does not print by
 option "rates-fullpath"     - "Add rates along the path instead of simple Arrhenius kinetics." flag off
 option "print-all"          - "Generate all output (switches on all text '*-file' to default)" flag off
 option "rates-temp"         T "Temperature for rates (in Celsius)" float default="37.0" no
-option "rates-mode"         - "Mode for rates generation (V - vertex contraction, taking into acount only max_height; S - vertex contraction, taking into acount path; E - edge contraction (minimal barrier); M - edge contraction (maximal barrier); F - full matrix for all LMs)" string default="F" multiple no
+#option "rates-mode"         - "Mode for rates generation (V - vertex contraction, taking into acount only max_height; S - vertex contraction, taking into acount path; E - edge contraction (minimal barrier); M - edge contraction (maximal barrier); F - full matrix for all LMs)" string default="F" multiple no
 option "filter-file"        - "Filter the results only to those in filter file. Affects only --energy-file, --dist-file, --bdist-file, and --gdist-file. Overrides the --print-full option for these matrices." string no
+option "prob-param"         - "Parameter t0 for probability matrix in 3 column format. This matrix is computed from rates as matrix exponential from rate matrix R: P = exp(t0.R). Matrix is printed in file \"prob_matrix<num>.tsv\", where <num> is the t0 parameter. Rewritten if already exists." default="1.0" double no
 
 option "visualise"          v "Visualise paths between 2 structures, can be specified multiple times, output goes to file pathL1_L2.eps" typestr="<l1>=<l2>" string multiple
 option "vis-dist"           - "Set distance as a bounding condition for visualisation (instead of energy)" flag off
