@@ -16,7 +16,8 @@ OBJ = $(NAME)_cmdline.o\
 			pknots.o\
 			findpath_pk.o\
 			RateGraph.o\
-			mxccm.o
+			mxccm.o\
+			exp_matrix.o
 
 # should stay unchanged: 
 CPP = g++
