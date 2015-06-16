@@ -138,6 +138,8 @@ RateGraph::RateGraph(DSU &dsu, double temp, int maxkeep, double minimal_rate, ch
       int lm2 = j->j;
       int saddle = j->saddle;
 
+      if (lm1 == lm2) continue;
+
       if (!maxkeep) {
 
         rate1 = rate(dsu.LM[lm1].energy, en, _kT);
@@ -166,6 +168,7 @@ RateGraph::RateGraph(DSU &dsu, double temp, int maxkeep, double minimal_rate, ch
 
       // add 'em
       if (rate1 > minimal_rate && rate2 > minimal_rate) {
+        //if (lm1 == lm2) fprintf(stderr, "WHAT? %d %d \n", lm1, lm2);
         rates[lm1][lm2] = rate1;
         rates[lm2][lm1] = rate2;
 
@@ -733,20 +736,29 @@ void RateGraph::PrintRates(FILE *filname)
     for (unsigned int i=0; i<dim_rates*dim_rates; i++) rate_matrix[i] = 0.0;
 
     for (unsigned int i=0; i<dim_rates; i++) {
-      double sum = 0.0;
+      long double sum = 0.0;
+      //int num = 0;
       for (auto a=rates[i].begin(); a!=rates[i].end(); a++) {
         rate_matrix[i*dim_rates + a->first] = a->second;
-        sum += a->second;
+        if (a->first != (int)i) sum += a->second;
+        //num++;
+        //if (i == 0) fprintf(stderr, "%5d    %16.10g\n", a->first, a->second);
       }
-      rate_matrix[i*dim_rates + i] = -sum;
+      rate_matrix[i*dim_rates + i] = -(double)sum;
+      //if (i == 0) fprintf(stderr, "%16.10g", (double)sum);
+      //fprintf(stderr, "num[%d] = %d\n", i, num);
     }
   }
 
   // just print the rate matrix:
   for (unsigned int i=0; i<dim_rates; i++) {
+    //int num = 0;
     for (unsigned int j=0; j<dim_rates; j++) {
+        //if (i == 0) fprintf(stderr, "%16.10g", rate_matrix[dim_rates*i+j]);
         fprintf(filname, "%16.10g ", rate_matrix[dim_rates*i+j]);
+        //if (rate_matrix[dim_rates*i+j] != 0.0) num ++;
     }
+    //fprintf(stderr, "num2[%d] = %d\n", i, num);
     fprintf(filname, "\n");
   }
 
