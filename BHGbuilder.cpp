@@ -119,25 +119,28 @@ DSU::DSU(FILE *input, bool noLP, bool shifts, bool pknots, int time_max, int max
         continue;
       }
 
-      vector<int> LM_c;
-      vector<int> saddle_c;
+      set<int> LM_cs;
+      set<int> saddle_cs;
       int number;
       if (saddle_reading) {
         while ((p=strtok(NULL, " \t"))) {
           if (p[strlen(p)-1]=='S') {
             sscanf(p, "%dS", &number);
-            saddle_c.push_back(number-1);
+            saddle_cs.insert(number-1);
           } else {
             sscanf(p, "%d", &number);
-            LM_c.push_back(number-1);
+            LM_cs.insert(number-1);
           }
         }
       }
 
-      if (saddle_reading && LM_c.size()<2) {
+      if (saddle_reading && LM_cs.size()<2) {
         fprintf(stderr, "File reading error -- too few LM connected by saddle %d\n", (int)saddles.size()+1);
         exit(EXIT_FAILURE);
       }
+
+      vector<int> LM_c(LM_cs.begin(), LM_cs.end());
+      vector<int> saddle_c(saddle_cs.begin(), saddle_cs.end());
 
       // add info:
       if (tmp) {
