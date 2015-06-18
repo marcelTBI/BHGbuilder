@@ -214,18 +214,18 @@ int main(int argc, char **argv)
       }
 
       // now output the prob matrix:
-      if (args_info.prob_param_given) {
+      for (int i=0; i<args_info.prob_param_given; i++) {
         char filename[500];
-        sprintf(filename, "prob_matrix%.0f.tsv", args_info.prob_param_arg);
+        sprintf(filename, "prob_matrix%.0f.tsv", args_info.prob_param_arg[i]);
         fprintf(stderr, "exponentiating rate matrix ... ");
-        rg.PrintProb(args_info.prob_param_arg, filename);
+        rg.PrintProb(args_info.prob_param_arg[i], filename);
         fprintf(stderr, "into \"%s\" took %.2f secs.\n", filename, (clock()-time)/(double)CLOCKS_PER_SEC); time = clock();
       }
 
       // now output all the FRET data:
       if (args_info.fret_given) {
         fprintf(stderr, "exponentiating rate matrix ... ");
-        rg.CreateProb(args_info.prob_param_arg);
+        rg.CreateProb(args_info.prob_param_arg[0]);
 
         // first file:
         char filename[500];
@@ -238,7 +238,7 @@ int main(int argc, char **argv)
 
         // third file:
         sprintf(filename, "tranprob_%s.tsv", args_info.fret_arg);
-        rg.PrintProb(args_info.prob_param_arg, filename);
+        rg.PrintProb(args_info.prob_param_arg[0], filename);
 
         fprintf(stderr, "creating FRET files took %.2f secs.\n", (clock()-time)/(double)CLOCKS_PER_SEC); time = clock();
       }

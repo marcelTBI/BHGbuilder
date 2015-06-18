@@ -93,7 +93,7 @@ option "print-all"          - "Generate all output (switches on all text '*-file
 option "rates-temp"         T "Temperature for rates (in Celsius)" float default="37.0" no
 #option "rates-mode"         - "Mode for rates generation (V - vertex contraction, taking into acount only max_height; S - vertex contraction, taking into acount path; E - edge contraction (minimal barrier); M - edge contraction (maximal barrier); F - full matrix for all LMs)" string default="F" multiple no
 option "filter-file"        - "Filter the results only to those in filter file. Affects only --energy-file, --dist-file, --bdist-file, and --gdist-file. Overrides the --print-full option for these matrices." string no
-option "prob-param"         - "Parameter t0 for probability matrix in 3 column format. This matrix is computed from rates as matrix exponential from rate matrix R: P = exp(t0.R). Matrix is printed in file \"prob_matrix<num>.tsv\", where <num> is the t0 parameter. Rewritten if already exists." default="1.0" double no
+option "prob-param"         - "Parameter t0 for probability matrix in 3 column format. This matrix is computed from rates as matrix exponential from rate matrix R: P = exp(t0.R). Matrix is printed in file \"prob_matrix<num>.tsv\", where <num> is the t0 parameter. Rewritten if already exists." default="1.0" double no multiple
 
 option "visualise"          v "Visualise paths between 2 structures, can be specified multiple times, output goes to file pathL1_L2.eps" typestr="<l1>=<l2>" string multiple
 option "vis-dist"           - "Set distance as a bounding condition for visualisation (instead of energy)" flag off

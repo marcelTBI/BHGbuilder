@@ -129,6 +129,7 @@ public:
   void PrintProb(double t0, char *filename);
   void PrintProb(double t0, FILE *output);
   void CreateProb(double t0);
+  void CreateRates();
 
   int Size() {return lms.size();};
 

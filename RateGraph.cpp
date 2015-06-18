@@ -609,19 +609,9 @@ int RateGraph::RemoveShur(int x, int step, double minimal_rate)
   //build rate matrix:
   dim_rates = rates.size();
   if (rate_matrix) free(rate_matrix);
-  rate_matrix = (double *) malloc(sizeof(double)*dim_rates*dim_rates);
-  for (unsigned int i=0; i<dim_rates*dim_rates; i++) rate_matrix[i] = 0.0;
-
-  for (unsigned int i=0; i<dim_rates; i++) {
-    double sum = 0.0;
-    for (auto a=rates[i].begin(); a!=rates[i].end(); a++) {
-      rate_matrix[i*dim_rates + a->first] = a->second;
-      sum += a->second;
-    }
-    rate_matrix[i*dim_rates + i] = -sum;
-  }
+  rate_matrix = NULL;
+  CreateRates();
   rates.clear();
-
 
   PrintRates("before_reorder.rat");
 
@@ -729,26 +719,7 @@ void RateGraph::PrintRates(char *filename)
 
 void RateGraph::PrintRates(FILE *filname)
 {
-  if (!rate_matrix) {
-      //build rate matrix:
-    dim_rates = rates.size();
-    rate_matrix = (double *) malloc(sizeof(double)*dim_rates*dim_rates);
-    for (unsigned int i=0; i<dim_rates*dim_rates; i++) rate_matrix[i] = 0.0;
-
-    for (unsigned int i=0; i<dim_rates; i++) {
-      long double sum = 0.0;
-      //int num = 0;
-      for (auto a=rates[i].begin(); a!=rates[i].end(); a++) {
-        rate_matrix[i*dim_rates + a->first] = a->second;
-        if (a->first != (int)i) sum += a->second;
-        //num++;
-        //if (i == 0) fprintf(stderr, "%5d    %16.10g\n", a->first, a->second);
-      }
-      rate_matrix[i*dim_rates + i] = -(double)sum;
-      //if (i == 0) fprintf(stderr, "%16.10g", (double)sum);
-      //fprintf(stderr, "num[%d] = %d\n", i, num);
-    }
-  }
+  CreateRates();
 
   // just print the rate matrix:
   for (unsigned int i=0; i<dim_rates; i++) {
@@ -850,10 +821,8 @@ void RateGraph::PrintProb(double t0, char *filename)
   }
 }
 
-void RateGraph::CreateProb(double t0)
+void RateGraph::CreateRates()
 {
-  if (prob_matrix) return;
-
   if (!rate_matrix) {
       //build rate matrix:
     dim_rates = rates.size();
@@ -864,11 +833,18 @@ void RateGraph::CreateProb(double t0)
       double sum = 0.0;
       for (auto a=rates[i].begin(); a!=rates[i].end(); a++) {
         rate_matrix[i*dim_rates + a->first] = a->second;
-        sum += a->second;
+        if (a->first != (int)i) sum += a->second;
       }
       rate_matrix[i*dim_rates + i] = -sum;
     }
   }
+}
+
+void RateGraph::CreateProb(double t0)
+{
+  if (prob_matrix) return;
+
+  CreateRates();
 
   // exponentiate it:
   prob_matrix = (double *) malloc(sizeof(double)*dim_rates*dim_rates);
