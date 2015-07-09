@@ -84,13 +84,28 @@ path_t *get_whole_path(DSU &dsu, int lm1, int lm2, int saddle, int maxkeep, int 
   return tmp1;
 }
 
-std::pair<double, double> rate_whole(path_t *path, double _kT)
+double rate_out;
+double _kT_global;
+int gather_rates(struct_en *next, struct_en *input) {
+  rate_out += rate(input->energy, next->energy, _kT_global);
+  //fprintf(stderr, "%10.3g\n", rate_out);
+  return 0;
+}
+
+std::pair<double, double> rate_whole(path_t *path, double _kT, char *seq)
 {
   // create array of rates:
   vector<double> rats_up;
   vector<double> rats_dw;
 
+  vector<double> rats_out;
+
   int last_en = en_fltoi(path->en);
+  int max_en = last_en;
+  int first_en = last_en;
+
+  _kT_global = _kT;// feels dirty, right? well.. its late...
+  int length = 0;
   //path_t *tmp = path;
   path++;
   while (path && path->s) {
@@ -98,20 +113,37 @@ std::pair<double, double> rate_whole(path_t *path, double _kT)
     rats_up.push_back(rate(last_en, en, _kT));
     rats_dw.push_back(rate(en, last_en, _kT));
     last_en = en;
+    max_en = max(max_en, en);
+    length++;
+
+    rate_out = 0.0;
+    //fprintf(stderr, "%s %s \n", seq, path->s);
+    browse_neighs(seq, path->s, 0, 0, 0, gather_rates);
+    rats_out.push_back(rate_out);
+    //fprintf(stderr, "%10.4g %10.4g\n", rats_up[rats_up.size()-1], rats_dw[rats_dw.size()-1]);
+
     path++;
   }
+
+
 
   // now get a global rate out of small ones:
   double rate_up = rats_up[0];
   double rate_dw = rats_dw[0];
   for (unsigned int i=1; i<rats_up.size(); i++) {
-    rate_up = rate_up*rats_up[i]/(rate_dw+rats_up[i]);
-    rate_dw = rate_dw*rats_dw[i]/(rate_dw+rats_up[i]);
+    rate_up = rate_up*rats_up[i]/(rats_out[i-1]);
+    rate_dw = rate_dw*rats_dw[i]/(rats_out[i-1]);
+
+    //rate_up = rate_up*rats_up[i]/(rats_dw[i-1]+rats_up[i]);
+    //rate_dw = rate_dw*rats_dw[i]/(rats_dw[i-1]+rats_up[i]);
   }
 
   // debug:
   //double drat1 = rate(en_fltoi(tmp[0].en), en_fltoi(tmp[1].en), _kT);
   //double drat2 = rate(en_fltoi(tmp[2].en), en_fltoi(tmp[1].en), _kT);
+
+
+  //fprintf(stderr, "final(%2d): %10.4g %10.4g (original: %10.4g %10.4g)\n", length, rate_up, rate_dw, rate(first_en, max_en, _kT), rate(last_en, max_en, _kT));
 
   return make_pair(rate_up, rate_dw);
 }
@@ -155,7 +187,7 @@ RateGraph::RateGraph(DSU &dsu, double temp, int maxkeep, double minimal_rate, ch
         auto whole_path = get_whole_path(dsu, lm1, lm2, saddle, maxkeep, count1, count2);
 
         // then convert it to both rates:
-        std::pair<double, double> rats = rate_whole(whole_path, _kT);
+        std::pair<double, double> rats = rate_whole(whole_path, _kT, dsu.seq);
         free_path(whole_path);
         rate1 = rats.first;
         rate2 = rats.second;

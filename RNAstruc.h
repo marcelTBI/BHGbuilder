@@ -45,7 +45,7 @@ struct RNAstruc {
       }
       //fprintf(stderr, "%s %c %s\n", pt_to_str(lhs).c_str(), (i<=lhs[0] && l<r) ? '<':'>', pt_to_str(rhs).c_str());
       if (i>structure[0]) return false;
-      return l<r;
+      return l>r;
     } else return energy<second.energy;
   }
 

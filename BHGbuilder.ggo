@@ -7,12 +7,13 @@ purpose "Landscape analysis: using near minima connections, tries to recompute l
           additional: see options under \"Output\" an \"Evaluation\" section"
 
 # Version of your program
-version "1.0"   # don't use version if you're using automake
+version "2.0"   # don't use version if you're using automake
 
 # command line options passed to gengetopt
 args "--file-name=BHGbuilder_cmdline --include-getopt --default-optional --unamed-opts"
 
 # Options
+section "General"
 option "debug"        			- "Print debug" flag off
 option "depth"              - "Depth of findpath search (higher value increases running time)" int default="10" no
 option "noLP"								- "Process structures without lonely pairs (helices of length 1)." flag off
@@ -43,14 +44,15 @@ option "outer"              o "Add to UBlist also outer structures - we will not
 
 section "Graph creation"
 option "components"         c "Also link components with DSU-algorithm" flag off
-option "noSaddle"           - "Do not flood-link sadddles (saves some computation time, usually saddles are not connected anyway)" flag off
 option "just-ub"  					- "Do not find connections - just do first part of program" hidden flag off
 option "no-conn"            - "Do not connect what is already connected (saves computation time greatly, decreases accuracy greatly)" flag off hidden
 option "conn-neighs"        - "Number of neighbours of newly found minima to connect. Saves computation time if set to 0 (and low values)." int default="0" no
-option "no-new"             - "Do not add new minima to whole computation at all." flag off
+option "no-new"             - "Do not add new minima to whole computation at all. Defalt is to just recompute minima found on paths." flag off
 
+section "Flooding"
 option "floodMax"           - "Flood cap on number - how many structures to flood (flooding is disabled by default)" int default="0" no
 option "floodHeight"        - "Flood cap on height - what is the maximal energy height we will flood in 10cal/mol (0 = unlimited)" int default="0" no
+option "noSaddle"           - "Do not flood-link sadddles (saves some computation time, usually saddles are not connected anyway)" flag off
 
 section "Schur removal for rate creation"
 option "max"								- "Maximal number of nodes remaining after removal (default all)" int default="-1" no
@@ -72,38 +74,42 @@ option "saddle-path"        - "Restrict only to paths with some maximal energy. 
 option "time-path"          - "Time of folding for --optimal-path=\"T\". Optimality criterion: (\\prod r_{i,i+1})*e^{-time * \\min_i\\sum_j r{ij}} ." double default="0.0" no
 option "bulk-path"          - "Filename for a bulk path searching (search a path for each pair of subsequent structures in the file)" string no
 
-section "Output"
+section "Visualisation"
 option "dot"                - "Use dot instead of neato for graph plotting" flag on
 option "dot-energies"       - "Print energies along with the LM number in graph" flag off
 option "tree-visualise"     t "Use tree visualisation (landmark)" flag off
-option "print-full"         - "Print matrices for all found LM. (default is print only for input, this influences ALL matrices)." flag off
-option "fret"               - "Produce all FRET input files (their names are: idstr_NAME.tsv; iniprob_NAME.tsv; tranprob_NAME.tsv; where name is the string provided in this option)." string no
-
 option "dot-file"					  - "Filename for dot graph file" string default="DSUeval.dot" no
 option "graph-file"					- "Filename for landmap/landmark graph image (does not print by default)" string no
 option "barr-file"          - "Filename for barrier-like output - does not contain all information (does not print by default)" string no
+
+section "Path visualisation"
+option "visualise"          v "Visualise paths between 2 structures, can be specified multiple times, output goes to file pathL1_L2.eps" typestr="<l1>=<l2>" string multiple
+option "vis-dist"           - "Set distance as a bounding condition for path visualisation (instead of energy)" flag off
+option "vis-length"         - "Set maximal length of paths in visualisation (increases computation time greatly) use only with vis-dist off" int default="15" no
+
+section "Matrices"
+option "print-full"         - "Print matrices for all found LM. (default is print only for input, this influences ALL matrices)." flag off
 option "energy-file"        - "Fileneme for energy barrier matrix (does not print by default)" string no
 option "dist-file"          - "Filename for distance matrix (does not print by default)" string no
 option "gdist-file"         - "Filename for graph distance matrix (does not print by default)" string no
 option "bdist-file"         - "Filename for a base pair distance on the energy optimal path (not a Hamming distance, which is a distance on a direct path) (does not print by default)" string no
 option "ptype-file"         - "Filename for a pseudoknot types on the optimal path matrix. Makes sense only with -k option on." string no
+
+section "Rates output"
 option "rates-file"         - "Filename for rates for treekin (does not print by default, appends mode_rates on end of filename)" string no
-option "rates-fullpath"     - "Add rates along the path instead of simple Arrhenius kinetics." flag off
-option "print-all"          - "Generate all output (switches on all text '*-file' to default)" flag off
+option "rates-fullpath"     - "Add rates along the path instead of simple Arrhenius kinetics. Does not work with pseudoknots." flag off
 option "rates-temp"         T "Temperature for rates (in Celsius)" float default="37.0" no
 #option "rates-mode"         - "Mode for rates generation (V - vertex contraction, taking into acount only max_height; S - vertex contraction, taking into acount path; E - edge contraction (minimal barrier); M - edge contraction (maximal barrier); F - full matrix for all LMs)" string default="F" multiple no
 option "filter-file"        - "Filter the results only to those in filter file. Affects only --energy-file, --dist-file, --bdist-file, and --gdist-file. Overrides the --print-full option for these matrices." string no
-option "prob-param"         - "Parameter t0 for probability matrix in 3 column format. This matrix is computed from rates as matrix exponential from rate matrix R: P = exp(t0.R). Matrix is printed in file \"prob_matrix<num>.tsv\", where <num> is the t0 parameter. Rewritten if already exists." default="1.0" double no multiple
 
-option "visualise"          v "Visualise paths between 2 structures, can be specified multiple times, output goes to file pathL1_L2.eps" typestr="<l1>=<l2>" string multiple
-option "vis-dist"           - "Set distance as a bounding condition for visualisation (instead of energy)" flag off
-option "vis-length"         - "Set maximal length of paths in visualisation (increases computation time greatly) use only with vis-dist off" int default="15" no
-
-section "Evaluation"
+section "Evaluation and experimental"
 option "energy-heights"     - "output energies of saddles between every pair of structures (filename)" string no
 option "energy-rank"        - "output sorted energies of saddles between minima (filename)" string no
 option "energy-barrier"			- "output sorted barrier heights between minima (filename)" string no
 option "analyze-graph"			- "Analyze graph - histogram of connectivity, ..." flag off
+option "fret"               - "Produce all FRET input files (their names are: idstr_NAME.tsv; iniprob_NAME.tsv; tranprob_NAME.tsv; where name is the string provided in this option)." string no
+option "prob-param"         - "Parameter t0 for probability matrix in 3 column format. This matrix is computed from rates as matrix exponential from rate matrix R: P = exp(t0.R). Matrix is printed in file \"prob_matrix<num>.tsv\", where <num> is the t0 parameter. Rewritten if already exists." default="1.0" double no multiple
+option "print-all"          - "Generate all output (switches on all text '*-file' to default)" flag off
 
 section "Clustering"
 option "cluster-Kmax"       K "Size of maximal cluster (clustering is off by default)" int default="0" no
