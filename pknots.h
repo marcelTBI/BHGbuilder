@@ -113,7 +113,6 @@ public:
   // constructor
   Pseudoknot();
   Pseudoknot(const Pseudoknot &pknot);
-
   Pseudoknot &operator=(const Pseudoknot &pknot);
 };
 

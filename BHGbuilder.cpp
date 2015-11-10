@@ -832,7 +832,7 @@ void DSU::PrintMatrix(char *filename, bool full, char* filter_file, char type)
   // read_filter!
   if (filter_file && mapping.empty()) ReadFilter(filter_file);
 
-
+  // if not filtered and not full, do only NORMAL ones.
   if (!full && mapping.size() == 0) {
     mapping_rev.resize(LM.size(), 0);
     fprintf(stderr, "Mapping: \n");

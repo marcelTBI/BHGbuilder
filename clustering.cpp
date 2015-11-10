@@ -532,6 +532,40 @@ void DSU::FindNumbers(int begin, int end, path_pk *path, vector<int> &lm_numbers
   return ;
 }
 
+int parseLine(char* line){
+  int i = strlen(line);
+  while (*line < '0' || *line > '9') line++;
+  line[i-3] = '\0';
+  i = atoi(line);
+  return i;
+}
+
+
+std::pair<int, int> getValue(){ //Note: this value is in KB!
+  FILE* file = fopen("/proc/self/status", "r");
+  int resultVM = -1;
+  int resultPM = -1;
+  char line[128];
+
+
+  while (fgets(line, 128, file) != NULL){
+    if (strncmp(line, "VmSize:", 7) == 0){
+      resultVM = parseLine(line);
+      break;
+    }
+  }
+
+  while (fgets(line, 128, file) != NULL){
+    if (strncmp(line, "VmRSS:", 6) == 0){
+      resultPM = parseLine(line);
+      break;
+    }
+  }
+
+  fclose(file);
+  return make_pair(resultVM, resultPM);
+}
+
 void DSU::ComputeTBD(TBD &pqueue, int maxkeep, int num_threshold, bool outer, bool noLP, bool shifts, bool debug, vector<RNAsaddle> *output_saddles, int conn_neighs, bool no_new)
 {
   int cnt = 0;
@@ -548,9 +582,11 @@ void DSU::ComputeTBD(TBD &pqueue, int maxkeep, int num_threshold, bool outer, bo
     }
 
     // just visualisation
-    if (!output_saddles && cnt%100==0 && cnt!=0) {
+    if (!output_saddles && cnt%100==0) {
       double tim = (clock()  - time_tbd)/(double)CLOCKS_PER_SEC;
-      fprintf(stderr, "Finding path: %7d/%7d; Time: %6.2f; Est.:%6.2f\n", cnt, pqueue.size()+cnt, tim, tim/(double)cnt*pqueue.size());
+      std::pair<int, int> mem = getValue();
+      //double one = ((sizeof(char)*strlen(seq) + sizeof(short)*strlen(seq)) + sizeof(RNAsaddle)) / 1024.0;
+      fprintf(stderr, "Finding path: %7d/%7d; Time: %6.2f; Est.:%6.2f Mem.:%6.1fMB VM %6.1fMB PM\n", cnt, pqueue.size()+cnt, tim, tim/(double)cnt*pqueue.size(), mem.first/1024.0, mem.second/1024.0);
     }
 
     // apply threshold
@@ -587,6 +623,7 @@ void DSU::ComputeTBD(TBD &pqueue, int maxkeep, int num_threshold, bool outer, bo
       // get the length of path for speed up
       int length = 0;
       for (path_pk *tmp = path; tmp && tmp->structure; tmp++) {
+        if (max_path->en < tmp->en) max_path = tmp;
         length ++;
       }
 
@@ -693,7 +730,7 @@ void DSU::ComputeTBD(TBD &pqueue, int maxkeep, int num_threshold, bool outer, bo
         RNAsaddle tmp(tbd.i, tbd.j, NOT_SURE);
         tmp.energy = en_fltoi(max_energy);
         tmp.str_ch = NULL;
-        tmp.structure = make_pair_table_PK(max_path->s);
+        tmp.structure = allocopy(max_path->structure);
 
         bool inserted = InsertUB(tmp, debug);
 
@@ -716,6 +753,7 @@ void DSU::ComputeTBD(TBD &pqueue, int maxkeep, int num_threshold, bool outer, bo
       // get the length of path for speed up
       int length = 0;
       for (path_t *tmp = path; tmp && tmp->s; tmp++) {
+        if (max_path->en < tmp->en) max_path = tmp;
         length ++;
       }
 
@@ -829,7 +867,7 @@ void DSU::ComputeTBD(TBD &pqueue, int maxkeep, int num_threshold, bool outer, bo
     //if (last_str) free(last_str);
 
   } // all doing while
-  fprintf(stderr, "The end of finding paths. Size of pqueue = %d\n", (int)pqueue.size());
+  fprintf(stderr, "The end of finding paths(%d). Size of pqueue = %d\n", cnt, (int)pqueue.size());
 }
 
 

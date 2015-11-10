@@ -57,7 +57,7 @@ public:
 
 vector<HeightData> DSU::HeightSearch(int start, vector< set<edgeLL> > &edgesV_l)
 {
-  optimality = 'B';
+  optimality = 'B'; // optimality is always B for height search
 
   // define + init
   vector<int> heights(LM.size(), INT_MAX);
