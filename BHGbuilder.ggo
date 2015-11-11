@@ -4,7 +4,7 @@ purpose "Landscape analysis: tries to recompute the Basin Hopping Graph of the l
   input:  (stdin)  local minima (output from barriers/RNAlocmin program)\n\
   output: (stdout) saddles and which minima they connect\n\
           .dot file with BHG graph in DOT language\n\
-          additional: see options under \"Output\" and \"Evaluation\" sections"
+          additional: see options under \"Matrices\", \"Rates output\", \"Path searching\" and \"Visualisation\" sections"
 
 # Version of your program
 version "2.0"   # don't use version if you're using automake
@@ -79,23 +79,23 @@ option "dist-file"          - "Filename for a distance matrix (does not print by
 option "gdist-file"         - "Filename for a graph distance matrix (does not print by default)" string no
 option "bdist-file"         - "Filename for a base pair distance on the energy optimal path (not a Hamming distance, which is under --dist-file) (does not print by default)" string no
 option "ptype-file"         - "Filename for pseudoknot types on the optimal path. Makes sense only with -k option." string no
-option "filter-file"        - "Filter the results only to those in filter file. Affects only --energy-file, --dist-file, --bdist-file, --gdist-file, --ptype-file, and --rates-file. Overrides the --print-full option for these matrices." string no
+option "filter-file"        - "Filter the results only to those in filter file. Affects only --energy-file, --dist-file, --bdist-file, --gdist-file, --ptype-file, and --rates-file. The output is now provided only for these minima." string no
 
 section "Path searching"
-option "get-path"           - "Get optimal path between 2 local minima and print it into file pathL1_L2.path. Optimality criterion is picked in the --optimal-path." typestr="<l1>=<l2>" string multiple
-option "optimal-path"       - "Criterion for optimality of path. B -> barrier height, L -> length (structures), M -> length (minima), R -> best cumulative rate, P -> highest probability, T -> time dependent best likelihood (time is given as an extra parameter --time-path)." default="B" string no
+option "get-path"           - "Get optimal path between 2 local minima and print it into file pathL1_L2.path. Optimality criterion is picked in the --optimal-path option." typestr="<l1>=<l2>" string multiple
+option "optimal-path"       - "Criterion for optimality of the path. B -> barrier height, L -> length (structures), M -> length (minima), R -> best cumulative rate, P -> highest probability, T -> time dependent best likelihood (time is given as an extra parameter --time-path)." default="B" string no
 #option "rate-path"          - "Compute the optimal path according to kinetics (returns path with best cumulative rate). Takes into accout length and saddle heights." flag off
 option "saddle-path"        - "Restrict only to paths with some maximal energy. Useful to pick the shortest path when the lowest barrier height is known." double no
 option "time-path"          - "Time of folding for --optimal-path=\"T\". Optimality criterion: (\\prod r_{i,i+1})*e^{-time * \\min_i\\sum_j r{ij}} ." double default="0.0" no
-option "bulk-path"          - "Filename for a bulk path searching (search a path for each pair of subsequent structures in the file)" string no
+option "bulk-path"          - "Filename for a bulk path searching (search a path for each pair of subsequent structures in the specified file)." string no
 
 section "Visualisation"
-option "dot"                - "Use dot instead of neato for graph plotting" flag on
-option "dot-energies"       - "Print energies along with the LM number in graph" flag off
-option "tree-visualise"     t "Use tree visualisation (link only enough minima to create a tree, use the lowest connections)" flag off hidden
 option "dot-file"					  - "Filename for dot graph file" string default="DSUeval.dot" no
-option "graph-file"					- "Filename for landmap/landmark graph image (does not print by default)" string no
-option "barr-file"          - "Filename for barrier-like output - does not contain all information (does not print by default)" string no hidden
+option "dot-energies"       - "Print energies along with the LM number in graph." flag off
+option "tree-visualise"     t "Use tree visualisation (link only enough minima to create a tree, use the lowest connections)." flag off hidden
+option "graph-file"					- "Filename for basin hopping graph image (does not print by default). Dot/neato must be installed on your system for this." string no
+option "dot"                - "Use dot instead of neato for graph plotting. Used only with --graph-file option specified." flag on
+option "barr-file"          - "Filename for barrier-like output - does not contain all information (does not print by default)." string no
 
 section "Path visualisation" 
 option "visualise"          v "Visualise paths between 2 structures, can be specified multiple times, output goes to file pathL1_L2.eps" typestr="<l1>=<l2>" string multiple hidden
@@ -104,14 +104,14 @@ option "vis-length"         - "Set maximal length of paths in visualisation (inc
 
 section "Evaluation and experimental"
 option "energy-heights"     - "Filename for a matrix that contains energy of saddles" string no hidden
-option "energy-rank"        - "Filename for sorted energies of saddles between minima (sorted version of --energy-heights) (filename)" string no hidden
+option "energy-rank"        - "Filename for sorted energies of saddles between minima (sorted version of --energy-heights)" string no hidden
 option "energy-barrier"			- "Filename for sorted barrier heights between minima (sorted version of --energy-file)" string no hidden
 option "analyze-graph"			- "Analyze graph - produce a histogram of connectivity, ..." flag off hidden
-option "fret"               - "Produce all FRET input files (their names are: idstr_NAME.tsv; iniprob_NAME.tsv; tranprob_NAME.tsv; where name is the string provided in this option)." string no hidden
+option "fret"               - "Produce all FRET input files (their names are: idstr_NAME.tsv; iniprob_NAME.tsv; tranprob_NAME.tsv; where NAME is the string provided in this option)." string no hidden
 option "prob-param"         - "Parameter t0 for probability matrix in 3 column format. This matrix is computed from rates as matrix exponential from rate matrix R: P = exp(t0.R). Matrix is printed in file \"prob_matrix<num>.tsv\", where <num> is the t0 parameter. Rewritten if already exists." default="1.0" double no multiple hidden
-option "print-all"          - "Generate all output (switches on all text '*-file' to default)" flag off hidden
+option "print-all"          - "Generate all output (switches on all '*-file' option to default)" flag off hidden
 
 section "Clustering"
-option "cluster-Kmax"       K "Size of maximal cluster (clustering is off by default)" int default="0" no
+option "cluster-Kmax"       K "Size of maximal allowed cluster, switches on the clustering (clustering is off by default)" int default="0" no
 option "cluster-repre"      - "Portion of LMs taken as representatives from each cluster" float default="0.05" no
 option "cluster-fsaddle"    - "Mark as representatives those LM, which have highest saddle point connecting them (instead of LM, which have highest barrier height between themselves)" flag off
