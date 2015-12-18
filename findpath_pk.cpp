@@ -56,7 +56,7 @@ struct compare_intermeds {
 struct compare_struct {
   bool operator()(const short *lhs, const short *rhs) const {
     int i=1;
-    short l,r;
+    short l=0,r=0;
     while (i<=lhs[0]) {
       l = lhs[i];
       r = rhs[i];
@@ -176,7 +176,7 @@ bool compare_intermeds::operator()(const intermediate_pk &left, const intermedia
   int i=1;
   short *lhs = left.structure;
   short *rhs = right.structure;
-  char l,r;
+  char l=0,r=0;
   while (i<=lhs[0]) {
     l = lhs[i];
     r = rhs[i];

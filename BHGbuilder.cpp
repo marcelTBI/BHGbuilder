@@ -1635,11 +1635,11 @@ void DSU::ReduceOne(int number, ReductionMethod method)
       saddles[sadd].lm2 = max(from_i, from_j);
 
       // insert the new one
-      bool existed1 = edgesV_l[from_i].insert(to_insert).second;
-      bool existed2 = edgesV_l[from_j].insert(to_insert).second;
-      bool existed3 = edges_l.insert(to_insert).second;
-      bool existed4 = edges_ls.insert(edgeLS(from_i, sadd)).second;
-      bool existed5 = edges_ls.insert(edgeLS(from_j, sadd)).second;
+      edgesV_l[from_i].insert(to_insert).second;
+      edgesV_l[from_j].insert(to_insert).second;
+      edges_l.insert(to_insert).second;
+      edges_ls.insert(edgeLS(from_i, sadd)).second;
+      edges_ls.insert(edgeLS(from_j, sadd)).second;
 
       //fprintf(stderr, "%d %d %d %d %d\n", existed1, existed2, existed3, existed4, existed5);
     }
